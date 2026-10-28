@@ -17,7 +17,7 @@ Atualizado em 28/10/2026. Todas as frentes abaixo estão planejadas. Este roteir
 | Novas ferramentas | Projetos, review/Azure, diagnóstico e mídia | Extensões abaixo |
 | Interface virtual | Exploração após o básico estar utilizável | Módulo 10 |
 
-Não implementar todos os módulos simultaneamente. Primeiro estabilizar o serviço e a agenda; demonstrar uma delegação completa antes de aumentar o número de agentes. A escolha do primeiro fluxo avançado entre review e inglês continua aberta.
+Não implementar todos os módulos simultaneamente. Primeiro estabilizar o serviço e a agenda; demonstrar uma delegação completa antes de aumentar o número de agentes. A prioridade profissional refinada em 28/10/2026 está descrita ao final deste documento.
 
 ## Extensões e dependências
 
@@ -50,3 +50,20 @@ Não escolher tecnologia apenas pelo nome da GPU. A RTX 5070 de 12 GB é o alvo 
 ## Evidência para mudar estado
 
 Um item só passa de planejado para implementado após código, execução e validação documentados. Integração simulada deve permanecer identificada. Registrar comando de execução, versão, resultado e limitação, sem segredos ou dados empresariais no repositório público.
+
+
+## Prioridade refinada com Airton — 28/10/2026
+
+Começar pelo MOAH como apoio à entrada de Airton em Tech Lead. O primeiro ciclo útil combina memória de trabalho, agenda, início/fechamento do dia e retomada. A base de serviço e persistência continua obrigatória; não é necessário implementar voz, música ou toda a hierarquia para obter valor inicial.
+
+Sequência de produto:
+1. Registrar atividades, decisões, bloqueios e próximos passos por projeto, inclusive por entrada manual.
+2. Consultar agenda e pendências no início do dia, com estado das fontes.
+3. Consolidar o dia e recuperar o checkpoint na próxima sessão.
+4. Integrar o primeiro especialista profissional: bot de review associado a US, depois de levantar sua interface.
+
+Essa prioridade resolve a escolha antes aberta entre review e inglês como primeiro fluxo profissional avançado: review é a proposta de sequência registrada; o inglês permanece no roadmap. A ordem técnica deve respeitar 01, persistência de 05 e dependências de agenda 03–04, entregando partes utilizáveis progressivamente. Inferência 02 é avaliada em paralelo lógico à fundação, sem tornar o relógio dependente do modelo.
+
+Validar entrada manual → confirmação → persistência → resumo diário → retomada após reinício. Distinguir reunião agendada, presença confirmada e conteúdo disponível. Não registrar participação ou decisões por inferência a partir do título da call.
+
+Software próprio sobre modelo existente e substituível é o plano inicial. Não treinar do zero; candidatos de modelo ainda dependem de avaliação real. O objetivo de todos os agentes é produzir registros e resumos rastreáveis, consumidos seletivamente pelo MOAH.
