@@ -38,6 +38,14 @@ A pasta `cursror-dev` mantém a grafia solicitada por Airton. Cada módulo cont�
 
 ## Primeiro resultado utilizável
 
-Serviço local que inicia com o sistema, sincroniza o calendário, acompanha convites do Gmail e emite lembretes persistentes. Lembretes devem funcionar mesmo com o modelo descarregado ou indisponível.
+Primeira entrega: CLI local para registrar atividades, reuniões relatadas, decisões, pendências e checkpoints, com persistência e consulta após reinício. Início pelo [prompt 00](cursror-dev/00-bootstrap-typescript.md).
 
-Modelo, runtime e bibliotecas ainda serão escolhidos após inspeção do ambiente real. Python é uma proposta, não uma decisão definitiva. Não iniciar todos os módulos ao mesmo tempo.
+Depois, evoluir para serviço contínuo, calendário, convites e lembretes persistentes. Lembretes devem funcionar mesmo com o modelo descarregado ou indisponível.
+
+O núcleo será em Node.js com TypeScript, conforme [ADR 0001](docs/02-adrs/0001-node-typescript-e-entrega-inicial.md). Modelo de IA, motor de inferência e bibliotecas ainda dependem de inspeção e validação. O launcher e especialistas podem continuar em outras linguagens. Não iniciar todos os módulos ao mesmo tempo.
+
+Organização: [prompts](cursror-dev/README.md), [histórico de execuções](cursror-dev/execucoes/README.md) e [decisões arquiteturais](docs/02-adrs/README.md).
+
+## Base de engenharia
+
+A [documentação de engenharia](docs/README.md) segue categorias inspiradas na estrutura fornecida do imex-arch, adaptadas ao MOAH. Começar pelo [catálogo](docs/_catalog/README.md). A memória privada do runtime não pertence ao Git público.

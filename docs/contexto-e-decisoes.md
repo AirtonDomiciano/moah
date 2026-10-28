@@ -84,3 +84,15 @@ Airton confirmou que quer iniciar pelo MOAH para apoiar sua entrada como Tech Le
 - Serviço e persistência continuam como fundação, agenda funciona sem IA. Voz/música e outros agentes não bloqueiam a primeira entrega.
 
 A sequência é uma orientação de produto, não autorização para executar integrações corporativas reais. A prioridade inicial de agenda é ampliada com memória de trabalho e continuidade profissional. Ver [visão](visao-produto.md) e [roadmap](roadmap.md).
+
+## Direção JS/TypeScript e organização — 28/10/2026
+
+Airton pediu início no ecossistema JavaScript, citando a pós em JS, e solicitou prompt para Cursor e pastas de prompts/decisões como organização do trabalho. Núcleo em Node.js com TypeScript conforme ADR 0001; isso substitui Python como proposta do núcleo. Launcher e especialistas existentes não serão reescritos por esta decisão.
+
+Prompt 00 preparado para CLI e memória de trabalho, sem inferência. Entrega parcial de 01/05 antes do serviço completo. Usar cursror-dev para prompts, cursror-dev/execucoes para execuções verificadas e docs/02-adrs para ADRs. Nenhum prompt de implementação foi executado nesta atualização.
+
+Airton informou que reuniu projetos de agentes na pasta Agents. Cadastrar caminho e capacidades; não presumir localização absoluta ou que todos estejam implementados/disponíveis.
+
+## Organização inspirada no imex-arch — 28/10/2026
+
+Airton forneceu uma descrição da estrutura docs do imex-arch e pediu aproveitá-la. Adaptada ao MOAH conforme ADR 0002: catálogo e categorias de engenharia, mantendo prompts em cursror-dev e histórico em execucoes. A fonte foi o texto fornecido, sem inspeção do repositório interno da empresa. ADRs passam a ser organizadas em docs/02-adrs; documentos existentes mantêm seus caminhos.

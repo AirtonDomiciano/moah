@@ -34,7 +34,7 @@ Separar dados pessoais, Imex e Aluai. Cada tarefa carrega contexto e permissões
 
 Configuração sem segredos versionada; credenciais fora do Git. Logs com redação de dados sensíveis. Estado persistente com migrações e backup. Saúde distingue serviço ativo, conectores atualizados, modelo disponível e notificação entregue.
 
-Não há tecnologia escolhida nem daemon instalado neste momento.
+Núcleo definido em Node.js com TypeScript pela ADR 0001; modelo, motor de inferência e bibliotecas ainda a validar. Não há daemon instalado por esta documentação.
 
 ## Refinamento em 28/10/2026: diretor, especialistas e ferramentas
 
@@ -49,3 +49,7 @@ Fila e checkpoints devem manter retomada e deduplicação. Na publicação em Az
 Alvo atual informado: Debian 13, RTX 5070 com 12 GB. Dimensionar por medições do conjunto; CPU/RAM ainda pendentes. Possível upgrade futuro não é dependência. Coleta e agendamento leves continuam disponíveis sem modelo.
 
 Rotinas proativas usam convites com estado, adiamento e cancelamento persistentes. Saudação depende de configuração e evento observável. Novas ferramentas planejadas: launcher separado, bot de review/Azure, diagnóstico e mídia. Interfaces e transportes ainda a definir; não expor endpoints sem necessidade.
+
+## Primeira fatia executável
+
+A [ADR 0001](02-adrs/0001-node-typescript-e-entrega-inicial.md) define CLI → casos de uso → domínio → persistência, iniciando por registros e checkpoints sem IA. O [prompt 00](../cursror-dev/00-bootstrap-typescript.md) especifica aceitação. Serviço contínuo e conectores entram depois; a CLI deve ser reutilizada, não descartada. SQLite é proposta preferida sujeita à compatibilidade verificada pelo implementador.

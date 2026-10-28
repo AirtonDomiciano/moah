@@ -82,3 +82,12 @@ Refinamentos: MOAH-015 passa a valer para todos os domínios; MOAH-016 usa check
 Próximos passos: serviço e persistência; entrada manual de atividades e notas; consulta de pendências e retomada; agenda; fechamento do dia; mapear bot de review. A ordem técnica detalhada deve respeitar dependências sem exigir todos os módulos para registrar a primeira nota. Voz/música ficam após essa base.
 
 MOAH é o software próprio; modelos/runtimes são substituíveis. Avaliar candidatos na máquina, sem tratar sugestão de modelo como decisão. Não iniciar treinamento do zero. Ver [roadmap](docs/roadmap.md) e [visão](docs/visao-produto.md).
+
+## MOAH-028 — Base de engenharia e trilha de desenvolvimento
+
+- Data: 28/10/2026. Origem: pedido de Airton por prompts/decisões organizados e descrição da estrutura imex-arch.
+- Estado: documentação criada; prompt 00 preparado e não executado.
+- Núcleo: Node.js/TypeScript conforme ADR 0001. Primeira entrega: CLI com memória de trabalho persistente, recorte de 01/05.
+- Estrutura: docs/_catalog e categorias 00–09, ADRs em docs/02-adrs; prompts em cursror-dev e relatórios em execucoes.
+- Próximo passo: executar somente cursror-dev/00-bootstrap-typescript.md e registrar resultado real.
+- Agentes reunidos por Airton na pasta Agents: cadastrar individualmente caminho/capacidade, sem iniciar todos.

@@ -24,3 +24,16 @@ Este repositório contém planejamento e prompts. Consultar README.md, docs/cont
 - Usar fixtures sintéticas e configuração de exemplo sem segredos.
 - Fazer testes relevantes para o comportamento, documentar execução e limitações; não declarar sucesso sem evidência.
 - Não instalar estas skills como skills pessoais do ChatGPT: são contratos para o futuro runtime MOAH.
+
+## Direção inicial e rastreabilidade — 28/10/2026
+
+- Núcleo em Node.js com TypeScript: consultar docs/02-adrs/0001-node-typescript-e-entrega-inicial.md.
+- Ponto de entrada: cursror-dev/00-bootstrap-typescript.md, recorte explícito de 01/05. Não marcar esses módulos completos por entregar o recorte.
+- Guardar prompts em cursror-dev, histórico real de execução em cursror-dev/execucoes e ADRs em docs/02-adrs.
+- Relatório deve citar versão/commit do prompt, escopo, decisões e verificações reais. Não inventar histórico de execuções anteriores.
+- Manter dados privados de runtime fora desses documentos e do Git.
+- Não iniciar nem importar todos os projetos da pasta Agents automaticamente.
+
+## Base de conhecimento
+
+Consultar docs/README.md e docs/_catalog/README.md para localizar fontes. Guardrails em docs/05-guardrails; ADRs em docs/02-adrs. Os documentos antigos mantêm caminhos canônicos. Separar rigorosamente base pública de engenharia e memória privada do runtime.
