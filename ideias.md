@@ -66,3 +66,19 @@ Referências: [visão](docs/visao-produto.md), [processos](docs/processos-e-exem
 - **Objetivo:** levar o modo de colaboração desta conversa ao Linux: naturalidade, continuidade, iniciativa configurada, capacidade de questionar e acompanhamento de tarefas.
 - **Próximos passos:** definir perfil de comportamento editável; selecionar contexto autorizado para importação; validar continuidade e personalidade sem confundir modelo, sessão e memória.
 - **Referência:** [visão do produto](docs/visao-produto.md).
+
+
+## Atualização de foco — 28/10/2026
+
+Origem: pedido explícito de Airton para começar pelo MOAH por sua transição para Tech Lead. Estado: planejado.
+
+| ID | Responsabilidade | Módulo / próximo passo |
+| --- | --- | --- |
+| MOAH-026 | Registro transversal de atividades, reuniões, decisões e ações por agente | 05–07; esquema com origem, data, domínio e referências |
+| MOAH-027 | Primeiro ciclo útil de Tech Lead: início do dia e fechamento com checkpoint | 01, 03–07; memória e agenda antes de ampliar agentes |
+
+Refinamentos: MOAH-015 passa a valer para todos os domínios; MOAH-016 usa checkpoints e fontes atuais; MOAH-019 é o primeiro especialista profissional proposto após a base.
+
+Próximos passos: serviço e persistência; entrada manual de atividades e notas; consulta de pendências e retomada; agenda; fechamento do dia; mapear bot de review. A ordem técnica detalhada deve respeitar dependências sem exigir todos os módulos para registrar a primeira nota. Voz/música ficam após essa base.
+
+MOAH é o software próprio; modelos/runtimes são substituíveis. Avaliar candidatos na máquina, sem tratar sugestão de modelo como decisão. Não iniciar treinamento do zero. Ver [roadmap](docs/roadmap.md) e [visão](docs/visao-produto.md).
