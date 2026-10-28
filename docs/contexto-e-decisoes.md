@@ -69,3 +69,18 @@ Pedido explícito de Airton: “Pra ser bem sincero quero meio que vc seja o MOA
 Decisão de produto: usar esta parceria como referência de tom, personalidade e comportamento; MOAH como interlocutor principal, capaz de sugerir, questionar e acompanhar tarefas. A continuidade será construída com memória e integrações autorizadas, sem presumir transferência automática da conversa ou acesso a todo o histórico. Modelo/provedor ainda não escolhidos.
 
 Detalhamento e critérios de aceite em [visão do produto](visao-produto.md#8-referência-de-personalidade-e-parceria--pedido-explícito). Registrar a preferência não executa importação de chats.
+
+
+## Prioridade e registros transversais — 28/10/2026
+
+Airton confirmou que quer iniciar pelo MOAH para apoiar sua entrada como Tech Lead e pediu registrar estas decisões.
+
+- Aplicar o padrão do inglês em todas as áreas: o especialista guarda o histórico detalhado e reporta resumo com referências ao diretor.
+- Registrar o que foi feito, calls com participação confirmada, decisões, responsabilidades e próximos passos.
+- Não confundir presença em reunião com evento da agenda; entrada manual é válida, identificada como relato.
+- Primeira experiência: início do dia, pendências e retomada; memória de trabalho e fechamento do dia; depois primeiro especialista com bot de review/US.
+- Construir software próprio sobre modelo substituível. Não iniciar treinamento de modelo do zero.
+- Qwen3.5-9B e Qwen3-Coder foram sugestões de avaliação, não escolhas aprovadas ou benchmarks.
+- Serviço e persistência continuam como fundação, agenda funciona sem IA. Voz/música e outros agentes não bloqueiam a primeira entrega.
+
+A sequência é uma orientação de produto, não autorização para executar integrações corporativas reais. A prioridade inicial de agenda é ampliada com memória de trabalho e continuidade profissional. Ver [visão](visao-produto.md) e [roadmap](roadmap.md).
