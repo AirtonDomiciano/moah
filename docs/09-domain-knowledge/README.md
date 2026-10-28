@@ -7,7 +7,7 @@ O domínio aqui é assistência pessoal e coordenação de trabalho, não docume
 - **Diretor:** interlocutor que coordena, acompanha e resume.
 - **CTO de área:** coordena contexto de uma empresa.
 - **Especialista:** executa e mantém histórico detalhado.
-- **Registro:** fato observado ou relato identificado, com origem/data/domínio.
+- **Registro:** fato observado ou relato identificado, com origem/data/domínio. A CLI do prompt 00 persiste atividade, reunião relatada e checkpoint com esses campos.
 - **Reunião:** evento agendado não equivale a participação confirmada.
 - **Pendência:** ação com estado; prazo e responsável só quando conhecidos.
 - **Checkpoint:** ponto de parada e próximo passo.

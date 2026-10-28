@@ -1,6 +1,6 @@
 # ADR 0001 — Núcleo em Node.js com TypeScript e primeira entrega CLI
 
-Data: 28/10/2026. Estado: aceita como direção de desenvolvimento; não implementada.
+Data: 28/10/2026. Estado: aceita. O recorte da CLI foi implementado no prompt 00; ver [ADR 0003](0003-persistencia-sqlite-cli.md). Os módulos 01 e 05 não estão concluídos.
 
 ## Contexto e origem
 
@@ -33,4 +33,4 @@ Launcher e especialistas em Python ou outras linguagens podem permanecer nos seu
 
 ## Validação
 
-Direção registrada por pedido do usuário. Nenhum código executado por esta ADR. Aceite técnico, comandos e testes estão no prompt 00; preencher relatório somente após execução.
+Direção registrada por pedido do usuário. A execução do prompt 00, em 28/10/2026, implementou o recorte da CLI e registrou versão, driver e testes na ADR 0003 e no relatório de execução. Esta ADR não passa a declarar o serviço contínuo nem o módulo de memória como prontos.

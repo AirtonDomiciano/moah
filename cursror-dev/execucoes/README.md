@@ -1,6 +1,10 @@
 # Histórico de execução dos prompts
 
-Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt não significa executá-lo. Neste momento não há execução do prompt 00 registrada.
+Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt não significa executá-lo.
+
+| Relatório | Prompt | Estado |
+| --- | --- | --- |
+| [2026-10-28-001-prompt-00](2026-10-28-001-prompt-00.md) | 00, versão 1.0 | Concluída no recorte da CLI |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

@@ -67,3 +67,9 @@ Essa prioridade resolve a escolha antes aberta entre review e inglês como prime
 Validar entrada manual → confirmação → persistência → resumo diário → retomada após reinício. Distinguir reunião agendada, presença confirmada e conteúdo disponível. Não registrar participação ou decisões por inferência a partir do título da call.
 
 Software próprio sobre modelo existente e substituível é o plano inicial. Não treinar do zero; candidatos de modelo ainda dependem de avaliação real. O objetivo de todos os agentes é produzir registros e resumos rastreáveis, consumidos seletivamente pelo MOAH.
+
+## Evidência do prompt 00 — 28/10/2026
+
+A CLI de memória de trabalho foi implementada e testada. Isso cobre o recorte explícito de registro manual, persistência, resumo do dia e retomada por checkpoint. Não marca a fundação contínua (módulo 01) nem a memória compartilhada (módulo 05) como concluídas: não há serviço, agenda, conectores nem edição de memória.
+
+Evidência: [relatório](../cursror-dev/execucoes/2026-10-28-001-prompt-00.md) e [ADR 0003](02-adrs/0003-persistencia-sqlite-cli.md). Comandos de verificação e a falha corrigida de criação concorrente estão nesse relatório. Agenda, início do dia com fontes externas e o bot de review continuam planejados.

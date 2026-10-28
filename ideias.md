@@ -1,6 +1,6 @@
 # Ideias e backlog
 
-Atualizado em 28/10/2026. Todos os módulos estão planejados.
+Atualizado em 28/10/2026. Os módulos 01 a 10 estão planejados. O prompt 00 entregou só o recorte da CLI de memória de trabalho.
 
 | ID | Responsabilidade | Prioridade / destino |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ Origem: pedido explícito de Airton para começar pelo MOAH por sua transição 
 
 | ID | Responsabilidade | Módulo / próximo passo |
 | --- | --- | --- |
-| MOAH-026 | Registro transversal de atividades, reuniões, decisões e ações por agente | 05–07; esquema com origem, data, domínio e referências |
+| MOAH-026 | Registro transversal de atividades, reuniões, decisões e ações por agente | Recorte manual na CLI do prompt 00, testado; memória compartilhada e correção continuam no módulo 05 |
 | MOAH-027 | Primeiro ciclo útil de Tech Lead: início do dia e fechamento com checkpoint | 01, 03–07; memória e agenda antes de ampliar agentes |
 
 Refinamentos: MOAH-015 passa a valer para todos os domínios; MOAH-016 usa checkpoints e fontes atuais; MOAH-019 é o primeiro especialista profissional proposto após a base.
@@ -86,8 +86,8 @@ MOAH é o software próprio; modelos/runtimes são substituíveis. Avaliar candi
 ## MOAH-028 — Base de engenharia e trilha de desenvolvimento
 
 - Data: 28/10/2026. Origem: pedido de Airton por prompts/decisões organizados e descrição da estrutura imex-arch.
-- Estado: documentação criada; prompt 00 preparado e não executado.
+- Estado: prompt 00 executado em 28/10/2026. A CLI de memória de trabalho está implementada e testada. Módulos 01 e 05 seguem planejados. Relatório: [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md).
 - Núcleo: Node.js/TypeScript conforme ADR 0001. Primeira entrega: CLI com memória de trabalho persistente, recorte de 01/05.
 - Estrutura: docs/_catalog e categorias 00–09, ADRs em docs/02-adrs; prompts em cursror-dev e relatórios em execucoes.
-- Próximo passo: executar somente cursror-dev/00-bootstrap-typescript.md e registrar resultado real.
+- Próximo passo: revisar o diff da CLI e decidir o commit. Serviço contínuo e agenda ficam para os módulos seguintes, um por vez.
 - Agentes reunidos por Airton na pasta Agents: cadastrar individualmente caminho/capacidade, sem iniciar todos.

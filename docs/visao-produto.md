@@ -106,7 +106,7 @@ O projeto também pode ser usado como portfólio de engenharia e evolução prof
 
 ## 7. Estado e limites atuais
 
-Esta atualização entrega documentação. Não instala serviço, não ativa microfone, não conecta contas, não agenda aulas e não executa bots. Os diálogos são ilustrativos. Nomes de US, horários e medições nos exemplos são fictícios.
+A visão de conversa continua documental. A CLI do prompt 00 registra memória de trabalho local; não instala serviço, não ativa microfone, não conecta contas, não agenda aulas e não executa bots. Os diálogos são ilustrativos. Nomes de US, horários e medições nos exemplos são fictícios.
 
 Ambiente informado: Debian 13, RTX 5070 de 12 GB, raiz /media/projetos, Cursor em /usr/bin/cursor. A abertura com cursor -n foi validada pelo usuário. CPU e RAM total não foram informadas. Uma RTX 5080 de 16 GB foi mencionada como possibilidade futura, não como requisito ou compra definida.
 

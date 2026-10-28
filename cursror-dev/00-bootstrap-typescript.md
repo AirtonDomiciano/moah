@@ -1,6 +1,6 @@
 # Prompt 00 — Fundação TypeScript e primeiro registro de trabalho
 
-Versão: 1.0. Data: 28/10/2026. Estado: preparado, não executado. Origem: pedido de Airton para iniciar o MOAH em JS/TypeScript e manter prompts e decisões organizados.
+Versão: 1.0. Data: 28/10/2026. Estado: executado em 28/10/2026. Relatório: [execucoes/2026-10-28-001-prompt-00.md](execucoes/2026-10-28-001-prompt-00.md). Origem: pedido de Airton para iniciar o MOAH em JS/TypeScript e manter prompts e decisões organizados.
 
 Este é o ponto de entrada atual. Entrega um recorte dos módulos 01 e 05; não declara os módulos completos. Execute somente este prompt.
 

@@ -1,6 +1,6 @@
 # Métricas — evolução com evidência
 
-Nenhuma medição real do MOAH foi realizada por esta documentação. Definir baseline antes de estabelecer metas.
+Não há baseline de latência, RAM ou cobertura percentual. A primeira verificação de engenharia da CLI, em 28/10/2026, está no [relatório do prompt 00](../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md): `npm run typecheck`, `npm run build` e 19 testes com 0 falhas na execução final.
 
 | Área | Medição proposta | Condição |
 | --- | --- | --- |

@@ -91,6 +91,10 @@ Airton pediu início no ecossistema JavaScript, citando a pós em JS, e solicito
 
 Prompt 00 preparado para CLI e memória de trabalho, sem inferência. Entrega parcial de 01/05 antes do serviço completo. Usar cursror-dev para prompts, cursror-dev/execucoes para execuções verificadas e docs/02-adrs para ADRs. Nenhum prompt de implementação foi executado nesta atualização.
 
+## Execução do prompt 00 — 28/10/2026
+
+O prompt 00, versão 1.0, foi executado depois da preparação acima. A CLI de memória de trabalho ficou implementada e testada. Os módulos 01 e 05 não foram concluídos. Relatório: [2026-10-28-001](../cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Decisão de persistência: [ADR 0003](02-adrs/0003-persistencia-sqlite-cli.md).
+
 Airton informou que reuniu projetos de agentes na pasta Agents. Cadastrar caminho e capacidades; não presumir localização absoluta ou que todos estejam implementados/disponíveis.
 
 ## Organização inspirada no imex-arch — 28/10/2026

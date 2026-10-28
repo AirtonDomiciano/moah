@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Estado local do runtime. Nunca versionar memória real.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite.lock
+*.db
+*.db-wal
+*.db-shm
+
+logs/
+*.log
+.env
+.env.*
+!.env.example
+
+coverage/
+.DS_Store

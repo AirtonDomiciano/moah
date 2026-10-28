@@ -1,6 +1,6 @@
 # Lições aprendidas
 
-Ainda não há incidente de implementação do MOAH validado para registrar aqui. Esta pasta não deve transformar hipóteses ou exemplos em ocorrências reais.
+A primeira lição com evidência de teste está em [criação concorrente do SQLite](2026-10-28-criacao-concorrente-sqlite.md). Esta pasta não deve transformar hipóteses ou exemplos em ocorrências reais.
 
 Para cada aprendizado comprovado, criar documento com:
 - data, contexto e versão;

@@ -52,4 +52,4 @@ Rotinas proativas usam convites com estado, adiamento e cancelamento persistente
 
 ## Primeira fatia executável
 
-A [ADR 0001](02-adrs/0001-node-typescript-e-entrega-inicial.md) define CLI → casos de uso → domínio → persistência, iniciando por registros e checkpoints sem IA. O [prompt 00](../cursror-dev/00-bootstrap-typescript.md) especifica aceitação. Serviço contínuo e conectores entram depois; a CLI deve ser reutilizada, não descartada. SQLite é proposta preferida sujeita à compatibilidade verificada pelo implementador.
+A [ADR 0001](02-adrs/0001-node-typescript-e-entrega-inicial.md) define CLI → casos de uso → domínio → persistência, iniciando por registros e checkpoints sem IA. O [prompt 00](../cursror-dev/00-bootstrap-typescript.md) foi executado nesse recorte. A [ADR 0003](02-adrs/0003-persistencia-sqlite-cli.md) registra Node 22 e `node:sqlite` depois da verificação no ambiente. Serviço contínuo e conectores entram depois; a CLI deve ser reutilizada, não descartada.

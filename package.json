@@ -1,0 +1,23 @@
+{
+  "name": "moah",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CLI local de memória de trabalho do MOAH, sem modelo de IA.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.0 <23"
+  },
+  "bin": {
+    "moah": "./dist/src/cli/main.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "npm run build && node --disable-warning=ExperimentalWarning --test dist/tests/*.test.js",
+    "moah": "node --disable-warning=ExperimentalWarning dist/src/cli/main.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.3"
+  }
+}
