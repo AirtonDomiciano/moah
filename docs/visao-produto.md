@@ -111,3 +111,25 @@ Esta atualização entrega documentação. Não instala serviço, não ativa mic
 Ambiente informado: Debian 13, RTX 5070 de 12 GB, raiz /media/projetos, Cursor em /usr/bin/cursor. A abertura com cursor -n foi validada pelo usuário. CPU e RAM total não foram informadas. Uma RTX 5080 de 16 GB foi mencionada como possibilidade futura, não como requisito ou compra definida.
 
 Ver [arquitetura](arquitetura.md), [processos e exemplos](processos-e-exemplos.md), [roadmap](roadmap.md) e [backlog](../ideias.md).
+
+
+## 8. Referência de personalidade e parceria — pedido explícito
+
+Em 28/10/2026, Airton explicou: “Pra ser bem sincero quero meio que vc seja o MOAH.” Após esclarecer a intenção, confirmou que deseja levar a experiência desta parceria com o assistente para o computador.
+
+### Experiência desejada
+- Conversa natural, informal e direta, adaptada ao jeito de Airton, sem respostas engessadas.
+- Continuidade sobre projetos, decisões, preferências e pendências por memória autorizada.
+- Ajuda para pensar, questionar ideias e avaliar alternativas, além de executar comandos.
+- Iniciativa conforme preferências e autoridade concedida, com acompanhamento até resultado ou bloqueio claro.
+- MOAH como interlocutor principal: especialistas trabalham nos bastidores e entregam resumos, preservando detalhes e evidências.
+- Personalidade consistente entre áreas, sem misturar informações de Imex, Aluai e vida pessoal.
+- Honestidade sobre o que sabe, o que consultou e o que conseguiu executar, sem concordar automaticamente nem prometer capacidades inexistentes.
+
+### Continuidade a construir
+Esta conversa é referência de comportamento e relação de trabalho, não um runtime que se transfere automaticamente para o Linux. O MOAH será implementado com modelo de IA, memória própria e integrações. O contexto escolhido por Airton pode ser exportado/importado por mecanismos explícitos; não presumir acesso integral a chats anteriores ou identidade persistente entre modelos.
+
+O modelo e o provedor permanecem decisões técnicas abertas. A experiência não depende de fingir que modelos ou sessões distintos são literalmente a mesma instância. O objetivo é preservar o modo de colaboração e a continuidade verificável.
+
+### Aceite futuro
+Airton deve conseguir ajustar tom e iniciativa; pedir “o que decidimos?” e receber referências; corrigir uma preferência; retomar uma tarefa; receber discordância fundamentada quando apropriado; e acompanhar trabalhos de especialistas por um único interlocutor. Mudanças de modelo não podem apagar a memória persistente nem alterar silenciosamente permissões.
