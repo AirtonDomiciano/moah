@@ -133,3 +133,36 @@ O modelo e o provedor permanecem decisões técnicas abertas. A experiência nã
 
 ### Aceite futuro
 Airton deve conseguir ajustar tom e iniciativa; pedir “o que decidimos?” e receber referências; corrigir uma preferência; retomar uma tarefa; receber discordância fundamentada quando apropriado; e acompanhar trabalhos de especialistas por um único interlocutor. Mudanças de modelo não podem apagar a memória persistente nem alterar silenciosamente permissões.
+
+
+## 9. Prioridade de início: apoiar Airton como Tech Lead
+
+Pedido de Airton em 28/10/2026: começar pelo MOAH porque precisa dele na transição para Tech Lead. A primeira versão útil deve responder: “o que tenho hoje, o que está pendente e onde paramos?”, usando registros reais e fontes autorizadas.
+
+### Registro como padrão em todas as áreas
+
+Aplicar a mesma lógica do agente de inglês a todos os agentes: executar, registrar o histórico útil no domínio responsável e entregar resumo ao MOAH. Registrar atividades, reuniões, decisões, responsáveis, prazos explícitos, bloqueios e próximos passos, com data, origem e referências. O histórico fica fora do contexto ativo do modelo; recuperar somente o necessário.
+
+Ter uma call na agenda não comprova participação. Distinguir evento agendado, presença confirmada, notas fornecidas e conteúdo obtido por integração. Não presumir gravação, transcrição ou observação contínua da máquina.
+
+### Primeiro ciclo de valor
+
+1. Memória de trabalho por projeto: atividades, decisões, bloqueios e próximos passos.
+2. Agenda e início do dia: calls e pendências, indicando atualização e indisponibilidade de fontes.
+3. Fechamento do dia: consolidar o que foi feito e deixar um checkpoint de retomada.
+4. Primeiro especialista de trabalho: integrar o bot de review ao fluxo de uma US, após levantar sua interface.
+
+Exemplo de entrada manual enquanto integrações não existirem:
+> “MOAH, participei da call do Financeiro. Decidimos X, eu fiquei responsável por Y e preciso entregar até sexta.”
+
+O MOAH confirma o entendimento, resolve datas relativas usando data/fuso da interação, esclarece ambiguidades materiais e registra fatos como relato do usuário. Isso não autoriza alterar a agenda nem publicar em ferramentas externas.
+
+Exemplos de consulta: “o que fizemos hoje?”, “qual call participei?”, “o que ficou decidido?” e “onde paramos?”. As respostas devem separar fatos, relatos, pendências e lacunas.
+
+### Software próprio, modelo substituível
+
+Construir a experiência MOAH sobre um modelo existente, com personalidade, memória, voz, agentes e ferramentas próprios. Treinar do zero não é o plano inicial; treinamento adicional só será avaliado por necessidade demonstrada. Ollama e llama.cpp são opções de motor, não requisitos de identidade.
+
+Qwen3.5-9B foi sugerido como candidato de teste e Qwen3-Coder como candidato para código; não foram escolhidos definitivamente nem validados na máquina. A intenção local permanece, com seleção após medir qualidade, latência e recursos.
+
+Serviço, persistência e agenda determinística formam a fundação. Implementar um módulo por vez. Voz, música e expansão da equipe vêm depois da base de continuidade profissional; inglês permanece na visão, com detalhes no especialista.
