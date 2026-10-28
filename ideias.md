@@ -55,3 +55,14 @@ Origem de todos os itens: pedidos explícitos de Airton na conversa de definiç�
 Evolução de MOAH-006: hierarquia CEO/Diretor/CTOs/especialistas detalhada. Evolução de MOAH-002: hardware agora conhecido, RTX 5070 de 12 GB; controlar contexto e simultaneidade em vez de presumir que agentes separados reduzem VRAM.
 
 Referências: [visão](docs/visao-produto.md), [processos](docs/processos-e-exemplos.md), [contratos](docs/contratos-agentes.md), [roadmap](docs/roadmap.md) e issue #2. A prioridade inicial de serviço e agenda permanece; a ordem dos fluxos avançados ainda será escolhida.
+
+
+## MOAH-025 — Parceria como referência de personalidade
+
+- **Data:** 28/10/2026.
+- **Origem:** pedido explícito de Airton: “quero meio que vc seja o MOAH”, confirmado após esclarecimento.
+- **Estado:** planejado.
+- **Responsabilidade:** módulos 05, 06, 08 e 09; memória, interlocução e preferências.
+- **Objetivo:** levar o modo de colaboração desta conversa ao Linux: naturalidade, continuidade, iniciativa configurada, capacidade de questionar e acompanhamento de tarefas.
+- **Próximos passos:** definir perfil de comportamento editável; selecionar contexto autorizado para importação; validar continuidade e personalidade sem confundir modelo, sessão e memória.
+- **Referência:** [visão do produto](docs/visao-produto.md).
