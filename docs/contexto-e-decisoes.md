@@ -60,3 +60,12 @@ Debian 13; RTX 5070 com 12 GB; raiz /media/projetos; Cursor em /usr/bin/cursor. 
 Contratos de relatório, estados de tarefa, referências de memória, fila de inferência e critérios de validação são propostas documentadas para implementar os pedidos. Não há stack definitiva, integração pronta ou benchmark. A rotina de inglês não foi agendada; horários de conversa são exemplos.
 
 Documentação detalhada: [visão](visao-produto.md), [contratos](contratos-agentes.md), [processos](processos-e-exemplos.md) e [roadmap](roadmap.md). Esta atualização complementa o registro anterior; não é uma exportação integral de chats.
+
+
+## Referência de parceria — 28/10/2026
+
+Pedido explícito de Airton: “Pra ser bem sincero quero meio que vc seja o MOAH.” Confirmação posterior: quer levar nosso modo de conversar e colaborar ao PC, com continuidade e execução por agentes.
+
+Decisão de produto: usar esta parceria como referência de tom, personalidade e comportamento; MOAH como interlocutor principal, capaz de sugerir, questionar e acompanhar tarefas. A continuidade será construída com memória e integrações autorizadas, sem presumir transferência automática da conversa ou acesso a todo o histórico. Modelo/provedor ainda não escolhidos.
+
+Detalhamento e critérios de aceite em [visão do produto](visao-produto.md#8-referência-de-personalidade-e-parceria--pedido-explícito). Registrar a preferência não executa importação de chats.
