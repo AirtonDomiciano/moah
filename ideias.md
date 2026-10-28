@@ -1,6 +1,6 @@
 # Ideias e backlog
 
-Atualizado em 27/10/2026. Todos os módulos estão planejados.
+Atualizado em 28/10/2026. Todos os módulos estão planejados.
 
 | ID | Responsabilidade | Prioridade / destino |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ Atualizado em 27/10/2026. Todos os módulos estão planejados.
 
 ## Decisões abertas
 
-- Qual GPU, VRAM e limite de uso durante jogos?
+- RTX 5070 de 12 GB informada; qual CPU, RAM total e limite de uso durante jogos?
 - Qual modelo/runtime oferece qualidade suficiente na máquina?
 - Qual conta e calendário serão usados? Não registrar endereço privado aqui.
 - Qual canal deve receber lembretes e qual antecedência? Sugestão inicial configurável: 15 e 5 minutos.
@@ -32,3 +32,26 @@ Atualizado em 27/10/2026. Todos os módulos estão planejados.
 ## Regra de atualização
 
 Para cada nova ideia, acrescentar ID, data, origem, estado, módulo responsável e próximos passos. Atualizar itens existentes quando a ideia refinar uma responsabilidade já documentada. Não marcar um recurso como pronto só porque seu prompt foi escrito.
+
+
+## Registro de 28/10/2026
+
+Origem de todos os itens: pedidos explícitos de Airton na conversa de definição do MOAH. Estado: planejado. Propostas de implementação detalhadas nos documentos vinculados; nenhuma tarefa foi executada por registrar a ideia.
+
+| ID | Responsabilidade | Módulo / próximo passo |
+| --- | --- | --- |
+| MOAH-014 | Launcher separado, busca no SSD e grupos no Cursor | Extensão de ferramentas; catálogo e contrato da issue #1 |
+| MOAH-015 | Especialistas guardam detalhes; MOAH recebe resumo e referências | 05–06; contrato em docs/contratos-agentes.md |
+| MOAH-016 | Início do dia: saudação, urgências, calls e ponto de retomada | 04–07–09; definir fontes e evento de saudação |
+| MOAH-017 | Convite proativo ao inglês, adiamento e cancelamento | 04–08; persistir estados e preferências |
+| MOAH-018 | Histórico detalhado de estudo e resumo de evolução | 05–08; verificar interface real do PRAN |
+| MOAH-019 | Review de US, bot existente e publicação no Azure | 06–07 + extensão; mapear bot e autorização |
+| MOAH-020 | Agente de diagnóstico e consumo do PC/MOAH | 02–09 + extensão; coletor leve e sugestões |
+| MOAH-021 | Controle de música, player, playlists e volume | Extensão; identificar serviço e adaptador |
+| MOAH-022 | Personalidade, iniciativa e autonomia configuráveis | 05–06–09; preferências explícitas |
+| MOAH-023 | Retomada, deduplicação e relatórios de tarefas longas | 01–06; persistir checkpoints e efeitos |
+| MOAH-024 | Check-in opcional em inglês no cotidiano | 08; idioma e correções ajustáveis |
+
+Evolução de MOAH-006: hierarquia CEO/Diretor/CTOs/especialistas detalhada. Evolução de MOAH-002: hardware agora conhecido, RTX 5070 de 12 GB; controlar contexto e simultaneidade em vez de presumir que agentes separados reduzem VRAM.
+
+Referências: [visão](docs/visao-produto.md), [processos](docs/processos-e-exemplos.md), [contratos](docs/contratos-agentes.md), [roadmap](docs/roadmap.md) e issue #2. A prioridade inicial de serviço e agenda permanece; a ordem dos fluxos avançados ainda será escolhida.

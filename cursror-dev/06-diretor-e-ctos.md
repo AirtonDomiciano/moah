@@ -21,3 +21,7 @@ Tarefa Imex não consulta memória Aluai; falha do auxiliar chega ao diretor com
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+Seguir ../docs/contratos-agentes.md: Airton CEO, MOAH Diretor Geral, CTOs IMEX/ALUAI e especialistas pessoais ou empresariais. Saída contém status, resumo, bloqueios, próximos passos e referências de evidência/detalhe. Permitir aprofundamento seletivo. Persistir checkpoints, efeitos e chaves de deduplicação; limitar ciclos de delegação e tentativas. Não executar uma inferência por cargo se ferramenta direta resolver. Validar relatório do inglês e fluxo sintético de review com publicação incerta sem duplicação, sem alegar integração real.

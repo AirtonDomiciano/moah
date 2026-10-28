@@ -26,3 +26,9 @@ Ler AGENTS.md e docs/ antes de começar. Inspecionar o código e o ambiente. Tra
 Antes de mudanças, informar abordagem e arquivos afetados. Implementar, validar comportamentos essenciais, atualizar documentação com evidência e limitações e entregar resumo com instruções de execução. Não publicar alterações em outros projetos ou executar ações externas sem autorização específica.
 
 Nenhum módulo está implementado atualmente.
+
+## Especificações ampliadas de 28/10/2026
+
+Antes do módulo afetado, consultar [visão](../docs/visao-produto.md), [contratos](../docs/contratos-agentes.md), [processos](../docs/processos-e-exemplos.md) e [roadmap](../docs/roadmap.md).
+
+Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Launcher, bot de review/Azure, diagnóstico e mídia são extensões: seus adaptadores reais ainda devem ser levantados. Não tratá-los como entregas obrigatórias de um único módulo. Preservar a sequência de fundação/agenda; escolher uma integração por vez.

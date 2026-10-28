@@ -21,3 +21,7 @@ Informar backend e disponibilidade sem inventar aceleração; serviço e agenda 
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+Hardware informado: RTX 5070 de 12 GB no Debian 13. Confirmar capacidade observada no ambiente; CPU/RAM ainda não informadas. Implementar orçamento de contexto e fila compartilhada entre papéis lógicos. Vários agentes não exigem modelos residentes diferentes. Coleta de métricas e agenda não devem depender da GPU. Incluir diagnóstico do próprio MOAH e descarregamento conforme política configurada; detalhamento em ../docs/contratos-agentes.md e ../docs/roadmap.md.

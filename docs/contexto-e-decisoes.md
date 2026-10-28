@@ -33,6 +33,30 @@ Usar a GPU sob demanda; um serviço de agenda não precisa de inferência contí
 
 ## Pendências materiais
 
-GPU e VRAM disponíveis, RAM, modelo local adequado, método de entrega de alertas, acesso remoto, agenda principal, horários silenciosos, autorização por ferramenta e interfaces reais dos agentes existentes.
+RAM e CPU disponíveis, modelo local adequado, método de entrega de alertas, acesso remoto, agenda principal, horários silenciosos, autorização por ferramenta e interfaces reais dos agentes existentes.
 
 O fuso inicial proposto é America/Sao_Paulo, configurável. Nunca deduzir uma reunião recorrente das 8h a partir do exemplo mencionado.
+
+
+## Atualização de 28/10/2026 — pedidos explícitos
+
+- Airton quer um assistente pessoal semelhante à Alexa/Gemini com responsabilidade por tarefas na máquina, incluindo conversa natural e voz.
+- Hierarquia: Airton CEO → MOAH Diretor Geral → CTO IMEX / CTO ALUAI → especialistas. Especialistas pessoais podem responder diretamente ao diretor.
+- Todos os especialistas devem manter o detalhe e enviar resumos ao MOAH. Inglês deve registrar o estudo e a evolução e prestar contas por resumo.
+- Início de sessão: cumprimento opcional e resposta a “temos alguma urgência?”, “tem alguma call?” e “paramos aonde?”.
+- Inglês no cotidiano e convite proativo, com exemplo de 16h30 e adiamento de 15 minutos após “agora não”.
+- Trabalho completo: executar bot de review de uma US e publicar o resultado no Azure quando solicitado.
+- Gerenciador de projetos separado do MOAH, integrado por ações reutilizáveis.
+- Agente de diagnóstico do PC para consumo e sugestões, incluindo recursos do próprio MOAH.
+- Controle de música, player e volume por linguagem natural.
+- Personalização ao jeito de Airton e possível uso como portfólio profissional.
+
+### Ambiente confirmado pelo usuário
+
+Debian 13; RTX 5070 com 12 GB; raiz /media/projetos; Cursor em /usr/bin/cursor. Abertura com cursor -n validada pelo usuário. CPU e RAM total permanecem desconhecidas. RTX 5080 de 16 GB é uma possibilidade futura mencionada, não decisão de aquisição.
+
+### Propostas técnicas e pendências
+
+Contratos de relatório, estados de tarefa, referências de memória, fila de inferência e critérios de validação são propostas documentadas para implementar os pedidos. Não há stack definitiva, integração pronta ou benchmark. A rotina de inglês não foi agendada; horários de conversa são exemplos.
+
+Documentação detalhada: [visão](visao-produto.md), [contratos](contratos-agentes.md), [processos](processos-e-exemplos.md) e [roadmap](roadmap.md). Esta atualização complementa o registro anterior; não é uma exportação integral de chats.

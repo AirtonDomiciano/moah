@@ -21,3 +21,7 @@ Com mocks, trocar sintetizador sem modificar detector; parar captura sob comando
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+O especialista de inglês guarda histórico de objetivos, exercícios, vocabulário, dificuldades, correções e evolução; envia ao MOAH um resumo e referências conforme ../docs/contratos-agentes.md. Não transferir toda a aula ao contexto do diretor. Integrar convites de rotina por contrato com módulo 04, sem reimplementar relógio no agente. Permitir check-in opcional em inglês, troca imediata para português e preferências de correção. Validar sessão e relatório com dados sintéticos; não pressupor interface do PRAN.

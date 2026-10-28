@@ -21,3 +21,7 @@ Resumo mostra origem e atualização; conflito de agenda fica visível; tarefa s
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+Suportar “temos alguma urgência?”, “tem alguma call?” e “paramos aonde?” com critérios explícitos, atualidade das fontes e checkpoints. Saudação opcional sem repetir a cada desbloqueio. Review de US com publicação no Azure é extensão descrita em ../docs/processos-e-exemplos.md: primeiro mapear bot, vínculos e permissões. Não confundir este planejamento com autorização para publicar resultados reais.

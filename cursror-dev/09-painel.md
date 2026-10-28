@@ -21,3 +21,7 @@ Painel diferencia conector desatualizado de serviço ativo; modo jogo reflete es
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+Mostrar resumos por agente, fontes e data, tarefas aguardando usuário, bloqueios e acesso autorizado ao detalhe. Controles para idioma, saudação, iniciativa, rotinas e adiamentos. Preparar integração de métricas de CPU/RAM/GPU/VRAM/disco com horários e estado do coletor, sem números simulados apresentados como reais. Ações de encerramento de aplicações precisam de autorização. Ver ../docs/processos-e-exemplos.md.

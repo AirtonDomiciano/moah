@@ -21,3 +21,7 @@ Relógio controlado nos testes prova aviso no momento certo, invalidação de al
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+Preparar rotinas proativas com estados de convite, resposta, adiamento, aceite e cancelamento. Cenário: convite de inglês às 16h30, “agora não” adia 15 minutos quando essa preferência estiver habilitada. Persistir novo horário e invalidar o anterior; “hoje não” cancela apenas o dia. Não iniciar aula sem aceite. Limitar tentativas, respeitar silêncio e tratar atraso após suspensão. Os horários são fixtures, não agenda real. Validar relógio e reinício sem duplicar convites. Ver ../docs/processos-e-exemplos.md.

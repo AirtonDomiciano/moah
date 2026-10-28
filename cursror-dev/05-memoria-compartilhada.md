@@ -21,3 +21,7 @@ Recuperar decisão com origem; corrigir sem manter versão antiga como atual; is
 ### Entrega
 
 Implementar apenas após inspecionar o ambiente e o código existente. Adicionar testes de comportamento apropriados, documentação de configuração e execução, exemplos sem segredos e registro dos resultados reais. Informar dependências faltantes e decisões propostas. Não marcar integrações simuladas como prontas. Não avançar automaticamente para o próximo módulo.
+
+### Refinamento de 28/10/2026
+
+Implementar memória executiva, por área, por especialista e estado operacional conforme ../docs/contratos-agentes.md. Especialista mantém detalhes; diretor recebe resumo com referências e atualidade. Suportar consulta seletiva, atualização e invalidação de resumo antigo. Sessão de inglês registra estudo útil, não exige gravação de áudio. Checkpoints sustentam “paramos aonde?”. Validar correção e remoção de dados derivados conforme política de retenção.
