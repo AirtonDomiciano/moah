@@ -4,7 +4,7 @@ Estado: planejado. Dependências em [README](README.md).
 
 ## Prompt para o Cursor
 
-Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/contexto-e-decisoes.md, docs/arquitetura.md e cursror-dev/README.md. Execute somente este módulo.
+Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/produto/historico.md, docs/arquitetura/visao-geral.md e cursror-dev/README.md. Execute somente este módulo.
 
 ### Objetivo
 
@@ -24,4 +24,4 @@ Implementar apenas após inspecionar o ambiente e o código existente. Adicionar
 
 ### Refinamento de 28/10/2026
 
-Preparar rotinas proativas com estados de convite, resposta, adiamento, aceite e cancelamento. Cenário: convite de inglês às 16h30, “agora não” adia 15 minutos quando essa preferência estiver habilitada. Persistir novo horário e invalidar o anterior; “hoje não” cancela apenas o dia. Não iniciar aula sem aceite. Limitar tentativas, respeitar silêncio e tratar atraso após suspensão. Os horários são fixtures, não agenda real. Validar relógio e reinício sem duplicar convites. Ver ../docs/processos-e-exemplos.md.
+Preparar rotinas proativas com estados de convite, resposta, adiamento, aceite e cancelamento. Cenário: convite de inglês às 16h30, “agora não” adia 15 minutos quando essa preferência estiver habilitada. Persistir novo horário e invalidar o anterior; “hoje não” cancela apenas o dia. Não iniciar aula sem aceite. Limitar tentativas, respeitar silêncio e tratar atraso após suspensão. Os horários são fixtures, não agenda real. Validar relógio e reinício sem duplicar convites. Ver ../docs/produto/exemplos.md.

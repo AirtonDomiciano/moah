@@ -4,7 +4,7 @@ Estado: planejado. Dependências em [README](README.md).
 
 ## Prompt para o Cursor
 
-Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/contexto-e-decisoes.md, docs/arquitetura.md e cursror-dev/README.md. Execute somente este módulo.
+Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/produto/historico.md, docs/arquitetura/visao-geral.md e cursror-dev/README.md. Execute somente este módulo.
 
 ### Objetivo
 
@@ -24,4 +24,4 @@ Implementar apenas após inspecionar o ambiente e o código existente. Adicionar
 
 ### Refinamento de 28/10/2026
 
-Implementar memória executiva, por área, por especialista e estado operacional conforme ../docs/contratos-agentes.md. Especialista mantém detalhes; diretor recebe resumo com referências e atualidade. Suportar consulta seletiva, atualização e invalidação de resumo antigo. Sessão de inglês registra estudo útil, não exige gravação de áudio. Checkpoints sustentam “paramos aonde?”. Validar correção e remoção de dados derivados conforme política de retenção.
+Implementar memória executiva, por área, por especialista e estado operacional conforme ../docs/arquitetura/agentes-e-memoria.md. Especialista mantém detalhes; diretor recebe resumo com referências e atualidade. Suportar consulta seletiva, atualização e invalidação de resumo antigo. Sessão de inglês registra estudo útil, não exige gravação de áudio. Checkpoints sustentam “paramos aonde?”. Validar correção e remoção de dados derivados conforme política de retenção.

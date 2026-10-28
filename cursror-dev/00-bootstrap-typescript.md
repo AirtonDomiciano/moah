@@ -10,7 +10,7 @@ Você está no repositório MOAH de Airton. Implemente a primeira entrega funcio
 
 ### Leitura e inspeção
 
-Leia AGENTS.md, README.md, docs/README.md, docs/_catalog/README.md, docs/05-guardrails/README.md, docs/02-adrs/0001-node-typescript-e-entrega-inicial.md, docs/visao-produto.md, docs/contratos-agentes.md, docs/roadmap.md e cursror-dev/README.md.
+Leia AGENTS.md, README.md, docs/README.md, docs/README.md, docs/desenvolvimento/limites.md, docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md, docs/produto/visao.md, docs/arquitetura/agentes-e-memoria.md, docs/produto/roadmap.md e cursror-dev/README.md.
 
 Inspecione git status, arquivos existentes e versões disponíveis de Node e gerenciador de pacotes. Preserve alterações locais e código existente. Não suponha que /media/projetos seja acessível neste ambiente. Não altere drivers, outros repositórios ou projetos em Agents. Se houver implementação posterior a este prompt, adapte a ela sem sobrescrever trabalho.
 
@@ -28,13 +28,13 @@ Informe abordagem e arquivos afetados e siga implementando. Pergunte apenas sobr
 
 ### Base de conhecimento de engenharia
 
-Respeite a organização docs/_catalog e 00-governance a 09-domain-knowledge. Consulte ADRs, guidelines e guardrails antes de implementar; registre lições e métricas apenas com evidência. Atualize o catálogo quando necessário. Não mova ou duplique os documentos canônicos sem necessidade. A base pública de engenharia não é armazenamento de memória real do MOAH.
+Respeite as quatro áreas: docs/produto, docs/arquitetura, docs/desenvolvimento e docs/operacao. Consulte ADRs, guidelines e guardrails antes de implementar; registre lições e métricas apenas com evidência. Atualize docs/README.md quando necessário. Não mova ou duplique os documentos canônicos sem necessidade. A base pública de engenharia não é armazenamento de memória real do MOAH.
 
 ### Estrutura sugerida
 
 Separar CLI, casos de uso, tipos de domínio e persistência. Sugestão: src/cli, src/application, src/domain, src/infrastructure. Evitar abstrações sem uso. Testes de comportamento em tests.
 
-Manter documentação existente; não renomear cursror-dev. Prompts ficam nela; decisões em docs/02-adrs; relatórios sanitizados de execução em cursror-dev/execucoes. Dados reais de runtime ficam fora do Git.
+Manter documentação existente; não renomear cursror-dev. Prompts ficam nela; decisões em docs/arquitetura/decisoes; relatórios sanitizados de execução em cursror-dev/execucoes. Dados reais de runtime ficam fora do Git.
 
 ### Dados de trabalho
 

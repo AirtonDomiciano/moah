@@ -11,4 +11,4 @@
 - Logs e fixtures sanitizados; injetar diretórios temporários nos testes.
 - Não multiplicar modelos por agente automaticamente; controlar contexto e fila.
 
-Referências: [contratos](../contratos-agentes.md), [arquitetura](../arquitetura.md) e [prompt 00](../../cursror-dev/00-bootstrap-typescript.md). A escolha de bibliotecas deve respeitar a ADR e ser validada no ambiente.
+Referências: [contratos](../arquitetura/agentes-e-memoria.md), [arquitetura](../arquitetura/visao-geral.md) e [prompt 00](../../cursror-dev/00-bootstrap-typescript.md). A escolha de bibliotecas deve respeitar a ADR e ser validada no ambiente.

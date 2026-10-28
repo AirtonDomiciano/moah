@@ -18,4 +18,4 @@ Commits pequenos e descritivos. Registrar branch/commit/PR quando existirem. Nã
 
 Manter uma fonte canônica e links no catálogo. Atualizar prompt/módulo/contrato afetado, sem copiar a mesma regra para todos os arquivos. Dados reais de runtime não pertencem a relatórios públicos.
 
-Procedimento inicial: [playbook](../06-playbooks/README.md). Decisões: [ADRs](../02-adrs/README.md).
+Procedimento inicial: [playbook](procedimentos.md). Decisões: [ADRs](../arquitetura/decisoes/README.md).

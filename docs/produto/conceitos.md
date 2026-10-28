@@ -15,4 +15,4 @@ O domínio aqui é assistência pessoal e coordenação de trabalho, não docume
 - **Rotina:** regra de convite/aviso com estado persistente.
 - **Ferramenta:** capacidade executável com parâmetros e permissões delimitadas.
 
-Fontes canônicas: [visão](../visao-produto.md), [contratos](../contratos-agentes.md) e [exemplos](../processos-e-exemplos.md). Conhecimento privado de negócios deve permanecer em fontes autorizadas separadas.
+Fontes canônicas: [visão](visao.md), [contratos](../arquitetura/agentes-e-memoria.md) e [exemplos](exemplos.md). Conhecimento privado de negócios deve permanecer em fontes autorizadas separadas.

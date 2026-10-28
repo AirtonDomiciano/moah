@@ -18,17 +18,17 @@ MOAH será o agente principal de Airton: organizar compromissos, preservar conte
 
 Uma experiência de conversa semelhante à Alexa/Gemini, com responsabilidade por tarefas e continuidade no computador: Airton como CEO; MOAH como Diretor Geral; CTOs IMEX e ALUAI; especialistas que mantêm detalhes e prestam contas por resumos.
 
-- [Visão do produto e identidade](docs/visao-produto.md).
-- [Contratos de agentes, memória e relatórios](docs/contratos-agentes.md).
-- [Processos e exemplos completos de conversa](docs/processos-e-exemplos.md).
-- [Roadmap e critérios de evolução](docs/roadmap.md).
+- [Visão do produto e identidade](docs/produto/visao.md).
+- [Contratos de agentes, memória e relatórios](docs/arquitetura/agentes-e-memoria.md).
+- [Processos e exemplos completos de conversa](docs/produto/exemplos.md).
+- [Roadmap e critérios de evolução](docs/produto/roadmap.md).
 
 Inclui início do dia, retomada de trabalho, inglês e adiamentos, review/Azure, projetos no Cursor, diagnóstico do PC e música. Hardware informado: Debian 13 e RTX 5070 de 12 GB; CPU/RAM e escolhas de runtime ainda pendentes. Nenhuma dessas integrações está implementada neste repositório.
 
 ## Comece aqui
 
-1. [Contexto e origem das ideias](docs/contexto-e-decisoes.md).
-2. [Arquitetura proposta](docs/arquitetura.md).
+1. [Contexto e origem das ideias](docs/produto/historico.md).
+2. [Arquitetura proposta](docs/arquitetura/visao-geral.md).
 3. [Backlog e perguntas abertas](ideias.md).
 4. [Prompts de desenvolvimento por módulo](cursror-dev/README.md).
 5. [Instruções para contribuidores e agentes](AGENTS.md).
@@ -38,11 +38,11 @@ A pasta `cursror-dev` mantém a grafia solicitada por Airton. Cada módulo cont�
 
 ## Primeiro resultado utilizável
 
-A CLI local registra atividades, reuniões relatadas, decisões, pendências e checkpoints, e consulta esses dados depois que o processo termina. Entrega do [prompt 00](cursror-dev/00-bootstrap-typescript.md); relatório em [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Escolhas de runtime e SQLite: [ADR 0001](docs/02-adrs/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](docs/02-adrs/0003-persistencia-sqlite-cli.md).
+A CLI local registra atividades, reuniões relatadas, decisões, pendências e checkpoints, e consulta esses dados depois que o processo termina. Entrega do [prompt 00](cursror-dev/00-bootstrap-typescript.md); relatório em [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Escolhas de runtime e SQLite: [ADR 0001](docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
 
 Serviço contínuo, calendário, convites e lembretes ficam para as etapas seguintes. Lembretes, quando existirem, devem funcionar mesmo com o modelo descarregado. Esta CLI não inclui modelo de IA. O launcher e os especialistas podem continuar em outras linguagens.
 
-Organização: [prompts](cursror-dev/README.md), [histórico de execuções](cursror-dev/execucoes/README.md) e [decisões arquiteturais](docs/02-adrs/README.md).
+Organização: [prompts](cursror-dev/README.md), [histórico de execuções](cursror-dev/execucoes/README.md) e [decisões arquiteturais](docs/arquitetura/decisoes/README.md).
 
 ## CLI de memória de trabalho
 
@@ -103,6 +103,11 @@ Uma ação com responsável e prazo usa `descricao ;; responsavel=Nome ;; prazo=
 - Em Node 22, `node:sqlite` ainda é experimental na documentação da linha. O aviso é suprimido na CLI.
 - Duas invocações simultâneas esperam um lock de até 5 segundos. Se o banco continuar ocupado, a segunda falha sem substituir o arquivo.
 
-## Base de engenharia
+## Documentação por responsabilidade
 
-A [documentação de engenharia](docs/README.md) segue categorias inspiradas na estrutura fornecida do imex-arch, adaptadas ao MOAH. Começar pelo [catálogo](docs/_catalog/README.md). A memória privada do runtime não pertence ao Git público.
+- [Produto](docs/produto/README.md): visão, exemplos e roadmap.
+- [Arquitetura](docs/arquitetura/README.md): componentes, agentes e decisões.
+- [Desenvolvimento](docs/desenvolvimento/README.md): processo, padrões e limites.
+- [Operação](docs/operacao/README.md): execução, métricas e lições.
+
+Índice em [docs/README.md](docs/README.md). Prompts e execuções continuam em cursror-dev. Memória privada fica fora do Git.

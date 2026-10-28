@@ -30,7 +30,7 @@ Não implementar todos os módulos simultaneamente. Primeiro estabilizar o servi
 
 ## Cenários que devem orientar a validação
 
-Consultar [processos-e-exemplos.md](processos-e-exemplos.md) e [contratos-agentes.md](contratos-agentes.md). Testar falhas e retomadas, não só o caminho feliz:
+Consultar [processos-e-exemplos.md](exemplos.md) e [contratos-agentes.md](../arquitetura/agentes-e-memoria.md). Testar falhas e retomadas, não só o caminho feliz:
 - agenda alterada/cancelada e PC suspenso;
 - modelo indisponível ou VRAM insuficiente;
 - bot ou conector desconectado;
@@ -72,4 +72,4 @@ Software próprio sobre modelo existente e substituível é o plano inicial. Nã
 
 A CLI de memória de trabalho foi implementada e testada. Isso cobre o recorte explícito de registro manual, persistência, resumo do dia e retomada por checkpoint. Não marca a fundação contínua (módulo 01) nem a memória compartilhada (módulo 05) como concluídas: não há serviço, agenda, conectores nem edição de memória.
 
-Evidência: [relatório](../cursror-dev/execucoes/2026-10-28-001-prompt-00.md) e [ADR 0003](02-adrs/0003-persistencia-sqlite-cli.md). Comandos de verificação e a falha corrigida de criação concorrente estão nesse relatório. Agenda, início do dia com fontes externas e o bot de review continuam planejados.
+Evidência: [relatório](../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md) e [ADR 0003](../arquitetura/decisoes/0003-persistencia-sqlite-cli.md). Comandos de verificação e a falha corrigida de criação concorrente estão nesse relatório. Agenda, início do dia com fontes externas e o bot de review continuam planejados.

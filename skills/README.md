@@ -10,4 +10,4 @@ Evoluir os contratos junto com os módulos, mantendo limites explícitos. Tecnol
 
 ## Especificação ampliada
 
-Os contratos foram refinados em 28/10/2026 e continuam sendo documentos do futuro runtime, não skills instaladas. Ver [contratos de agentes e memória](../docs/contratos-agentes.md). Inglês, diagnóstico e mídia são responsabilidades planejadas, sem novos contratos instaláveis ou integrações prontas.
+Os contratos foram refinados em 28/10/2026 e continuam sendo documentos do futuro runtime, não skills instaladas. Ver [contratos de agentes e memória](../docs/arquitetura/agentes-e-memoria.md). Inglês, diagnóstico e mídia são responsabilidades planejadas, sem novos contratos instaláveis ou integrações prontas.

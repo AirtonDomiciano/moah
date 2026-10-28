@@ -16,7 +16,7 @@ Começar com CLI local e memória de trabalho persistente: registros, pendência
 
 O prompt 00 entrega um recorte dos módulos 01 e 05. Depois, retomar serviço contínuo, agenda e demais dependências conforme roadmap. A sequência anterior que exigia concluir 01–04 antes de qualquer memória é refinada por este recorte explícito.
 
-Manter cursror-dev como catálogo de prompts; execucoes como histórico de execuções; docs/02-adrs como ADRs. Nenhuma execução retroativa será inventada.
+Manter cursror-dev como catálogo de prompts; execucoes como histórico de execuções; docs/arquitetura/decisoes como ADRs. Nenhuma execução retroativa será inventada.
 
 ## Alternativas
 

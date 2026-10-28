@@ -7,4 +7,4 @@
 - Causa confirmada: os dois processos criavam `moah.sqlite` ao mesmo tempo. O `busy_timeout` de 5 segundos não chegou a esperar; o erro voltou em dezenas de milissegundos. Com um processo já segurando `BEGIN IMMEDIATE`, o segundo espera o timeout, como verificado num script à parte.
 - Correção: lock exclusivo `moah.sqlite.lock` durante cada operação da CLI, com espera de até 5 segundos e remoção do lock se o processo dono não existe. WAL e `BEGIN IMMEDIATE` continuam no SQLite.
 - Validação: `node --disable-warning=ExperimentalWarning --test dist/tests/*.test.js` em 28/10/2026, 19 testes, 0 falhas.
-- Prevenção: teste de duas invocações paralelas em `tests/cli.acceptance.test.ts`. ADR [0003](../02-adrs/0003-persistencia-sqlite-cli.md).
+- Prevenção: teste de duas invocações paralelas em `tests/cli.acceptance.test.ts`. ADR [0003](../../arquitetura/decisoes/0003-persistencia-sqlite-cli.md).

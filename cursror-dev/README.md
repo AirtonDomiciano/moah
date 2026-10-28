@@ -29,19 +29,19 @@ Nenhum módulo de 01 a 10 está concluído. O prompt 00 entregou a CLI de memór
 
 ## Especificações ampliadas de 28/10/2026
 
-Antes do módulo afetado, consultar [visão](../docs/visao-produto.md), [contratos](../docs/contratos-agentes.md), [processos](../docs/processos-e-exemplos.md) e [roadmap](../docs/roadmap.md).
+Antes do módulo afetado, consultar [visão](../docs/produto/visao.md), [contratos](../docs/arquitetura/agentes-e-memoria.md), [processos](../docs/produto/exemplos.md) e [roadmap](../docs/produto/roadmap.md).
 
 Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Launcher, bot de review/Azure, diagnóstico e mídia são extensões: seus adaptadores reais ainda devem ser levantados. Não tratá-los como entregas obrigatórias de um único módulo. Preservar a sequência de fundação/agenda; escolher uma integração por vez.
 
 ## Comece pelo prompt 00
 
-[00 — Fundação TypeScript e primeiro registro de trabalho](00-bootstrap-typescript.md), versão 1.0: executado em 28/10/2026. Entrega CLI local e memória persistente, antes de voz/modelo. Relatório em [execuções](execucoes/2026-10-28-001-prompt-00.md). Direção em [ADR 0001](../docs/02-adrs/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](../docs/02-adrs/0003-persistencia-sqlite-cli.md).
+[00 — Fundação TypeScript e primeiro registro de trabalho](00-bootstrap-typescript.md), versão 1.0: executado em 28/10/2026. Entrega CLI local e memória persistente, antes de voz/modelo. Relatório em [execuções](execucoes/2026-10-28-001-prompt-00.md). Direção em [ADR 0001](../docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](../docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
 
 ## Organização de prompts e decisões
 
 - Prompts completos e versionados: esta pasta.
 - Relatórios de cada execução: [execucoes](execucoes/README.md).
-- Decisões arquiteturais: [docs/02-adrs](../docs/02-adrs/README.md).
-- Ideias e contexto: ../ideias.md e ../docs/contexto-e-decisoes.md.
+- Decisões arquiteturais: [docs/arquitetura/decisoes](../docs/arquitetura/decisoes/README.md).
+- Ideias e contexto: ../ideias.md e ../docs/produto/historico.md.
 
 Identificar cada prompt por número, versão, data, escopo e estado. Registrar execução real com commit de origem e resultados; não marcar “executado” só porque o arquivo foi publicado. Não renomear esta pasta nem duplicar prompts em outro catálogo.

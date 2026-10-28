@@ -4,7 +4,7 @@ Estado: planejado. Dependências em [README](README.md).
 
 ## Prompt para o Cursor
 
-Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/contexto-e-decisoes.md, docs/arquitetura.md e cursror-dev/README.md. Execute somente este módulo.
+Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/produto/historico.md, docs/arquitetura/visao-geral.md e cursror-dev/README.md. Execute somente este módulo.
 
 ### Objetivo
 
@@ -24,4 +24,4 @@ Implementar apenas após inspecionar o ambiente e o código existente. Adicionar
 
 ### Refinamento de 28/10/2026
 
-Seguir ../docs/contratos-agentes.md: Airton CEO, MOAH Diretor Geral, CTOs IMEX/ALUAI e especialistas pessoais ou empresariais. Saída contém status, resumo, bloqueios, próximos passos e referências de evidência/detalhe. Permitir aprofundamento seletivo. Persistir checkpoints, efeitos e chaves de deduplicação; limitar ciclos de delegação e tentativas. Não executar uma inferência por cargo se ferramenta direta resolver. Validar relatório do inglês e fluxo sintético de review com publicação incerta sem duplicação, sem alegar integração real.
+Seguir ../docs/arquitetura/agentes-e-memoria.md: Airton CEO, MOAH Diretor Geral, CTOs IMEX/ALUAI e especialistas pessoais ou empresariais. Saída contém status, resumo, bloqueios, próximos passos e referências de evidência/detalhe. Permitir aprofundamento seletivo. Persistir checkpoints, efeitos e chaves de deduplicação; limitar ciclos de delegação e tentativas. Não executar uma inferência por cargo se ferramenta direta resolver. Validar relatório do inglês e fluxo sintético de review com publicação incerta sem duplicação, sem alegar integração real.

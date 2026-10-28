@@ -38,7 +38,7 @@ Exemplo:
 
 “Registrar tudo” significa preservar os registros úteis de estudo e trabalho conforme a política escolhida, não gravar áudio e telas indiscriminadamente. O formato e a retenção são configuráveis.
 
-Ver [contrato de agentes e memória](contratos-agentes.md).
+Ver [contrato de agentes e memória](../arquitetura/agentes-e-memoria.md).
 
 ## 4. Capacidades e exemplos
 
@@ -110,7 +110,7 @@ A visão de conversa continua documental. A CLI do prompt 00 registra memória d
 
 Ambiente informado: Debian 13, RTX 5070 de 12 GB, raiz /media/projetos, Cursor em /usr/bin/cursor. A abertura com cursor -n foi validada pelo usuário. CPU e RAM total não foram informadas. Uma RTX 5080 de 16 GB foi mencionada como possibilidade futura, não como requisito ou compra definida.
 
-Ver [arquitetura](arquitetura.md), [processos e exemplos](processos-e-exemplos.md), [roadmap](roadmap.md) e [backlog](../ideias.md).
+Ver [arquitetura](../arquitetura/visao-geral.md), [processos e exemplos](exemplos.md), [roadmap](roadmap.md) e [backlog](../../ideias.md).
 
 
 ## 8. Referência de personalidade e parceria — pedido explícito

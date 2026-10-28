@@ -4,7 +4,7 @@ Estado: planejado. Dependências em [README](README.md).
 
 ## Prompt para o Cursor
 
-Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/contexto-e-decisoes.md, docs/arquitetura.md e cursror-dev/README.md. Execute somente este módulo.
+Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/produto/historico.md, docs/arquitetura/visao-geral.md e cursror-dev/README.md. Execute somente este módulo.
 
 ### Objetivo
 
@@ -24,4 +24,4 @@ Implementar apenas após inspecionar o ambiente e o código existente. Adicionar
 
 ### Refinamento de 28/10/2026
 
-Mostrar resumos por agente, fontes e data, tarefas aguardando usuário, bloqueios e acesso autorizado ao detalhe. Controles para idioma, saudação, iniciativa, rotinas e adiamentos. Preparar integração de métricas de CPU/RAM/GPU/VRAM/disco com horários e estado do coletor, sem números simulados apresentados como reais. Ações de encerramento de aplicações precisam de autorização. Ver ../docs/processos-e-exemplos.md.
+Mostrar resumos por agente, fontes e data, tarefas aguardando usuário, bloqueios e acesso autorizado ao detalhe. Controles para idioma, saudação, iniciativa, rotinas e adiamentos. Preparar integração de métricas de CPU/RAM/GPU/VRAM/disco com horários e estado do coletor, sem números simulados apresentados como reais. Ações de encerramento de aplicações precisam de autorização. Ver ../docs/produto/exemplos.md.

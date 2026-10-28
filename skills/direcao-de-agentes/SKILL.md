@@ -11,8 +11,8 @@ Confirmar objetivo, empresa e permissões da tarefa. Selecionar agente por respo
 
 ## Referências
 
-Consultar ../../docs/arquitetura.md e ../../cursror-dev/README.md para dependências e critérios de implementação.
+Consultar ../../docs/arquitetura/visao-geral.md e ../../cursror-dev/README.md para dependências e critérios de implementação.
 
 ## Refinamento do contrato — 28/10/2026
 
-Airton é CEO; MOAH é Diretor Geral; CTOs coordenam contextos IMEX/ALUAI; especialistas pessoais podem responder diretamente ao MOAH. O especialista preserva detalhes e entrega status, resumo, bloqueios, próximos passos e referências. Consultar detalhe sob demanda, sem importar todo o histórico. Impor limites de delegação e tentativas; persistir checkpoints e efeitos externos. Consultar [contrato detalhado](../../docs/contratos-agentes.md) e [processos](../../docs/processos-e-exemplos.md). Papéis lógicos não exigem modelos simultâneos.
+Airton é CEO; MOAH é Diretor Geral; CTOs coordenam contextos IMEX/ALUAI; especialistas pessoais podem responder diretamente ao MOAH. O especialista preserva detalhes e entrega status, resumo, bloqueios, próximos passos e referências. Consultar detalhe sob demanda, sem importar todo o histórico. Impor limites de delegação e tentativas; persistir checkpoints e efeitos externos. Consultar [contrato detalhado](../../docs/arquitetura/agentes-e-memoria.md) e [processos](../../docs/produto/exemplos.md). Papéis lógicos não exigem modelos simultâneos.

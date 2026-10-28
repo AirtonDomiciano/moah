@@ -38,7 +38,7 @@ Núcleo definido em Node.js com TypeScript pela ADR 0001; modelo, motor de infer
 
 ## Refinamento em 28/10/2026: diretor, especialistas e ferramentas
 
-A visão de experiência está em [visao-produto.md](visao-produto.md). Os contratos detalhados estão em [contratos-agentes.md](contratos-agentes.md), e os fluxos em [processos-e-exemplos.md](processos-e-exemplos.md).
+A visão de experiência está em [visao-produto.md](../produto/visao.md). Os contratos detalhados estão em [contratos-agentes.md](agentes-e-memoria.md), e os fluxos em [processos-e-exemplos.md](../produto/exemplos.md).
 
 O especialista preserva o histórico detalhado; o CTO agrega informações da área; o MOAH recebe resumo executivo, bloqueios, decisões e referências. Aprofundamento é seletivo. Contextos de estudo, trabalho empresarial e diagnóstico não devem ser copiados integralmente para o diretor.
 
@@ -52,4 +52,4 @@ Rotinas proativas usam convites com estado, adiamento e cancelamento persistente
 
 ## Primeira fatia executável
 
-A [ADR 0001](02-adrs/0001-node-typescript-e-entrega-inicial.md) define CLI → casos de uso → domínio → persistência, iniciando por registros e checkpoints sem IA. O [prompt 00](../cursror-dev/00-bootstrap-typescript.md) foi executado nesse recorte. A [ADR 0003](02-adrs/0003-persistencia-sqlite-cli.md) registra Node 22 e `node:sqlite` depois da verificação no ambiente. Serviço contínuo e conectores entram depois; a CLI deve ser reutilizada, não descartada.
+A [ADR 0001](decisoes/0001-node-typescript-e-entrega-inicial.md) define CLI → casos de uso → domínio → persistência, iniciando por registros e checkpoints sem IA. O [prompt 00](../../cursror-dev/00-bootstrap-typescript.md) foi executado nesse recorte. A [ADR 0003](decisoes/0003-persistencia-sqlite-cli.md) registra Node 22 e `node:sqlite` depois da verificação no ambiente. Serviço contínuo e conectores entram depois; a CLI deve ser reutilizada, não descartada.

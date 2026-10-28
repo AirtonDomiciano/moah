@@ -59,7 +59,7 @@ Debian 13; RTX 5070 com 12 GB; raiz /media/projetos; Cursor em /usr/bin/cursor. 
 
 Contratos de relatório, estados de tarefa, referências de memória, fila de inferência e critérios de validação são propostas documentadas para implementar os pedidos. Não há stack definitiva, integração pronta ou benchmark. A rotina de inglês não foi agendada; horários de conversa são exemplos.
 
-Documentação detalhada: [visão](visao-produto.md), [contratos](contratos-agentes.md), [processos](processos-e-exemplos.md) e [roadmap](roadmap.md). Esta atualização complementa o registro anterior; não é uma exportação integral de chats.
+Documentação detalhada: [visão](visao.md), [contratos](../arquitetura/agentes-e-memoria.md), [processos](exemplos.md) e [roadmap](roadmap.md). Esta atualização complementa o registro anterior; não é uma exportação integral de chats.
 
 
 ## Referência de parceria — 28/10/2026
@@ -68,7 +68,7 @@ Pedido explícito de Airton: “Pra ser bem sincero quero meio que vc seja o MOA
 
 Decisão de produto: usar esta parceria como referência de tom, personalidade e comportamento; MOAH como interlocutor principal, capaz de sugerir, questionar e acompanhar tarefas. A continuidade será construída com memória e integrações autorizadas, sem presumir transferência automática da conversa ou acesso a todo o histórico. Modelo/provedor ainda não escolhidos.
 
-Detalhamento e critérios de aceite em [visão do produto](visao-produto.md#8-referência-de-personalidade-e-parceria--pedido-explícito). Registrar a preferência não executa importação de chats.
+Detalhamento e critérios de aceite em [visão do produto](visao.md#8-referência-de-personalidade-e-parceria--pedido-explícito). Registrar a preferência não executa importação de chats.
 
 
 ## Prioridade e registros transversais — 28/10/2026
@@ -83,20 +83,24 @@ Airton confirmou que quer iniciar pelo MOAH para apoiar sua entrada como Tech Le
 - Qwen3.5-9B e Qwen3-Coder foram sugestões de avaliação, não escolhas aprovadas ou benchmarks.
 - Serviço e persistência continuam como fundação, agenda funciona sem IA. Voz/música e outros agentes não bloqueiam a primeira entrega.
 
-A sequência é uma orientação de produto, não autorização para executar integrações corporativas reais. A prioridade inicial de agenda é ampliada com memória de trabalho e continuidade profissional. Ver [visão](visao-produto.md) e [roadmap](roadmap.md).
+A sequência é uma orientação de produto, não autorização para executar integrações corporativas reais. A prioridade inicial de agenda é ampliada com memória de trabalho e continuidade profissional. Ver [visão](visao.md) e [roadmap](roadmap.md).
 
 ## Direção JS/TypeScript e organização — 28/10/2026
 
 Airton pediu início no ecossistema JavaScript, citando a pós em JS, e solicitou prompt para Cursor e pastas de prompts/decisões como organização do trabalho. Núcleo em Node.js com TypeScript conforme ADR 0001; isso substitui Python como proposta do núcleo. Launcher e especialistas existentes não serão reescritos por esta decisão.
 
-Prompt 00 preparado para CLI e memória de trabalho, sem inferência. Entrega parcial de 01/05 antes do serviço completo. Usar cursror-dev para prompts, cursror-dev/execucoes para execuções verificadas e docs/02-adrs para ADRs. Nenhum prompt de implementação foi executado nesta atualização.
+Prompt 00 preparado para CLI e memória de trabalho, sem inferência. Entrega parcial de 01/05 antes do serviço completo. Usar cursror-dev para prompts, cursror-dev/execucoes para execuções verificadas e docs/arquitetura/decisoes para ADRs. Nenhum prompt de implementação foi executado nesta atualização.
 
 ## Execução do prompt 00 — 28/10/2026
 
-O prompt 00, versão 1.0, foi executado depois da preparação acima. A CLI de memória de trabalho ficou implementada e testada. Os módulos 01 e 05 não foram concluídos. Relatório: [2026-10-28-001](../cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Decisão de persistência: [ADR 0003](02-adrs/0003-persistencia-sqlite-cli.md).
+O prompt 00, versão 1.0, foi executado depois da preparação acima. A CLI de memória de trabalho ficou implementada e testada. Os módulos 01 e 05 não foram concluídos. Relatório: [2026-10-28-001](../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Decisão de persistência: [ADR 0003](../arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
 
 Airton informou que reuniu projetos de agentes na pasta Agents. Cadastrar caminho e capacidades; não presumir localização absoluta ou que todos estejam implementados/disponíveis.
 
 ## Organização inspirada no imex-arch — 28/10/2026
 
-Airton forneceu uma descrição da estrutura docs do imex-arch e pediu aproveitá-la. Adaptada ao MOAH conforme ADR 0002: catálogo e categorias de engenharia, mantendo prompts em cursror-dev e histórico em execucoes. A fonte foi o texto fornecido, sem inspeção do repositório interno da empresa. ADRs passam a ser organizadas em docs/02-adrs; documentos existentes mantêm seus caminhos.
+Airton forneceu uma descrição da estrutura docs do imex-arch e pediu aproveitá-la. Adaptada ao MOAH conforme ADR 0002: catálogo e categorias de engenharia, mantendo prompts em cursror-dev e histórico em execucoes. A fonte foi o texto fornecido, sem inspeção do repositório interno da empresa. ADRs passam a ser organizadas em docs/arquitetura/decisoes; documentos existentes mantêm seus caminhos.
+
+## Simplificação — 28/10/2026
+
+Airton solicitou leitura fácil mantendo responsabilidades separadas. Documentação reorganizada em Produto, Arquitetura, Desenvolvimento e Operação conforme ADR 0004. Prompts e execuções permanecem em cursror-dev. Implementação CLI e evidências existentes foram preservadas; esta alteração é documental.

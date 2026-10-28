@@ -4,7 +4,7 @@ Estado: planejado. Dependências em [README](README.md).
 
 ## Prompt para o Cursor
 
-Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/contexto-e-decisoes.md, docs/arquitetura.md e cursror-dev/README.md. Execute somente este módulo.
+Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/produto/historico.md, docs/arquitetura/visao-geral.md e cursror-dev/README.md. Execute somente este módulo.
 
 ### Objetivo
 
@@ -24,4 +24,4 @@ Implementar apenas após inspecionar o ambiente e o código existente. Adicionar
 
 ### Refinamento de 28/10/2026
 
-Hardware informado: RTX 5070 de 12 GB no Debian 13. Confirmar capacidade observada no ambiente; CPU/RAM ainda não informadas. Implementar orçamento de contexto e fila compartilhada entre papéis lógicos. Vários agentes não exigem modelos residentes diferentes. Coleta de métricas e agenda não devem depender da GPU. Incluir diagnóstico do próprio MOAH e descarregamento conforme política configurada; detalhamento em ../docs/contratos-agentes.md e ../docs/roadmap.md.
+Hardware informado: RTX 5070 de 12 GB no Debian 13. Confirmar capacidade observada no ambiente; CPU/RAM ainda não informadas. Implementar orçamento de contexto e fila compartilhada entre papéis lógicos. Vários agentes não exigem modelos residentes diferentes. Coleta de métricas e agenda não devem depender da GPU. Incluir diagnóstico do próprio MOAH e descarregamento conforme política configurada; detalhamento em ../docs/arquitetura/agentes-e-memoria.md e ../docs/produto/roadmap.md.

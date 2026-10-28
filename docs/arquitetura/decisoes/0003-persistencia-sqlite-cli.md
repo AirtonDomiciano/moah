@@ -38,4 +38,4 @@ O esquema versão 1 não tem edição nem exclusão. Correção de memória cont
 
 ## Validação
 
-Testes automatizados e a demonstração com diretório temporário estão no [relatório de 28/10/2026](../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md). A primeira tentativa de duas gravações paralelas falhou com `database is locked`; o lock e o teste que exige os dois textos passaram na execução final.
+Testes automatizados e a demonstração com diretório temporário estão no [relatório de 28/10/2026](../../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md). A primeira tentativa de duas gravações paralelas falhou com `database is locked`; o lock e o teste que exige os dois textos passaram na execução final.

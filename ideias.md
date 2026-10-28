@@ -41,7 +41,7 @@ Origem de todos os itens: pedidos explícitos de Airton na conversa de definiç�
 | ID | Responsabilidade | Módulo / próximo passo |
 | --- | --- | --- |
 | MOAH-014 | Launcher separado, busca no SSD e grupos no Cursor | Extensão de ferramentas; catálogo e contrato da issue #1 |
-| MOAH-015 | Especialistas guardam detalhes; MOAH recebe resumo e referências | 05–06; contrato em docs/contratos-agentes.md |
+| MOAH-015 | Especialistas guardam detalhes; MOAH recebe resumo e referências | 05–06; contrato em docs/arquitetura/agentes-e-memoria.md |
 | MOAH-016 | Início do dia: saudação, urgências, calls e ponto de retomada | 04–07–09; definir fontes e evento de saudação |
 | MOAH-017 | Convite proativo ao inglês, adiamento e cancelamento | 04–08; persistir estados e preferências |
 | MOAH-018 | Histórico detalhado de estudo e resumo de evolução | 05–08; verificar interface real do PRAN |
@@ -54,7 +54,7 @@ Origem de todos os itens: pedidos explícitos de Airton na conversa de definiç�
 
 Evolução de MOAH-006: hierarquia CEO/Diretor/CTOs/especialistas detalhada. Evolução de MOAH-002: hardware agora conhecido, RTX 5070 de 12 GB; controlar contexto e simultaneidade em vez de presumir que agentes separados reduzem VRAM.
 
-Referências: [visão](docs/visao-produto.md), [processos](docs/processos-e-exemplos.md), [contratos](docs/contratos-agentes.md), [roadmap](docs/roadmap.md) e issue #2. A prioridade inicial de serviço e agenda permanece; a ordem dos fluxos avançados ainda será escolhida.
+Referências: [visão](docs/produto/visao.md), [processos](docs/produto/exemplos.md), [contratos](docs/arquitetura/agentes-e-memoria.md), [roadmap](docs/produto/roadmap.md) e issue #2. A prioridade inicial de serviço e agenda permanece; a ordem dos fluxos avançados ainda será escolhida.
 
 
 ## MOAH-025 — Parceria como referência de personalidade
@@ -65,7 +65,7 @@ Referências: [visão](docs/visao-produto.md), [processos](docs/processos-e-exem
 - **Responsabilidade:** módulos 05, 06, 08 e 09; memória, interlocução e preferências.
 - **Objetivo:** levar o modo de colaboração desta conversa ao Linux: naturalidade, continuidade, iniciativa configurada, capacidade de questionar e acompanhamento de tarefas.
 - **Próximos passos:** definir perfil de comportamento editável; selecionar contexto autorizado para importação; validar continuidade e personalidade sem confundir modelo, sessão e memória.
-- **Referência:** [visão do produto](docs/visao-produto.md).
+- **Referência:** [visão do produto](docs/produto/visao.md).
 
 
 ## Atualização de foco — 28/10/2026
@@ -81,13 +81,17 @@ Refinamentos: MOAH-015 passa a valer para todos os domínios; MOAH-016 usa check
 
 Próximos passos: serviço e persistência; entrada manual de atividades e notas; consulta de pendências e retomada; agenda; fechamento do dia; mapear bot de review. A ordem técnica detalhada deve respeitar dependências sem exigir todos os módulos para registrar a primeira nota. Voz/música ficam após essa base.
 
-MOAH é o software próprio; modelos/runtimes são substituíveis. Avaliar candidatos na máquina, sem tratar sugestão de modelo como decisão. Não iniciar treinamento do zero. Ver [roadmap](docs/roadmap.md) e [visão](docs/visao-produto.md).
+MOAH é o software próprio; modelos/runtimes são substituíveis. Avaliar candidatos na máquina, sem tratar sugestão de modelo como decisão. Não iniciar treinamento do zero. Ver [roadmap](docs/produto/roadmap.md) e [visão](docs/produto/visao.md).
 
 ## MOAH-028 — Base de engenharia e trilha de desenvolvimento
 
 - Data: 28/10/2026. Origem: pedido de Airton por prompts/decisões organizados e descrição da estrutura imex-arch.
 - Estado: prompt 00 executado em 28/10/2026. A CLI de memória de trabalho está implementada e testada. Módulos 01 e 05 seguem planejados. Relatório: [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md).
 - Núcleo: Node.js/TypeScript conforme ADR 0001. Primeira entrega: CLI com memória de trabalho persistente, recorte de 01/05.
-- Estrutura: docs/_catalog e categorias 00–09, ADRs em docs/02-adrs; prompts em cursror-dev e relatórios em execucoes.
+- Estrutura: docs e categorias 00–09, ADRs em docs/arquitetura/decisoes; prompts em cursror-dev e relatórios em execucoes.
 - Próximo passo: revisar o diff da CLI e decidir o commit. Serviço contínuo e agenda ficam para os módulos seguintes, um por vez.
 - Agentes reunidos por Airton na pasta Agents: cadastrar individualmente caminho/capacidade, sem iniciar todos.
+
+## MOAH-029 — Documentação simples por responsabilidade
+
+Data: 28/10/2026. Origem: pedido de Airton. Estado: organização documental entregue. Quatro áreas em docs: produto, arquitetura, desenvolvimento e operacao. ADR 0004 substitui a organização anterior. Preservar prompts, execuções e decisões; não alterar código nesta entrega.

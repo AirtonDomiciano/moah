@@ -11,8 +11,8 @@ Identificar contexto pessoal, Imex ou Aluai antes de registrar. Preservar origem
 
 ## Referências
 
-Consultar ../../docs/arquitetura.md e ../../cursror-dev/README.md para dependências e critérios de implementação.
+Consultar ../../docs/arquitetura/visao-geral.md e ../../cursror-dev/README.md para dependências e critérios de implementação.
 
 ## Refinamento do contrato — 28/10/2026
 
-Manter níveis executivo, área, especialista e operacional. Aulas e trabalhos detalhados ficam no especialista; o diretor recebe resumo com data e referências. Preservar checkpoints para “paramos aonde?”. Corrigir resumos derivados quando a origem mudar; exclusão e retenção devem considerar índices e backups conforme política. Consultar [contratos](../../docs/contratos-agentes.md). Não pressupor gravação de áudio para registrar estudo.
+Manter níveis executivo, área, especialista e operacional. Aulas e trabalhos detalhados ficam no especialista; o diretor recebe resumo com data e referências. Preservar checkpoints para “paramos aonde?”. Corrigir resumos derivados quando a origem mudar; exclusão e retenção devem considerar índices e backups conforme política. Consultar [contratos](../../docs/arquitetura/agentes-e-memoria.md). Não pressupor gravação de áudio para registrar estudo.

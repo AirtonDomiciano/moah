@@ -4,7 +4,7 @@ Estado: planejado. Dependências em [README](README.md).
 
 ## Prompt para o Cursor
 
-Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/contexto-e-decisoes.md, docs/arquitetura.md e cursror-dev/README.md. Execute somente este módulo.
+Você está no repositório MOAH de Airton. Leia AGENTS.md, docs/produto/historico.md, docs/arquitetura/visao-geral.md e cursror-dev/README.md. Execute somente este módulo.
 
 ### Objetivo
 
@@ -24,7 +24,7 @@ Implementar apenas após inspecionar o ambiente e o código existente. Adicionar
 
 ### Refinamento de 28/10/2026
 
-Suportar “temos alguma urgência?”, “tem alguma call?” e “paramos aonde?” com critérios explícitos, atualidade das fontes e checkpoints. Saudação opcional sem repetir a cada desbloqueio. Review de US com publicação no Azure é extensão descrita em ../docs/processos-e-exemplos.md: primeiro mapear bot, vínculos e permissões. Não confundir este planejamento com autorização para publicar resultados reais.
+Suportar “temos alguma urgência?”, “tem alguma call?” e “paramos aonde?” com critérios explícitos, atualidade das fontes e checkpoints. Saudação opcional sem repetir a cada desbloqueio. Review de US com publicação no Azure é extensão descrita em ../docs/produto/exemplos.md: primeiro mapear bot, vínculos e permissões. Não confundir este planejamento com autorização para publicar resultados reais.
 
 
 ### Prioridade de produto e registros — 28/10/2026
@@ -37,4 +37,4 @@ Fechamento do dia consolida atividades e deixa checkpoint recuperável. Especial
 
 Critérios adicionais: registrar nota e recuperá-la após reinício; responder sobre participação somente com evidência ou relato identificado; resumir por dia e projeto; manter pendência sem prazo quando ausente; preservar separação empresarial. Bot de review/US é a primeira extensão profissional proposta, após validar contrato real. Voz e mídia não são pré-requisitos.
 
-Consultar ../docs/visao-produto.md e ../docs/roadmap.md. Nenhum recurso se torna implementado por esta atualização.
+Consultar ../docs/produto/visao.md e ../docs/produto/roadmap.md. Nenhum recurso se torna implementado por esta atualização.

@@ -11,8 +11,8 @@ Consultar fontes autorizadas e informar sua última sincronização. Correlacion
 
 ## Referências
 
-Consultar ../../docs/arquitetura.md e ../../cursror-dev/README.md para dependências e critérios de implementação.
+Consultar ../../docs/arquitetura/visao-geral.md e ../../cursror-dev/README.md para dependências e critérios de implementação.
 
 ## Refinamento do contrato — 28/10/2026
 
-Incluir rotinas proativas configuradas: convite, resposta, adiamento, aceite e cancelamento. A regra “agora não → 15 minutos” depende da preferência explícita; persistir a nova ocorrência e invalidar a anterior. “Hoje não” cancela apenas o dia conforme regra habilitada. Não iniciar aula sem aceite. Respeitar silêncio, reuniões e limites de tentativas. Horários de exemplo não configuram rotinas reais. Consultar [processos](../../docs/processos-e-exemplos.md).
+Incluir rotinas proativas configuradas: convite, resposta, adiamento, aceite e cancelamento. A regra “agora não → 15 minutos” depende da preferência explícita; persistir a nova ocorrência e invalidar a anterior. “Hoje não” cancela apenas o dia conforme regra habilitada. Não iniciar aula sem aceite. Respeitar silêncio, reuniões e limites de tentativas. Horários de exemplo não configuram rotinas reais. Consultar [processos](../../docs/produto/exemplos.md).

@@ -2,7 +2,7 @@
 
 ## Escopo atual
 
-Este repositório contém planejamento e prompts. Consultar README.md, docs/contexto-e-decisoes.md e cursror-dev/README.md antes de implementar.
+Este repositório contém documentação, prompts e uma CLI inicial de memória de trabalho. Consultar o estado atual no README; não presumir que todos os módulos estão implementados. Consultar README.md, docs/produto/historico.md e cursror-dev/README.md antes de implementar.
 
 ## Registrar ideias
 
@@ -27,13 +27,13 @@ Este repositório contém planejamento e prompts. Consultar README.md, docs/cont
 
 ## Direção inicial e rastreabilidade — 28/10/2026
 
-- Núcleo em Node.js com TypeScript: consultar docs/02-adrs/0001-node-typescript-e-entrega-inicial.md.
+- Núcleo em Node.js com TypeScript: consultar docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md.
 - Ponto de entrada: cursror-dev/00-bootstrap-typescript.md, recorte explícito de 01/05. Não marcar esses módulos completos por entregar o recorte.
-- Guardar prompts em cursror-dev, histórico real de execução em cursror-dev/execucoes e ADRs em docs/02-adrs.
+- Guardar prompts em cursror-dev, histórico real de execução em cursror-dev/execucoes e ADRs em docs/arquitetura/decisoes.
 - Relatório deve citar versão/commit do prompt, escopo, decisões e verificações reais. Não inventar histórico de execuções anteriores.
 - Manter dados privados de runtime fora desses documentos e do Git.
 - Não iniciar nem importar todos os projetos da pasta Agents automaticamente.
 
-## Base de conhecimento
+## Documentação por responsabilidade
 
-Consultar docs/README.md e docs/_catalog/README.md para localizar fontes. Guardrails em docs/05-guardrails; ADRs em docs/02-adrs. Os documentos antigos mantêm caminhos canônicos. Separar rigorosamente base pública de engenharia e memória privada do runtime.
+Consultar docs/README.md. Produto em docs/produto; arquitetura e ADRs em docs/arquitetura; processo, padrões e limites em docs/desenvolvimento; execução, métricas e lições em docs/operacao. Ler apenas o necessário. Prompts permanecem em cursror-dev e relatórios em cursror-dev/execucoes. Separar base pública de engenharia e memória privada.

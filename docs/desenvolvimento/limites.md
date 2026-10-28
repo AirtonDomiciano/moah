@@ -11,4 +11,4 @@
 9. Falhas de conectores e dados antigos devem aparecer no resultado.
 10. Controlar recursos e manter agenda determinística independente da IA.
 
-Escopo inicial: documentação e desenvolvimento local autorizados, sem alteração de sistemas empresariais. Consultar [AGENTS raiz](../../AGENTS.md) e [contratos](../contratos-agentes.md).
+Escopo inicial: documentação e desenvolvimento local autorizados, sem alteração de sistemas empresariais. Consultar [AGENTS raiz](../../AGENTS.md) e [contratos](../arquitetura/agentes-e-memoria.md).
