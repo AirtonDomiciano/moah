@@ -1,9 +1,9 @@
 import { AppError, exitCodeFor } from "../domain/errors.js";
 import { execute } from "./commands.js";
 
-export function runCli(argv: string[]): number {
+export async function runCli(argv: string[]): Promise<number> {
   try {
-    execute(argv);
+    await execute(argv);
     return 0;
   } catch (error) {
     if (error instanceof AppError) {

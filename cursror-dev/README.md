@@ -25,7 +25,7 @@ Ler AGENTS.md e docs/ antes de começar. Inspecionar o código e o ambiente. Tra
 
 Antes de mudanças, informar abordagem e arquivos afetados. Implementar, validar comportamentos essenciais, atualizar documentação com evidência e limitações e entregar resumo com instruções de execução. Não publicar alterações em outros projetos ou executar ações externas sem autorização específica.
 
-Nenhum módulo de 01 a 10 está concluído. O prompt 00 entregou a CLI de memória de trabalho; o relatório está em [execuções](execucoes/2026-10-28-001-prompt-00.md).
+Nenhum módulo de 01 a 10 está concluído. O prompt 00 entregou a CLI de memória de trabalho; o relatório está em [execuções](execucoes/2026-10-28-001-prompt-00.md). O prompt 11 acrescenta a conversa de leitura sobre essa memória, com simulador; o relatório está em [execuções](execucoes/2026-10-29-001-prompt-11.md). O módulo 02 continua planejado.
 
 ## Especificações ampliadas de 28/10/2026
 
@@ -35,7 +35,9 @@ Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Laun
 
 ## Comece pelo prompt 00
 
-[00 — Fundação TypeScript e primeiro registro de trabalho](00-bootstrap-typescript.md), versão 1.0: executado em 28/10/2026. Entrega CLI local e memória persistente, antes de voz/modelo. Relatório em [execuções](execucoes/2026-10-28-001-prompt-00.md). Direção em [ADR 0001](../docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](../docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
+[00 — Fundação TypeScript e primeiro registro de trabalho](00-bootstrap-typescript.md), versão 1.0: executado em 28/10/2026. Entrega CLI local e memória persistente. Relatório em [execuções](execucoes/2026-10-28-001-prompt-00.md). Direção em [ADR 0001](../docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](../docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
+
+[11 — Conversa por texto sobre a memória de trabalho](11-conversa-texto.md), versão 1.0: executado em 29/10/2026. Consulta pendências, resumo de data explícita e último checkpoint. O simulador está validado; o modelo real, não. Relatório em [execuções](execucoes/2026-10-29-001-prompt-11.md). Decisão em [ADR 0005](../docs/arquitetura/decisoes/0005-conversa-texto-e-provedor.md).
 
 ## Organização de prompts e decisões
 

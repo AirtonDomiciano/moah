@@ -5,6 +5,7 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | Relatório | Prompt | Estado |
 | --- | --- | --- |
 | [2026-10-28-001-prompt-00](2026-10-28-001-prompt-00.md) | 00, versão 1.0 | Concluída no recorte da CLI |
+| [2026-10-29-001-prompt-11](2026-10-29-001-prompt-11.md) | 11, versão 1.0 | Concluída com simulador; modelo real pendente |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

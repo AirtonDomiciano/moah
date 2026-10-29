@@ -1,4 +1,4 @@
-export type AppErrorCode = "validation" | "not_found" | "conflict" | "persistence";
+export type AppErrorCode = "validation" | "not_found" | "conflict" | "persistence" | "unavailable";
 
 export class AppError extends Error {
   readonly code: AppErrorCode;
@@ -18,6 +18,7 @@ export function exitCodeFor(code: AppErrorCode): number {
     case "not_found":
       return 2;
     case "persistence":
+    case "unavailable":
       return 3;
   }
 }

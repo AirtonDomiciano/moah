@@ -1,3 +1,4 @@
+import type { ConversationResult } from "../application/converse.js";
 import { formatInstant } from "../domain/time.js";
 import type { ActionView, DailySummary, WorkRecord } from "../domain/types.js";
 
@@ -179,6 +180,53 @@ function actionJson(item: ActionView): unknown {
     origin: item.origin,
     occurredAt: item.occurredAt,
   };
+}
+
+export function printConversation(result: ConversationResult, json: boolean): void {
+  const consulted = result.consultations.map((item) => ({
+    name: item.name,
+    ok: item.ok,
+    empty: item.empty,
+    references: item.references,
+    lines: item.lines,
+  }));
+  if (json) {
+    printJson({
+      domain: result.domain,
+      project: result.project,
+      provider: result.provider,
+      model: result.model,
+      simulated: result.simulated,
+      limitReached: result.limitReached,
+      consulted,
+      answer: result.answer,
+    });
+    return;
+  }
+  const lines = [
+    `Domínio: ${result.domain}`,
+    `Provedor: ${result.provider}`,
+    `Modelo: ${result.model}`,
+  ];
+  if (result.simulated) {
+    lines.push("Validação com modelo real: pendente.");
+  }
+  lines.push("Dados consultados:");
+  if (consulted.length === 0) {
+    lines.push("  (nenhuma ferramenta chamada)");
+  }
+  for (const item of consulted) {
+    lines.push(`  ${item.name}`);
+    for (const line of item.lines) {
+      lines.push(`    ${line}`);
+    }
+  }
+  lines.push("Resposta do modelo:");
+  lines.push(result.answer ?? "(sem texto do modelo)");
+  if (result.limitReached) {
+    lines.push("Limite de chamadas de ferramentas atingido nesta interação.");
+  }
+  process.stdout.write(`${lines.join("\n")}\n`);
 }
 
 function appendRecords(lines: string[], records: WorkRecord[], timeZone: string): void {

@@ -10,6 +10,7 @@ Comandos:
   moah checkpoint --dominio <domínio> --resumo <texto> [--projeto <nome>] [--proximo <texto>]
   moah onde-paramos --dominio <domínio> [--projeto <nome>]
   moah resumo [--data AAAA-MM-DD] [--dominio <domínio>] [--projeto <nome>]
+  moah conversar --dominio <domínio> [--projeto <nome>] [--texto <pergunta>] [--provedor simulator|openai-compatible]
   moah ajuda
 
 Opções comuns de registro:
@@ -42,12 +43,16 @@ Códigos de saída:
   0  sucesso, inclusive consulta vazia
   1  uso, validação ou ação já concluída
   2  identificador inexistente
-  3  falha de persistência
+  3  falha de persistência ou do provedor do modelo
 
 Arquivos:
   Dados: $MOAH_DATA_DIR, ou $XDG_DATA_HOME/moah, ou ~/.local/share/moah
   Configuração: $MOAH_CONFIG_DIR, ou $XDG_CONFIG_HOME/moah, ou ~/.config/moah
   config.json: { "timezone": "America/Sao_Paulo" }
+  llm opcional: provider, baseUrl, model, timeoutMs, maxToolCalls
+  Variáveis: MOAH_LLM_PROVIDER, MOAH_LLM_BASE_URL, MOAH_LLM_MODEL, MOAH_LLM_TIMEOUT_MS, MOAH_LLM_MAX_TOOL_CALLS
+  MOAH_LLM_API_KEY, se existir, só vai no cabeçalho Authorization e não entra no arquivo nem no log.
+  Sem configuração, conversar usa o simulador. Os demais comandos não chamam modelo.
   Banco: moah.sqlite no diretório de dados
 
 Uma reunião registrada aqui é relato do usuário, não presença inferida da agenda.

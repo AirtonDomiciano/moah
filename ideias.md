@@ -1,6 +1,6 @@
 # Ideias e backlog
 
-Atualizado em 28/10/2026. Os módulos 01 a 10 estão planejados. O prompt 00 entregou só o recorte da CLI de memória de trabalho.
+Atualizado em 29/10/2026. Os módulos 01 a 10 estão planejados. O prompt 00 entregou a CLI de memória de trabalho. O prompt 11 entrega a conversa de leitura sobre essa memória, com simulador e sem modelo real validado.
 
 | ID | Responsabilidade | Prioridade / destino |
 | --- | --- | --- |
@@ -95,3 +95,10 @@ MOAH é o software próprio; modelos/runtimes são substituíveis. Avaliar candi
 ## MOAH-029 — Documentação simples por responsabilidade
 
 Data: 28/10/2026. Origem: pedido de Airton. Estado: organização documental entregue. Quatro áreas em docs: produto, arquitetura, desenvolvimento e operacao. ADR 0004 substitui a organização anterior. Preservar prompts, execuções e decisões; não alterar código nesta entrega.
+
+## MOAH-030 — Conversa por texto sobre a memória existente
+
+- Data: 29/10/2026. Origem: pedido explícito de Airton. Estado: entregue no recorte de leitura, com simulador testado e modelo real pendente.
+- Responsabilidade: perguntar sobre pendências, resumo de uma data explícita e último checkpoint, no domínio escolhido na sessão.
+- Módulo: apoio ao uso da memória do prompt 00. Não conclui inferência GPU (módulo 02), serviço (01) nem memória compartilhada (05).
+- Próximo passo: quando um motor local estiver configurado, apontar endereço e modelo e registrar a validação real. Voz, agenda, escrita por IA e delegação continuam fora desta entrega. Guia em [docs/operacao/conversa.md](docs/operacao/conversa.md).

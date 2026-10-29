@@ -40,7 +40,7 @@ A pasta `cursror-dev` mantém a grafia solicitada por Airton. Cada módulo cont�
 
 A CLI local registra atividades, reuniões relatadas, decisões, pendências e checkpoints, e consulta esses dados depois que o processo termina. Entrega do [prompt 00](cursror-dev/00-bootstrap-typescript.md); relatório em [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Escolhas de runtime e SQLite: [ADR 0001](docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
 
-Serviço contínuo, calendário, convites e lembretes ficam para as etapas seguintes. Lembretes, quando existirem, devem funcionar mesmo com o modelo descarregado. Esta CLI não inclui modelo de IA. O launcher e os especialistas podem continuar em outras linguagens.
+Serviço contínuo, calendário, convites e lembretes ficam para as etapas seguintes. Lembretes, quando existirem, devem funcionar mesmo com o modelo descarregado. A conversa de leitura usa um provedor configurável e, por padrão, um simulador; os demais comandos não chamam modelo. O launcher e os especialistas podem continuar em outras linguagens.
 
 Organização: [prompts](cursror-dev/README.md), [histórico de execuções](cursror-dev/execucoes/README.md) e [decisões arquiteturais](docs/arquitetura/decisoes/README.md).
 
@@ -91,15 +91,17 @@ Ações:
 
 Outros comandos da mesma gramática, também exercitados com dados sintéticos: `listar dia`, `pendencias`, `concluir <id>`, `checkpoint`, `onde-paramos` e `resumo`. `--json` escreve só JSON na saída padrão. `--quando sexta` termina com código 1, mensagem na saída de erro e nenhum registro novo.
 
+`moah conversar --dominio pessoal --texto "quais são as pendências?"` consulta esses registros em linguagem natural. Sem configuração de modelo, a resposta vem do simulador e informa que a validação real está pendente. O caminho da mensagem, a troca do modelo e os erros estão em [docs/operacao/conversa.md](docs/operacao/conversa.md). Entrega do [prompt 11](cursror-dev/11-conversa-texto.md); decisão na [ADR 0005](docs/arquitetura/decisoes/0005-conversa-texto-e-provedor.md).
+
 Uma ação com responsável e prazo usa `descricao ;; responsavel=Nome ;; prazo=AAAA-MM-DD`.
 
 ### Limitações desta CLI
 
-- Não interpreta linguagem natural, não edita nem apaga registros e não corrige um resumo já derivado.
+- A linguagem natural cobre pendências, resumo de uma data explícita e último checkpoint. A conversa não edita, não apaga e não conclui registros.
 - Reunião registrada é relato do usuário. Não há leitura de agenda nem inferência de presença.
 - O resumo do dia agrupa os registros daquele dia civil e mostra o estado atual das ações.
 - Origem aceita: `user_report`. Agente aceito: `manual`.
-- Sem serviço, fila, HTTP, microfone, conta externa ou modelo.
+- Sem serviço, fila, servidor HTTP, microfone ou conta externa. O cliente de modelo é opcional; o padrão é o simulador, e nenhum modelo real foi validado em 29/10/2026.
 - Em Node 22, `node:sqlite` ainda é experimental na documentação da linha. O aviso é suprimido na CLI.
 - Duas invocações simultâneas esperam um lock de até 5 segundos. Se o banco continuar ocupado, a segunda falha sem substituir o arquivo.
 

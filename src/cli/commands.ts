@@ -1,3 +1,5 @@
+import readline from "node:readline";
+import { converse } from "../application/converse.js";
 import {
   concludeAction,
   findCheckpoint,
@@ -11,7 +13,10 @@ import { AppError } from "../domain/errors.js";
 import { civilToday, formatInstant, isSupportedNodeVersion, parseCivilDate, parseExplicitInstant } from "../domain/time.js";
 import type { ActionView, Domain } from "../domain/types.js";
 import { assertItemCount, validateRecord } from "../domain/validate.js";
+import type { ConversationTurn } from "../domain/llm.js";
 import { loadConfig } from "../infrastructure/config.js";
+import { createLlmProvider, readApiKey } from "../infrastructure/llm/create-provider.js";
+import { resolveLlmSettings } from "../infrastructure/llm/settings.js";
 import { resolveDirs } from "../infrastructure/paths.js";
 import { parseActionSpec } from "./action-spec.js";
 import { HELP } from "./help.js";
@@ -19,11 +24,13 @@ import { many, one, parseArgs, rejectUnknown } from "./parse-args.js";
 import {
   printActions,
   printCheckpoint,
+  printConversation,
   printJson,
   printRecord,
   printRecordList,
   printSummary,
 } from "./present.js";
+
 const RECORD_OPTIONS = [
   "dominio",
   "texto",
@@ -38,7 +45,7 @@ const RECORD_OPTIONS = [
   "agente",
 ] as const;
 
-export function execute(argv: string[]): void {
+export async function execute(argv: string[]): Promise<void> {
   if (!isSupportedNodeVersion(process.versions.node)) {
     throw new AppError(
       `Esta CLI requer Node.js 22.16 ou superior, na linha 22.x. Versão atual: ${process.versions.node}.`,
@@ -168,6 +175,31 @@ export function execute(argv: string[]): void {
     return;
   }
 
+  if (command === "conversar") {
+    if (parsed.positionals.length !== 1) {
+      throw new AppError(
+        "Uso: moah conversar --dominio <domínio> [--projeto <nome>] [--texto <pergunta>] [--provedor simulator|openai-compatible].",
+        "validation",
+      );
+    }
+    rejectUnknown(parsed.options, ["dominio", "projeto", "texto", "provedor"]);
+    const domain = requiredDomain(one(parsed.options, "dominio"));
+    const project = one(parsed.options, "projeto");
+    const text = one(parsed.options, "texto");
+    const settings = resolveLlmSettings(config.llm, process.env, one(parsed.options, "provedor"));
+    const provider = createLlmProvider(settings, readApiKey(process.env));
+    if (text !== null) {
+      const result = await runTurn(context, domain, project, [], text, provider, settings.maxToolCalls);
+      printConversation(result, parsed.json);
+      return;
+    }
+    if (!process.stdin.isTTY) {
+      throw new AppError("Informe --texto ou execute moah conversar em um terminal interativo.", "validation");
+    }
+    await conversationLoop(context, domain, project, provider, settings.maxToolCalls, parsed.json);
+    return;
+  }
+
   throw new AppError(`Comando desconhecido: ${command}. Use moah ajuda.`, "validation");
 }
 
@@ -188,6 +220,74 @@ function printConcluded(item: ActionView, timeZone: string, json: boolean): void
     return;
   }
   process.stdout.write(`Ação ${item.action.id} concluída em ${formatInstant(item.action.completedAt, timeZone)}.\n`);
+}
+
+async function runTurn(
+  context: { dataDir: string; timeZone: string; now: () => Date },
+  domain: Domain,
+  project: string | null,
+  history: ConversationTurn[],
+  text: string,
+  provider: ReturnType<typeof createLlmProvider>,
+  maxToolCalls: number,
+) {
+  const controller = new AbortController();
+  const onSigint = (): void => {
+    controller.abort(new DOMException("Consulta cancelada.", "AbortError"));
+  };
+  process.on("SIGINT", onSigint);
+  try {
+    return await converse({
+      context,
+      domain,
+      project,
+      history,
+      text,
+      provider,
+      maxToolCalls,
+      signal: controller.signal,
+    });
+  } finally {
+    process.off("SIGINT", onSigint);
+  }
+}
+
+async function conversationLoop(
+  context: { dataDir: string; timeZone: string; now: () => Date },
+  domain: Domain,
+  project: string | null,
+  provider: ReturnType<typeof createLlmProvider>,
+  maxToolCalls: number,
+  json: boolean,
+): Promise<void> {
+  const history: ConversationTurn[] = [];
+  const input = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    for await (const line of input) {
+      const text = line.trim();
+      if (text === "") {
+        continue;
+      }
+      if (text === "/sair") {
+        break;
+      }
+      try {
+        const result = await runTurn(context, domain, project, history, text, provider, maxToolCalls);
+        printConversation(result, json);
+        if (result.answer) {
+          history.push({ role: "user", content: text }, { role: "assistant", content: result.answer });
+        }
+      } catch (error) {
+        if (error instanceof AppError && error.message === "Consulta ao modelo cancelada.") {
+          process.stderr.write(`${error.message}\n`);
+          continue;
+        }
+        throw error;
+      }
+    }
+  } finally {
+    input.close();
+  }
 }
 
 function requiredValue(options: Map<string, string[]>, name: string): string {

@@ -2,7 +2,7 @@
   "name": "moah",
   "version": "0.1.0",
   "private": true,
-  "description": "CLI local de memória de trabalho do MOAH, sem modelo de IA.",
+  "description": "CLI local de memória de trabalho do MOAH. A conversa usa um provedor configurável e, por padrão, um simulador.",
   "type": "module",
   "engines": {
     "node": ">=22.16.0 <23"

@@ -73,3 +73,9 @@ Software próprio sobre modelo existente e substituível é o plano inicial. Nã
 A CLI de memória de trabalho foi implementada e testada. Isso cobre o recorte explícito de registro manual, persistência, resumo do dia e retomada por checkpoint. Não marca a fundação contínua (módulo 01) nem a memória compartilhada (módulo 05) como concluídas: não há serviço, agenda, conectores nem edição de memória.
 
 Evidência: [relatório](../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md) e [ADR 0003](../arquitetura/decisoes/0003-persistencia-sqlite-cli.md). Comandos de verificação e a falha corrigida de criação concorrente estão nesse relatório. Agenda, início do dia com fontes externas e o bot de review continuam planejados.
+
+## Evidência do prompt 11 — 29/10/2026
+
+A CLI responde em texto sobre pendências, o resumo de uma data explícita e o último checkpoint. A consulta reutiliza o SQLite e os casos de uso do prompt 00, é somente leitura e separa os dados consultados da resposta do modelo. O provedor padrão é um simulador identificado. O adaptador HTTP configurável foi testado com falhas controladas. Não houve modelo local disponível, então a integração real permanece pendente.
+
+Isso não conclui o módulo 02 nem acrescenta voz, agenda, escrita de registros por IA ou delegação. Evidência: [relatório](../../cursror-dev/execucoes/2026-10-29-001-prompt-11.md), [ADR 0005](../arquitetura/decisoes/0005-conversa-texto-e-provedor.md) e [guia da conversa](../operacao/conversa.md).
