@@ -102,3 +102,7 @@ Data: 28/10/2026. Origem: pedido de Airton. Estado: organização documental ent
 - Responsabilidade: perguntar sobre pendências, resumo de uma data explícita e último checkpoint, no domínio escolhido na sessão.
 - Módulo: apoio ao uso da memória do prompt 00. Não conclui inferência GPU (módulo 02), serviço (01) nem memória compartilhada (05).
 - Próximo passo: quando um motor local estiver configurado, apontar endereço e modelo e registrar a validação real. Voz, agenda, escrita por IA e delegação continuam fora desta entrega. Guia em [docs/operacao/conversa.md](docs/operacao/conversa.md).
+
+## MOAH-031 — Conhecimento visual com Obsidian e Graphify
+
+Data: 29/10/2026. Origem: pedido explícito de Airton. Estado: decisão documentada, implementação pendente. Exportar notas Markdown vinculadas e idempotentes por domínio para Obsidian; manter SQLite como fonte estruturada. Avaliar Graphify em prova de conceito isolada, com fontes selecionadas e verificação de envio a APIs. Primeira exportação unidirecional, preservando notas manuais. [ADR 0006](docs/arquitetura/decisoes/0006-obsidian-e-graphify.md).
