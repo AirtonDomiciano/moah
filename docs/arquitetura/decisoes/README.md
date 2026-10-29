@@ -19,3 +19,7 @@ Escolhas rotineiras não precisam virar ADR. Versões exatas e comandos verifica
 ## Organização atual
 
 [ADR 0004](0004-documentacao-por-responsabilidade.md) simplifica a documentação em quatro responsabilidades e substitui a organização da ADR 0002. ADRs 0001 e 0003 continuam preservadas nos arquivos desta pasta.
+
+## Conhecimento visual
+
+[ADR 0006 — Obsidian e Graphify](0006-obsidian-e-graphify.md): direção aceita, integração pendente. SQLite mantém estado; Obsidian visualiza notas; Graphify terá prova de conceito.
