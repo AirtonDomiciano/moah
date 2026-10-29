@@ -19,3 +19,7 @@ Estado em 28/10/2026, com a linha da conversa revisada em 29/10/2026. “Adotar�
 | Treinar modelo do zero | Fora do plano inicial | Não atende ao primeiro objetivo |
 
 Para promover uma tecnologia, registrar problema, alternativas, versão, custo operacional e evidência. Radar não substitui ADR nem prova compatibilidade. CPU/RAM do host e orçamento de recursos permanecem pendentes.
+
+## Conhecimento visual — 29/10/2026
+
+Obsidian: adotar como interface de notas e grafo, integração ainda planejada. Graphify: direção aprovada para uso complementar, condicionada a prova de conceito de privacidade, compatibilidade e recursos. SQLite permanece fonte operacional. [ADR 0006](decisoes/0006-obsidian-e-graphify.md).
