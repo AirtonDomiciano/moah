@@ -25,7 +25,7 @@ Ler AGENTS.md e docs/ antes de começar. Inspecionar o código e o ambiente. Tra
 
 Antes de mudanças, informar abordagem e arquivos afetados. Implementar, validar comportamentos essenciais, atualizar documentação com evidência e limitações e entregar resumo com instruções de execução. Não publicar alterações em outros projetos ou executar ações externas sem autorização específica.
 
-Nenhum módulo de 01 a 10 está concluído. O prompt 00 entregou a CLI de memória de trabalho; o relatório está em [execuções](execucoes/2026-10-28-001-prompt-00.md). O prompt 11 acrescenta a conversa de leitura sobre essa memória, com simulador; o relatório está em [execuções](execucoes/2026-10-29-001-prompt-11.md). O prompt 12 prepara a validação com Ollama e aguarda autorização para o download. O módulo 02 continua planejado.
+Nenhum módulo de 01 a 10 está concluído. O prompt 00 entregou a CLI de memória de trabalho; o relatório está em [execuções](execucoes/2026-10-28-001-prompt-00.md). O prompt 11 acrescenta a conversa de leitura sobre essa memória, com simulador; o relatório está em [execuções](execucoes/2026-10-29-001-prompt-11.md). O prompt 12 prepara a validação com Ollama e aguarda autorização para o download. O prompt 13 aperta o critério dessa avaliação; o modelo real continua pendente. O módulo 02 continua planejado.
 
 ## Especificações ampliadas de 28/10/2026
 
@@ -40,6 +40,8 @@ Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Laun
 [11 — Conversa por texto sobre a memória de trabalho](11-conversa-texto.md), versão 1.0: executado em 29/10/2026. Consulta pendências, resumo de data explícita e último checkpoint. O simulador está validado; o modelo real, não. Relatório em [execuções](execucoes/2026-10-29-001-prompt-11.md). Decisão em [ADR 0005](../docs/arquitetura/decisoes/0005-conversa-texto-e-provedor.md).
 
 [12 — Validação com LLM local](12-validacao-llm-local.md), versão 1.0: inspeção e escolha do Ollama registradas em 29/10/2026. O download aguarda autorização. Relatório em [execuções](execucoes/2026-10-29-002-prompt-12.md). Decisão em [ADR 0007](../docs/arquitetura/decisoes/0007-ollama-qwen35-9b.md).
+
+[13 — Confiabilidade da avaliação do LLM](13-confiabilidade-avaliacao-llm.md), versão 1.0: executado em 01/11/2026. Corrige o critério automático da avaliação. Não baixa modelo nem conclui a validação real. Relatório em [execuções](execucoes/2026-11-01-001-prompt-13.md).
 
 ## Organização de prompts e decisões
 

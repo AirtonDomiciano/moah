@@ -1,6 +1,6 @@
 # Prompt 13 — Tornar confiável a avaliação do LLM local
 
-Data: 01/11/2026. Versão: 1.0. Estado: preparado, não executado.
+Data: 01/11/2026. Versão: 1.0. Estado: executado em 01/11/2026. Relatório: [execucoes/2026-11-01-001-prompt-13.md](execucoes/2026-11-01-001-prompt-13.md).
 Origem: revisão do diff do commit 152232b342abd3ea78ba96cea404486994de0c2b.
 
 ## Prompt para o Cursor

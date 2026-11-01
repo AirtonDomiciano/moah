@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { converse } from "../src/application/converse.js";
-import { gradeConversation } from "../src/application/llm-eval.js";
+import { gradeConversation, interpretReread, logicalChanges, maxGpuUsedMiB } from "../src/application/llm-eval.js";
 import { executeQueryTool } from "../src/application/query-tools.js";
 import { listPending, registerRecord } from "../src/application/work-log.js";
 import type { WorkLogContext } from "../src/application/work-log.js";
@@ -367,43 +367,175 @@ describe("adaptador e configuração", () => {
 });
 
 describe("avaliação real, critérios separados dos testes automáticos", () => {
-  it("exige a ferramenta e a data explícita e recusa data inventada", () => {
+  it("separa consulta, referências e resposta final", () => {
     const summary = gradeConversation({
       scenario: "resumo",
       calls: [{ name: "consultar_resumo", arguments: { data: "2026-10-29" } }],
-      corpus: "rec_sintetico",
+      references: ["rec_sintetico"],
+      toolLines: ["rec_sintetico atividade"],
+      empty: false,
+      answer: "O registro rec_sintetico está no dia 2026-10-29.",
       requiredIds: ["rec_sintetico"],
       forbiddenIds: ["rec_outro"],
       explicitDate: "2026-10-29",
     });
     assert.equal(summary.pass, true);
+    assert.equal(summary.humanReviewRequired, true);
+
+    const contradicted = gradeConversation({
+      scenario: "pendencias",
+      calls: [{ name: "consultar_pendencias", arguments: {} }],
+      references: ["act_sintetica"],
+      toolLines: ["act_sintetica [pendente] Conferir"],
+      empty: false,
+      answer: "Não há pendências.",
+      requiredIds: ["act_sintetica"],
+      forbiddenIds: [],
+      explicitDate: null,
+    });
+    assert.equal(contradicted.toolMatched, true);
+    assert.equal(contradicted.referencesMatched, true);
+    assert.equal(contradicted.answerMatched, false);
+    assert.equal(contradicted.pass, false);
+
+    const idOnlyInToolLine = gradeConversation({
+      scenario: "checkpoint",
+      calls: [{ name: "consultar_checkpoint", arguments: {} }],
+      references: [],
+      toolLines: ["rec_checkpoint checkpoint"],
+      empty: false,
+      answer: "O checkpoint rec_checkpoint segue aberto.",
+      requiredIds: ["rec_checkpoint"],
+      forbiddenIds: [],
+      explicitDate: null,
+    });
+    assert.equal(idOnlyInToolLine.referencesMatched, false);
+    assert.equal(idOnlyInToolLine.pass, false);
+  });
+
+  it("recusa esclarecimento vazio e ausência sem consulta", () => {
+    const emptyAnswer = gradeConversation({
+      scenario: "esclarecimento",
+      calls: [],
+      references: [],
+      toolLines: [],
+      empty: null,
+      answer: "",
+      requiredIds: [],
+      forbiddenIds: [],
+      explicitDate: null,
+    });
+    assert.equal(emptyAnswer.pass, false);
+    const irrelevant = gradeConversation({
+      scenario: "esclarecimento",
+      calls: [],
+      references: [],
+      toolLines: [],
+      empty: null,
+      answer: "Tudo certo.",
+      requiredIds: [],
+      forbiddenIds: [],
+      explicitDate: null,
+    });
+    assert.equal(irrelevant.pass, false);
+    const asked = gradeConversation({
+      scenario: "esclarecimento",
+      calls: [],
+      references: [],
+      toolLines: [],
+      empty: null,
+      answer: "Informe a data explícita no formato AAAA-MM-DD.",
+      requiredIds: [],
+      forbiddenIds: [],
+      explicitDate: null,
+    });
+    assert.equal(asked.pass, true);
     const invented = gradeConversation({
       scenario: "esclarecimento",
       calls: [{ name: "consultar_resumo", arguments: { data: "2026-10-24" } }],
-      corpus: "sexta",
+      references: [],
+      toolLines: [],
+      empty: null,
+      answer: "Informe a data explícita no formato AAAA-MM-DD.",
       requiredIds: [],
       forbiddenIds: [],
       explicitDate: null,
     });
     assert.equal(invented.pass, false);
-    const isolated = gradeConversation({
-      scenario: "dominio",
-      calls: [{ name: "consultar_pendencias", arguments: {} }],
-      corpus: "Nenhum registro de pendência no domínio pessoal.",
+    const absentWithoutQuery = gradeConversation({
+      scenario: "ausencia",
+      calls: [],
+      references: [],
+      toolLines: [],
+      empty: null,
+      answer: "Não há registros.",
       requiredIds: [],
       forbiddenIds: ["rec_imex"],
       explicitDate: null,
     });
-    assert.equal(isolated.pass, true);
-    const leaked = gradeConversation({
+    assert.equal(absentWithoutQuery.pass, false);
+    const absent = gradeConversation({
       scenario: "ausencia",
       calls: [{ name: "consultar_pendencias", arguments: {} }],
-      corpus: "Nenhum registro, mas rec_imex apareceu",
+      references: [],
+      toolLines: ["Nenhum registro de pendência no domínio pessoal."],
+      empty: true,
+      answer: "Não há registros de pendência no domínio pessoal.",
       requiredIds: [],
       forbiddenIds: ["rec_imex"],
       explicitDate: null,
     });
+    assert.equal(absent.pass, true);
+    const leaked = gradeConversation({
+      scenario: "dominio",
+      calls: [{ name: "consultar_pendencias", arguments: {} }],
+      references: [],
+      toolLines: ["Nenhum registro de pendência no domínio pessoal."],
+      empty: true,
+      answer: "Não há registros, mas rec_imex apareceu.",
+      requiredIds: [],
+      forbiddenIds: ["rec_imex"],
+      explicitDate: null,
+    });
+    assert.equal(leaked.answerMatched, false);
     assert.equal(leaked.pass, false);
+  });
+
+  it("compara o estado lógico e não trata a releitura inválida como sucesso", () => {
+    const before = {
+      records: [{ id: "rec_a", decisions: [{ text: "manter" }], refs: ["memoria://sintetica"], actions: [{ id: "act_a", status: "pendente" }] }],
+      actions: [{ id: "act_a", status: "pendente" }],
+      checkpoints: { imex: { id: "rec_c", nextStep: "medir" } },
+    };
+    assert.deepEqual(logicalChanges(before, { ...before, records: before.records }), []);
+    assert.deepEqual(
+      logicalChanges(before, { ...before, actions: [{ status: "pendente", id: "act_a" }] }),
+      [],
+    );
+    const concluded = logicalChanges(before, {
+      ...before,
+      actions: [{ id: "act_a", status: "concluida" }],
+    });
+    assert.equal(concluded.includes("a lista de ações mudou"), true);
+    const edited = logicalChanges(before, {
+      ...before,
+      records: [{ id: "rec_a", decisions: [{ text: "outro" }], refs: ["memoria://sintetica"], actions: [{ id: "act_a", status: "pendente" }] }],
+    });
+    assert.equal(edited.includes("registros, decisões, ações ou referências mudaram"), true);
+    const movedCheckpoint = logicalChanges(before, {
+      ...before,
+      checkpoints: { imex: { id: "rec_c", nextStep: "outro" } },
+    });
+    assert.equal(movedCheckpoint.includes("os checkpoints mudaram"), true);
+
+    const failed = interpretReread(1, "{", "Modelo indisponível. Verifique o endereço configurado.\n");
+    assert.equal(failed.ok, false);
+    assert.match(failed.diagnosis ?? "", /código 1/);
+    assert.match(failed.diagnosis ?? "", /Modelo indisponível/);
+    const broken = interpretReread(0, "{", "");
+    assert.equal(broken.ok, false);
+    assert.match(broken.diagnosis ?? "", /JSON inválido/);
+    assert.equal(maxGpuUsedMiB(["1200 MiB, 8000 MiB, 5 %", "nvidia-smi indisponível", "3400 MiB, 5000 MiB, 40 %"]), 3400);
   });
 });
 

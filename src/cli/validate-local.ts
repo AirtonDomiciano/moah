@@ -1,12 +1,23 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gradeConversation, type EvalScenario, type ObservedCall } from "../application/llm-eval.js";
+import {
+  AUTOMATIC_EVAL_LIMITS,
+  gradeConversation,
+  interpretReread,
+  logicalChanges,
+  maxGpuUsedMiB,
+  type EvalScenario,
+  type LogicalSnapshot,
+  type ObservedCall,
+} from "../application/llm-eval.js";
 import { resolveLlmSettings } from "../infrastructure/llm/settings.js";
 
 const cliPath = fileURLToPath(new URL("./main.js", import.meta.url));
+const EVAL_DATE = "2026-10-29";
+const SAMPLE_INTERVAL_MS = 250;
 
 interface Scenario {
   name: EvalScenario;
@@ -17,7 +28,14 @@ interface Scenario {
   explicitDate: string | null;
 }
 
-function main(): number {
+interface CommandResult {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  gpuSamples: string[];
+}
+
+async function main(): Promise<number> {
   const settings = resolveLlmSettings({}, process.env, null);
   if (settings.provider !== "openai-compatible") {
     process.stderr.write(
@@ -37,10 +55,10 @@ function main(): number {
     MOAH_CONFIG_DIR: configDir,
     MOAH_LLM_PROVIDER: "openai-compatible",
   };
-  const beforeGpu = sampleGpu();
-  const beforeRam = sampleRam();
+  const gpuBefore = sampleGpu();
+  const ramHostAvailableBefore = sampleRam();
   try {
-    const created = run(env, [
+    const created = runSync(env, [
       "--json",
       "registrar",
       "atividade",
@@ -53,7 +71,7 @@ function main(): number {
       "--acao",
       "Conferir a ferramenta",
     ]);
-    const checkpoint = run(env, [
+    const checkpoint = runSync(env, [
       "--json",
       "checkpoint",
       "--dominio",
@@ -65,13 +83,20 @@ function main(): number {
       "--proximo",
       "Medir a resposta",
     ]);
-    if (created.status !== 0 || checkpoint.status !== 0) {
-      process.stderr.write("Não foi possível preparar os registros sintéticos.\n");
+    const createdBody = interpretReread(created.status, created.stdout, created.stderr);
+    const checkpointBody = interpretReread(checkpoint.status, checkpoint.stdout, checkpoint.stderr);
+    if (!createdBody.ok || !checkpointBody.ok) {
+      process.stderr.write(`${createdBody.diagnosis ?? checkpointBody.diagnosis ?? "Falha ao preparar registros."}\n`);
       return 1;
     }
-    const activity = JSON.parse(created.stdout) as { id: string; actions: Array<{ id: string }> };
-    const savedCheckpoint = JSON.parse(checkpoint.stdout) as { id: string };
+    const activity = createdBody.value as { id: string; actions: Array<{ id: string }> };
+    const savedCheckpoint = checkpointBody.value as { id: string };
     const actionId = activity.actions[0]?.id ?? "";
+    const before = readSnapshot(env);
+    if (!before.ok) {
+      process.stderr.write(`${before.diagnosis}\n`);
+      return 1;
+    }
     const scenarios: Scenario[] = [
       {
         name: "pendencias",
@@ -122,10 +147,11 @@ function main(): number {
         explicitDate: null,
       },
     ];
-    const during: string[] = [];
-    const results = scenarios.map((scenario) => {
+    const gpuSamplesDuringCalls: string[] = [];
+    const results = [];
+    for (const scenario of scenarios) {
       const started = Date.now();
-      const response = run(env, [
+      const response = await runLive(env, [
         "--json",
         "conversar",
         "--dominio",
@@ -135,100 +161,211 @@ function main(): number {
         "--texto",
         scenario.text,
       ]);
+      gpuSamplesDuringCalls.push(...response.gpuSamples);
       const elapsedMs = Date.now() - started;
-      during.push(sampleGpu());
-      if (response.status !== 0) {
-        return {
+      const parsed = interpretReread(response.status, response.stdout, response.stderr);
+      if (!parsed.ok) {
+        results.push({
           scenario: scenario.name,
           elapsedMs,
           pass: false,
           toolMatched: false,
-          notes: [`a conversa terminou com código ${response.status ?? "nulo"}`],
+          referencesMatched: false,
+          answerMatched: false,
+          humanReviewRequired: true,
+          notes: [parsed.diagnosis],
           provider: null,
           simulated: null,
-        };
+        });
+        continue;
       }
-      const body = JSON.parse(response.stdout) as {
+      const body = parsed.value as {
         provider: string;
         simulated: boolean;
         model: string;
         answer: string | null;
-        consulted: Array<{ name: string; arguments: unknown; lines: string[] }>;
+        consulted: Array<{ name: string; arguments: unknown; empty: boolean | null; references: string[]; lines: string[] }>;
       };
       if (body.simulated || body.provider !== "openai-compatible") {
-        return {
+        results.push({
           scenario: scenario.name,
           elapsedMs,
           pass: false,
           toolMatched: false,
+          referencesMatched: false,
+          answerMatched: false,
+          humanReviewRequired: true,
           notes: ["a resposta veio do simulador"],
           provider: body.provider,
           simulated: body.simulated,
-        };
+        });
+        continue;
       }
-      const calls: ObservedCall[] = body.consulted.map((item) => ({
-        name: item.name,
-        arguments: "arguments" in item ? item.arguments : {},
-      }));
-      const corpus = [body.answer ?? "", ...body.consulted.flatMap((item) => item.lines)].join("\n");
+      const calls: ObservedCall[] = body.consulted.map((item) => ({ name: item.name, arguments: item.arguments }));
       const grade = gradeConversation({
         scenario: scenario.name,
         calls,
-        corpus,
+        references: body.consulted.flatMap((item) => item.references),
+        toolLines: body.consulted.flatMap((item) => item.lines),
+        empty: combinedEmpty(body.consulted.map((item) => item.empty)),
+        answer: body.answer,
         requiredIds: scenario.requiredIds,
         forbiddenIds: scenario.forbiddenIds,
         explicitDate: scenario.explicitDate,
       });
-      return {
+      results.push({
         scenario: scenario.name,
         elapsedMs,
         pass: grade.pass,
         toolMatched: grade.toolMatched,
+        referencesMatched: grade.referencesMatched,
+        answerMatched: grade.answerMatched,
+        humanReviewRequired: grade.humanReviewRequired,
         notes: grade.notes,
         provider: body.provider,
         simulated: body.simulated,
         model: body.model,
-      };
-    });
-    const after = run(env, ["--json", "pendencias", "--dominio", "imex"]);
-    const pending = JSON.parse(after.stdout) as { actions: Array<{ id: string; status: string }> };
-    const unchanged = pending.actions.some((item) => item.id === actionId && item.status === "pendente");
+      });
+    }
+    const after = readSnapshot(env);
+    const changes = after.ok ? logicalChanges(before.snapshot, after.snapshot) : [];
     const report = {
       kind: "avaliacao-real",
       automatedTests: false,
+      humanReviewRequired: true,
+      automaticLimits: AUTOMATIC_EVAL_LIMITS,
       provider: settings.provider,
       model: settings.model,
       baseUrl: settings.baseUrl,
       modelsDir: settings.modelsDir,
-      recordsUnchanged: unchanged,
-      ramBefore: beforeRam,
-      ramAfter: sampleRam(),
-      gpuBefore: beforeGpu,
-      gpuDuring: during,
-      gpuAfter: sampleGpu(),
+      recordsUnchanged: after.ok ? changes.length === 0 : null,
+      logicalChanges: changes,
+      rereadDiagnosis: after.ok ? null : after.diagnosis,
+      ram: {
+        exclusiveToModel: false,
+        hostAvailableBefore: ramHostAvailableBefore,
+        hostAvailableAfter: sampleRam(),
+      },
+      gpu: {
+        hostWide: true,
+        peakGuaranteed: false,
+        sampleIntervalMs: SAMPLE_INTERVAL_MS,
+        before: gpuBefore,
+        samplesDuringCalls: gpuSamplesDuringCalls,
+        observedMaxUsedMiB: maxGpuUsedMiB(gpuSamplesDuringCalls),
+        after: sampleGpu(),
+      },
       results,
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-    const failed = results.some((item) => !item.pass) || !unchanged;
+    const failed = results.some((item) => !item.pass) || !after.ok || changes.length > 0;
     return failed ? 1 : 0;
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
 
-function run(env: NodeJS.ProcessEnv, args: string[]): { status: number | null; stdout: string; stderr: string } {
+function readSnapshot(env: NodeJS.ProcessEnv): { ok: true; snapshot: LogicalSnapshot } | { ok: false; diagnosis: string } {
+  const day = interpretReread(
+    ...commandParts(runSync(env, ["--json", "listar", "dia", "--data", EVAL_DATE])),
+  );
+  const actions = interpretReread(...commandParts(runSync(env, ["--json", "pendencias", "--estado", "todas"])));
+  const checkpoints = {
+    pessoal: interpretReread(...commandParts(runSync(env, ["--json", "onde-paramos", "--dominio", "pessoal"]))),
+    imex: interpretReread(...commandParts(runSync(env, ["--json", "onde-paramos", "--dominio", "imex"]))),
+    aluai: interpretReread(...commandParts(runSync(env, ["--json", "onde-paramos", "--dominio", "aluai"]))),
+  };
+  const failed = [day, actions, checkpoints.pessoal, checkpoints.imex, checkpoints.aluai].find((item) => !item.ok);
+  if (failed && !failed.ok) {
+    return { ok: false, diagnosis: failed.diagnosis ?? "Falha ao reler o estado." };
+  }
+  if (!day.ok || !actions.ok || !checkpoints.pessoal.ok || !checkpoints.imex.ok || !checkpoints.aluai.ok) {
+    return { ok: false, diagnosis: "Falha ao reler o estado." };
+  }
+  const dayBody = day.value as { records?: unknown };
+  const actionBody = actions.value as { actions?: unknown };
+  return {
+    ok: true,
+    snapshot: {
+      records: dayBody.records ?? [],
+      actions: actionBody.actions ?? [],
+      checkpoints: {
+        pessoal: checkpointOf(checkpoints.pessoal.value),
+        imex: checkpointOf(checkpoints.imex.value),
+        aluai: checkpointOf(checkpoints.aluai.value),
+      },
+    },
+  };
+}
+
+function checkpointOf(value: unknown): unknown {
+  if (typeof value === "object" && value !== null && "checkpoint" in value) {
+    return (value as { checkpoint: unknown }).checkpoint;
+  }
+  return null;
+}
+
+function commandParts(result: CommandResult): [number | null, string, string] {
+  return [result.status, result.stdout, result.stderr];
+}
+
+function combinedEmpty(values: Array<boolean | null>): boolean | null {
+  if (values.some((value) => value === false)) {
+    return false;
+  }
+  if (values.length > 0 && values.every((value) => value === true)) {
+    return true;
+  }
+  return null;
+}
+
+function runSync(env: NodeJS.ProcessEnv, args: string[]): CommandResult {
   const result = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", cliPath, ...args], {
     encoding: "utf8",
     env,
   });
-  if (result.stderr) {
-    const safe = result.stderr.split("\n").filter((line) => !line.includes("MOAH_LLM_API_KEY"));
-    process.stderr.write(safe.join("\n"));
-    if (safe.length > 0 && !safe[safe.length - 1]?.endsWith("\n")) {
-      process.stderr.write("\n");
-    }
+  writeSafeStderr(result.stderr);
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr, gpuSamples: [] };
+}
+
+function runLive(env: NodeJS.ProcessEnv, args: string[]): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", cliPath, ...args], { env });
+    const gpuSamples: string[] = [sampleGpu()];
+    const timer = setInterval(() => {
+      gpuSamples.push(sampleGpu());
+    }, SAMPLE_INTERVAL_MS);
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      clearInterval(timer);
+      reject(error);
+    });
+    child.on("close", (status) => {
+      clearInterval(timer);
+      writeSafeStderr(stderr);
+      resolve({ status, stdout, stderr, gpuSamples });
+    });
+  });
+}
+
+function writeSafeStderr(stderr: string): void {
+  if (!stderr) {
+    return;
   }
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  const safe = stderr.split("\n").filter((line) => !line.includes("MOAH_LLM_API_KEY"));
+  process.stderr.write(safe.join("\n"));
+  if (safe.length > 0 && !safe[safe.length - 1]?.endsWith("\n")) {
+    process.stderr.write("\n");
+  }
 }
 
 function sampleGpu(): string {
@@ -247,7 +384,7 @@ function sampleRam(): string {
 }
 
 try {
-  process.exitCode = main();
+  process.exitCode = await main();
 } catch (error) {
   const message = error instanceof Error ? error.message : "Falha na avaliação real.";
   process.stderr.write(`${message}\n`);

@@ -79,7 +79,11 @@ Os testes de `npm test` usam o simulador e respostas HTTP falsas. A avaliação 
 npm run validar-llm
 ```
 
-Esse comando exige `MOAH_LLM_PROVIDER=openai-compatible`, cria registros sintéticos num diretório temporário e apaga esse diretório ao terminar. Sem o provedor real, ele para e não chama o simulador.
+Esse comando exige `MOAH_LLM_PROVIDER=openai-compatible`, cria registros sintéticos num diretório temporário e apaga esse diretório ao terminar. Sem o provedor real, ele para e não chama o simulador. A validação com modelo real continua pendente até a autorização de download do prompt 12.
+
+O relatório marca `humanReviewRequired`. A aprovação automática separa a ferramenta chamada, as referências devolvidas e o texto final. Um identificador presente só nas linhas da ferramenta não aprova a resposta. Esclarecimento vazio ou irrelevante e ausência sem consulta são reprovados. O comando compara registros, decisões, ações, checkpoints e referências antes e depois, pelo conteúdo lógico, e confere o código e o JSON da releitura antes de usá-la.
+
+Durante cada chamada, a VRAM do computador é amostrada a cada 250 ms. O maior valor é o máximo observado, não um pico garantido. `MemAvailable` antes e depois é a memória livre do host, não o consumo exclusivo do MOAH ou do modelo. Essa aprovação não substitui a leitura humana da resposta. O ajuste está no [relatório do prompt 13](../../cursror-dev/execucoes/2026-11-01-001-prompt-13.md).
 
 ## Diagnosticar
 
