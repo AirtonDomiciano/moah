@@ -35,6 +35,77 @@ interface CommandResult {
   gpuSamples: string[];
 }
 
+interface ConsultedItem {
+  name: string;
+  arguments: unknown;
+  references: string[];
+  lines: string[];
+}
+
+export interface ScenarioEvidence {
+  scenario: EvalScenario;
+  domain: Scenario["domain"];
+  question: string;
+  answer: string | null;
+  tools: Array<{ name: string; arguments: unknown }>;
+  references: string[];
+  syntheticData: string[];
+  criteria: {
+    tool: "aprovado" | "reprovado";
+    references: "aprovado" | "reprovado";
+    answer: "aprovado" | "reprovado";
+  };
+  elapsedMs: number;
+  pass: boolean;
+  humanReviewRequired: true;
+  notes: string[];
+  provider: string | null;
+  simulated: boolean | null;
+  model?: string;
+}
+
+export function buildScenarioEvidence(input: {
+  scenario: Scenario;
+  elapsedMs: number;
+  answer: string | null;
+  consulted: ConsultedItem[];
+  toolMatched: boolean;
+  referencesMatched: boolean;
+  answerMatched: boolean;
+  notes: string[];
+  provider: string | null;
+  simulated: boolean | null;
+  model?: string;
+}): ScenarioEvidence {
+  const evidence: ScenarioEvidence = {
+    scenario: input.scenario.name,
+    domain: input.scenario.domain,
+    question: redact(input.scenario.text),
+    answer: input.answer === null ? null : redact(input.answer),
+    tools: input.consulted.map((item) => ({
+      name: item.name,
+      arguments: redactValue(item.arguments),
+    })),
+    references: input.consulted.flatMap((item) => item.references.map(redact)),
+    syntheticData: input.consulted.flatMap((item) => item.lines.map(redact)),
+    criteria: {
+      tool: mark(input.toolMatched),
+      references: mark(input.referencesMatched),
+      answer: mark(input.answerMatched),
+    },
+    elapsedMs: input.elapsedMs,
+    pass: input.toolMatched && input.referencesMatched && input.answerMatched && input.notes.length === 0,
+    humanReviewRequired: true,
+    notes: input.notes.map(redact),
+    provider: input.provider,
+    simulated: input.simulated,
+  };
+  if (input.model !== undefined) {
+    evidence.model = input.model;
+  }
+  return evidence;
+}
+
 async function main(): Promise<number> {
   const settings = resolveLlmSettings({}, process.env, null);
   if (settings.provider !== "openai-compatible") {
@@ -165,18 +236,20 @@ async function main(): Promise<number> {
       const elapsedMs = Date.now() - started;
       const parsed = interpretReread(response.status, response.stdout, response.stderr);
       if (!parsed.ok) {
-        results.push({
-          scenario: scenario.name,
-          elapsedMs,
-          pass: false,
-          toolMatched: false,
-          referencesMatched: false,
-          answerMatched: false,
-          humanReviewRequired: true,
-          notes: [parsed.diagnosis],
-          provider: null,
-          simulated: null,
-        });
+        results.push(
+          buildScenarioEvidence({
+            scenario,
+            elapsedMs,
+            answer: null,
+            consulted: [],
+            toolMatched: false,
+            referencesMatched: false,
+            answerMatched: false,
+            notes: [parsed.diagnosis ?? "Falha ao ler a resposta."],
+            provider: null,
+            simulated: null,
+          }),
+        );
         continue;
       }
       const body = parsed.value as {
@@ -187,18 +260,21 @@ async function main(): Promise<number> {
         consulted: Array<{ name: string; arguments: unknown; empty: boolean | null; references: string[]; lines: string[] }>;
       };
       if (body.simulated || body.provider !== "openai-compatible") {
-        results.push({
-          scenario: scenario.name,
-          elapsedMs,
-          pass: false,
-          toolMatched: false,
-          referencesMatched: false,
-          answerMatched: false,
-          humanReviewRequired: true,
-          notes: ["a resposta veio do simulador"],
-          provider: body.provider,
-          simulated: body.simulated,
-        });
+        results.push(
+          buildScenarioEvidence({
+            scenario,
+            elapsedMs,
+            answer: body.answer,
+            consulted: body.consulted,
+            toolMatched: false,
+            referencesMatched: false,
+            answerMatched: false,
+            notes: ["a resposta veio do simulador"],
+            provider: body.provider,
+            simulated: body.simulated,
+            model: body.model,
+          }),
+        );
         continue;
       }
       const calls: ObservedCall[] = body.consulted.map((item) => ({ name: item.name, arguments: item.arguments }));
@@ -213,19 +289,21 @@ async function main(): Promise<number> {
         forbiddenIds: scenario.forbiddenIds,
         explicitDate: scenario.explicitDate,
       });
-      results.push({
-        scenario: scenario.name,
-        elapsedMs,
-        pass: grade.pass,
-        toolMatched: grade.toolMatched,
-        referencesMatched: grade.referencesMatched,
-        answerMatched: grade.answerMatched,
-        humanReviewRequired: grade.humanReviewRequired,
-        notes: grade.notes,
-        provider: body.provider,
-        simulated: body.simulated,
-        model: body.model,
-      });
+      results.push(
+        buildScenarioEvidence({
+          scenario,
+          elapsedMs,
+          answer: body.answer,
+          consulted: body.consulted,
+          toolMatched: grade.toolMatched,
+          referencesMatched: grade.referencesMatched,
+          answerMatched: grade.answerMatched,
+          notes: grade.notes,
+          provider: body.provider,
+          simulated: body.simulated,
+          model: body.model,
+        }),
+      );
     }
     const after = readSnapshot(env);
     const changes = after.ok ? logicalChanges(before.snapshot, after.snapshot) : [];
@@ -383,10 +461,41 @@ function sampleRam(): string {
   return `MemAvailable_kB=${available}`;
 }
 
-try {
-  process.exitCode = await main();
-} catch (error) {
-  const message = error instanceof Error ? error.message : "Falha na avaliação real.";
-  process.stderr.write(`${message}\n`);
-  process.exitCode = 1;
+function mark(ok: boolean): "aprovado" | "reprovado" {
+  return ok ? "aprovado" : "reprovado";
+}
+
+function redact(value: string): string {
+  return value
+    .replace(/Bearer\s+\S+/gi, "Bearer [omitido]")
+    .replace(/MOAH_LLM_API_KEY[=:]\S+/g, "MOAH_LLM_API_KEY=[omitido]");
+}
+
+function redactValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return redact(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(redactValue);
+  }
+  if (typeof value === "object" && value !== null) {
+    const source = value as Record<string, unknown>;
+    const redacted: Record<string, unknown> = {};
+    for (const key of Object.keys(source)) {
+      redacted[key] = /api.?key|authorization|secret|token|password/i.test(key) ? "[omitido]" : redactValue(source[key]);
+    }
+    return redacted;
+  }
+  return value;
+}
+
+const entry = process.argv[1];
+if (entry !== undefined && path.resolve(entry) === fileURLToPath(import.meta.url)) {
+  try {
+    process.exitCode = await main();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha na avaliação real.";
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 1;
+  }
 }

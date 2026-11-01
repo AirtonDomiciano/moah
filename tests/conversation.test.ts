@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { converse } from "../src/application/converse.js";
 import { gradeConversation, interpretReread, logicalChanges, maxGpuUsedMiB } from "../src/application/llm-eval.js";
+import { buildScenarioEvidence } from "../src/cli/validate-local.js";
 import { executeQueryTool } from "../src/application/query-tools.js";
 import { listPending, registerRecord } from "../src/application/work-log.js";
 import type { WorkLogContext } from "../src/application/work-log.js";
@@ -536,6 +537,45 @@ describe("avaliação real, critérios separados dos testes automáticos", () =>
     assert.equal(broken.ok, false);
     assert.match(broken.diagnosis ?? "", /JSON inválido/);
     assert.equal(maxGpuUsedMiB(["1200 MiB, 8000 MiB, 5 %", "nvidia-smi indisponível", "3400 MiB, 5000 MiB, 40 %"]), 3400);
+  });
+
+  it("inclui no relatório a pergunta, a resposta, as ferramentas e os critérios", () => {
+    const evidence = buildScenarioEvidence({
+      scenario: {
+        name: "pendencias",
+        domain: "imex",
+        text: "quais são as pendências?",
+        requiredIds: ["act_sintetica"],
+        forbiddenIds: [],
+        explicitDate: null,
+      },
+      elapsedMs: 12,
+      answer: "A pendência act_sintetica continua aberta. Bearer segredo-nao-registrar",
+      consulted: [
+        {
+          name: "consultar_pendencias",
+          arguments: { projeto: "sintetico", apiKey: "segredo-nao-registrar" },
+          references: ["act_sintetica"],
+          lines: ["act_sintetica [pendente] Conferir a ferramenta"],
+        },
+      ],
+      toolMatched: true,
+      referencesMatched: true,
+      answerMatched: false,
+      notes: ["a resposta final contradiz os dados consultados"],
+      provider: "openai-compatible",
+      simulated: false,
+      model: "qwen3.5:9b",
+    });
+    assert.equal(evidence.question, "quais são as pendências?");
+    assert.match(evidence.answer ?? "", /act_sintetica continua aberta/);
+    assert.equal(evidence.answer?.includes("segredo-nao-registrar"), false);
+    assert.deepEqual(evidence.tools, [{ name: "consultar_pendencias", arguments: { projeto: "sintetico", apiKey: "[omitido]" } }]);
+    assert.deepEqual(evidence.references, ["act_sintetica"]);
+    assert.deepEqual(evidence.syntheticData, ["act_sintetica [pendente] Conferir a ferramenta"]);
+    assert.deepEqual(evidence.criteria, { tool: "aprovado", references: "aprovado", answer: "reprovado" });
+    assert.equal(evidence.humanReviewRequired, true);
+    assert.equal(JSON.stringify(evidence).includes("segredo-nao-registrar"), false);
   });
 });
 
