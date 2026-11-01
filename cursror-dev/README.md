@@ -39,7 +39,7 @@ Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Laun
 
 [11 — Conversa por texto sobre a memória de trabalho](11-conversa-texto.md), versão 1.0: executado em 29/10/2026. Consulta pendências, resumo de data explícita e último checkpoint. O simulador está validado; o modelo real, não. Relatório em [execuções](execucoes/2026-10-29-001-prompt-11.md). Decisão em [ADR 0005](../docs/arquitetura/decisoes/0005-conversa-texto-e-provedor.md).
 
-[12 — Validação com LLM local](12-validacao-llm-local.md), versão 1.0: inspeção e escolha do Ollama registradas em 29/10/2026. O download aguarda autorização. Relatório em [execuções](execucoes/2026-10-29-002-prompt-12.md). Decisão em [ADR 0006](../docs/arquitetura/decisoes/0006-ollama-qwen35-9b.md).
+[12 — Validação com LLM local](12-validacao-llm-local.md), versão 1.0: inspeção e escolha do Ollama registradas em 29/10/2026. O download aguarda autorização. Relatório em [execuções](execucoes/2026-10-29-002-prompt-12.md). Decisão em [ADR 0007](../docs/arquitetura/decisoes/0007-ollama-qwen35-9b.md).
 
 ## Organização de prompts e decisões
 

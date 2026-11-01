@@ -1,4 +1,4 @@
-# ADR 0006 — Motor local para validar a conversa
+# ADR 0007 — Motor local para validar a conversa
 
 - Data: 29/10/2026
 - Estado: escolha registrada; download não executado, aguardando autorização de Airton

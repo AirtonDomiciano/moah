@@ -106,7 +106,7 @@ Data: 28/10/2026. Origem: pedido de Airton. Estado: organização documental ent
 ## MOAH-031 — Conhecimento visual com Obsidian e Graphify
 
 Data: 29/10/2026. Origem: pedido explícito de Airton. Estado: decisão documentada, implementação pendente. Exportar notas Markdown vinculadas e idempotentes por domínio para Obsidian; manter SQLite como fonte estruturada. Avaliar Graphify em prova de conceito isolada, com fontes selecionadas e verificação de envio a APIs. Primeira exportação unidirecional, preservando notas manuais. [ADR 0006](docs/arquitetura/decisoes/0006-obsidian-e-graphify.md).
-## MOAH-031 — Validar a conversa com um modelo local
+## MOAH-032 — Validar a conversa com um modelo local
 
 - Data: 29/10/2026. Origem: pedido explícito de Airton. Estado: escolha registrada; download do Ollama e de `qwen3.5:9b` aguardando autorização.
 - Responsabilidade: medir a conversa de leitura do prompt 11 num endpoint local, com registros sintéticos.

@@ -82,4 +82,4 @@ Isso não conclui o módulo 02 nem acrescenta voz, agenda, escrita de registros 
 
 ## Evidência do prompt 12 — 29/10/2026
 
-A máquina foi inspecionada e o Ollama foi escolhido como motor local do adaptador HTTP. O candidato `qwen3.5:9b` em Q4_K_M, pacote de 7,6 GB, ainda não foi baixado: a autorização foi pedida antes do download. Os testes automáticos continuam no simulador. A avaliação real fica em `npm run validar-llm` e só vale depois que o endpoint responder. Evidência: [relatório](../../cursror-dev/execucoes/2026-10-29-002-prompt-12.md) e [ADR 0006](../arquitetura/decisoes/0006-ollama-qwen35-9b.md).
+A máquina foi inspecionada e o Ollama foi escolhido como motor local do adaptador HTTP. O candidato `qwen3.5:9b` em Q4_K_M, pacote de 7,6 GB, ainda não foi baixado: a autorização foi pedida antes do download. Os testes automáticos continuam no simulador. A avaliação real fica em `npm run validar-llm` e só vale depois que o endpoint responder. Evidência: [relatório](../../cursror-dev/execucoes/2026-10-29-002-prompt-12.md) e [ADR 0007](../arquitetura/decisoes/0007-ollama-qwen35-9b.md).

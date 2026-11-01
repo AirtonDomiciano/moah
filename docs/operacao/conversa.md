@@ -49,7 +49,7 @@ Para voltar ao simulador: `--provedor simulator` ou `"provider": "simulator"`.
 
 ## Modelo local
 
-A escolha registrada na [ADR 0006](../arquitetura/decisoes/0006-ollama-qwen35-9b.md) é o Ollama em `http://127.0.0.1:11434/v1`, com o candidato `qwen3.5:9b` (Q4_K_M, pacote de 7,6 GB). Em 29/10/2026 o motor e o modelo ainda não foram baixados.
+A escolha registrada na [ADR 0007](../arquitetura/decisoes/0007-ollama-qwen35-9b.md) é o Ollama em `http://127.0.0.1:11434/v1`, com o candidato `qwen3.5:9b` (Q4_K_M, pacote de 7,6 GB). Em 29/10/2026 o motor e o modelo ainda não foram baixados.
 
 Quando o binário existir, o servidor desta validação sobe no usuário, sem serviço permanente:
 
