@@ -10,3 +10,5 @@ Responsabilidade: transformar uma tarefa em código verificado, com histórico c
 - [Prompts](../../cursror-dev/README.md) e [execuções](../../cursror-dev/execucoes/README.md).
 
 Fluxo: escolher uma entrega → ler só o contexto relevante → implementar → testar → registrar resultado. Decisões importantes ficam na arquitetura; problemas comprovados ficam nas lições de operação.
+
+- [Segurança](seguranca/README.md): permissões, aprovação de ações, execução e proteção de dados.

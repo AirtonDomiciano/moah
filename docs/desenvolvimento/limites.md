@@ -12,3 +12,5 @@
 10. Controlar recursos e manter agenda determinística independente da IA.
 
 Escopo inicial: documentação e desenvolvimento local autorizados, sem alteração de sistemas empresariais. Consultar [AGENTS raiz](../../AGENTS.md) e [contratos](../arquitetura/agentes-e-memoria.md).
+
+Detalhamento canônico: [segurança por responsabilidade](seguranca/README.md), incluindo acesso, aprovação, execução e critérios de validação. Estado: especificação; não instala controles no SO nem em ferramentas externas.

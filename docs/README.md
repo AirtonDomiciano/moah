@@ -21,3 +21,5 @@ Quatro áreas, cada uma com uma responsabilidade. Comece pela área relacionada 
 Prompts permanecem em cursror-dev; não há um segundo catálogo. Dados privados do MOAH ficam fora do Git. Esta documentação registra engenharia, não suas reuniões e estudos reais.
 
 Organização simplificada em 28/10/2026 por pedido de Airton. Os documentos anteriores foram movidos e seus links atualizados, preservando decisões, exemplos e execução registrada.
+
+Segurança fica sob Desenvolvimento: [políticas e responsabilidades](desenvolvimento/seguranca/README.md). Não cria uma quinta área principal.

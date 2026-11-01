@@ -113,3 +113,7 @@ Data: 29/10/2026. Origem: pedido explícito de Airton. Estado: decisão document
 - Responsabilidade: medir a conversa de leitura do prompt 11 num endpoint local, com registros sintéticos.
 - O candidato Qwen3.5-9B quantizado não é obrigatório. A reserva, se a VRAM medida não comportar o pacote de 7,6 GB, é uma variante menor da mesma família.
 - Próximo passo: autorizar o download para `/media/projetos/models/ollama` e executar `npm run validar-llm`. A aprovação automática não substitui a revisão humana. Obsidian, Graphify, voz, agenda e escrita por IA ficam para entregas seguintes. Relatório do critério: [prompt 13](cursror-dev/execucoes/2026-11-01-001-prompt-13.md).
+
+## MOAH-033 — Políticas de acesso e aprovação de ações
+
+Data: 01/11/2026. Origem: pedido explícito de Airton por regras claras, inclusive no Windows. Estado: especificação documental entregue; controles de runtime pendentes. Responsabilidade: política allow/ask/deny, aprovação vinculada à ação, executor restrito, auditoria e pausa. Fonte: [segurança](docs/desenvolvimento/seguranca/README.md). Próximo passo: implementar motor de políticas e aprovação com ferramentas falsas antes de habilitar escrita/comandos na conversa. Esta decisão não configura Cursor nem permissões do SO.

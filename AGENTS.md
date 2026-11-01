@@ -37,3 +37,7 @@ Este repositório contém documentação, prompts e uma CLI inicial de memória 
 ## Documentação por responsabilidade
 
 Consultar docs/README.md. Produto em docs/produto; arquitetura e ADRs em docs/arquitetura; processo, padrões e limites em docs/desenvolvimento; execução, métricas e lições em docs/operacao. Ler apenas o necessário. Prompts permanecem em cursror-dev e relatórios em cursror-dev/execucoes. Separar base pública de engenharia e memória privada.
+
+## Segurança por responsabilidade
+
+Consultar docs/desenvolvimento/seguranca/README.md antes de acrescentar ferramentas, conectores, captura ou escrita por IA. O modelo propõe; política e executor verificam autorização. Não ativar ferramentas novas por existir documentação. Manter conversa somente leitura até controles apropriados serem implementados. Não ampliar privilégios nem alterar política do runtime pela própria IA. Autorização explícita exata já concedida deve ser respeitada sem perguntas redundantes.
