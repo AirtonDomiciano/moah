@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { converse } from "../src/application/converse.js";
+import { gradeConversation } from "../src/application/llm-eval.js";
 import { executeQueryTool } from "../src/application/query-tools.js";
 import { listPending, registerRecord } from "../src/application/work-log.js";
 import type { WorkLogContext } from "../src/application/work-log.js";
@@ -347,11 +348,62 @@ describe("adaptador e configuração", () => {
       assert.equal(config.timezone, "America/Sao_Paulo");
       assert.equal(config.llm.provider, "simulator");
       assert.equal(config.llm.maxToolCalls, 2);
+      fs.writeFileSync(
+        path.join(workspace.dir, "config.json"),
+        JSON.stringify({ timezone: "America/Sao_Paulo", llm: { modelsDir: "relativo" } }),
+      );
+      assert.throws(() => loadConfig(workspace.dir), /absoluto/);
+      fs.writeFileSync(
+        path.join(workspace.dir, "config.json"),
+        JSON.stringify({ timezone: "America/Sao_Paulo", llm: { modelsDir: "/media/projetos/models/ollama" } }),
+      );
+      assert.equal(loadConfig(workspace.dir).llm.modelsDir, "/media/projetos/models/ollama");
       fs.writeFileSync(path.join(workspace.dir, "config.json"), JSON.stringify({ timezone: "America/Sao_Paulo", llm: { apiKey: "x" } }));
       assert.throws(() => loadConfig(workspace.dir), /desconhecida/);
     } finally {
       workspace.cleanup();
     }
+  });
+});
+
+describe("avaliação real, critérios separados dos testes automáticos", () => {
+  it("exige a ferramenta e a data explícita e recusa data inventada", () => {
+    const summary = gradeConversation({
+      scenario: "resumo",
+      calls: [{ name: "consultar_resumo", arguments: { data: "2026-10-29" } }],
+      corpus: "rec_sintetico",
+      requiredIds: ["rec_sintetico"],
+      forbiddenIds: ["rec_outro"],
+      explicitDate: "2026-10-29",
+    });
+    assert.equal(summary.pass, true);
+    const invented = gradeConversation({
+      scenario: "esclarecimento",
+      calls: [{ name: "consultar_resumo", arguments: { data: "2026-10-24" } }],
+      corpus: "sexta",
+      requiredIds: [],
+      forbiddenIds: [],
+      explicitDate: null,
+    });
+    assert.equal(invented.pass, false);
+    const isolated = gradeConversation({
+      scenario: "dominio",
+      calls: [{ name: "consultar_pendencias", arguments: {} }],
+      corpus: "Nenhum registro de pendência no domínio pessoal.",
+      requiredIds: [],
+      forbiddenIds: ["rec_imex"],
+      explicitDate: null,
+    });
+    assert.equal(isolated.pass, true);
+    const leaked = gradeConversation({
+      scenario: "ausencia",
+      calls: [{ name: "consultar_pendencias", arguments: {} }],
+      corpus: "Nenhum registro, mas rec_imex apareceu",
+      requiredIds: [],
+      forbiddenIds: ["rec_imex"],
+      explicitDate: null,
+    });
+    assert.equal(leaked.pass, false);
   });
 });
 

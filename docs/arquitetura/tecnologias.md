@@ -12,7 +12,8 @@ Estado em 28/10/2026, com a linha da conversa revisada em 29/10/2026. “Adotar�
 | Modelo local substituível | Direção de arquitetura | Não acoplar memória ao modelo |
 | Qwen3.5-9B | Candidato | Sem benchmark real na máquina |
 | Qwen3-Coder | Candidato para código | Avaliar memória e qualidade |
-| Ollama / llama.cpp | Avaliar | Em 29/10/2026 os binários não estavam no PATH e as portas locais habituais recusaram conexão |
+| Ollama | Escolhido para a validação local | Contrato HTTP já existente. v0.40.13 e qwen3.5:9b ainda não baixados. ADR 0006 |
+| llama.cpp | Avaliar | Alternativa HTTP não instalada; não é o motor desta validação |
 | systemd de usuário | Avaliar na fase de serviço | Sem instalação automática |
 | Launcher Python/PyQt6 | Projeto separado existente | Integrar por contrato; sem reescrita obrigatória |
 | Framework multiagente | Adiar | Demonstrar necessidade antes de adicionar |

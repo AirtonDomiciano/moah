@@ -49,6 +49,7 @@ export const QUERY_TOOL_DEFINITIONS: LlmToolDefinition[] = [
 
 export interface ToolExecution {
   name: string;
+  arguments: unknown;
   ok: boolean;
   empty: boolean | null;
   question: string | null;
@@ -65,12 +66,13 @@ export function executeQueryTool(
 ): ToolExecution {
   const args = asArguments(rawArguments);
   if (args === null) {
-    return failure(name, "Os argumentos da ferramenta precisam ser um objeto JSON.");
+    return failure(name, rawArguments, "Os argumentos da ferramenta precisam ser um objeto JSON.");
   }
   const forbidden = Object.keys(args).filter((key) => !allowedKeys(name).includes(key));
   if (forbidden.length > 0) {
     return failure(
       name,
+      args,
       `A ferramenta não aceita ${forbidden.join(", ")}. O domínio da sessão permanece ${session.domain}.`,
     );
   }
@@ -78,29 +80,29 @@ export function executeQueryTool(
   try {
     project = resolveProject(session.project, args.projeto);
   } catch (error) {
-    return failure(name, error instanceof Error ? error.message : "Projeto inválido.");
+    return failure(name, args, error instanceof Error ? error.message : "Projeto inválido.");
   }
   try {
     if (name === "consultar_pendencias") {
       const actions = listPending(context, { domain: session.domain, project, status: "pendente" });
-      return fromActions(name, session.domain, actions);
+      return fromActions(name, session.domain, actions, args);
     }
     if (name === "consultar_resumo") {
       const date = requiredDate(args.data);
       const summary = summarizeDay(context, { date, domain: session.domain, project });
-      return fromSummary(summary);
+      return fromSummary(summary, args);
     }
     if (name === "consultar_checkpoint") {
       const checkpoint = findCheckpoint(context, { domain: session.domain, project });
-      return fromCheckpoint(session.domain, checkpoint);
+      return fromCheckpoint(session.domain, checkpoint, args);
     }
   } catch (error) {
     if (error instanceof AppError && error.code === "validation") {
-      return failure(name, error.message);
+      return failure(name, args, error.message);
     }
     throw error;
   }
-  return failure(name, `Ferramenta desconhecida: ${name}.`);
+  return failure(name, args, `Ferramenta desconhecida: ${name}.`);
 }
 
 function allowedKeys(name: string): string[] {
@@ -160,7 +162,7 @@ function requiredDate(value: unknown): string {
   return parseCivilDate(value);
 }
 
-function fromActions(name: string, domain: Domain, actions: ActionView[]): ToolExecution {
+function fromActions(name: string, domain: Domain, actions: ActionView[], args: Record<string, unknown>): ToolExecution {
   const shown = actions.slice(0, MAX_SENT_ITEMS);
   const lines = shown.map((item) => {
     const project = item.project ? `/${item.project}` : "";
@@ -172,7 +174,7 @@ function fromActions(name: string, domain: Domain, actions: ActionView[]): ToolE
     lines.push(`Há mais itens do que o limite de ${MAX_SENT_ITEMS} enviado ao modelo.`);
   }
   const references = shown.map((item) => item.action.id);
-  return success(name, actions.length === 0, references, lines, {
+  return success(name, args, actions.length === 0, references, lines, {
     tool: name,
     domain,
     empty: actions.length === 0,
@@ -182,7 +184,7 @@ function fromActions(name: string, domain: Domain, actions: ActionView[]): ToolE
   });
 }
 
-function fromSummary(summary: DailySummary): ToolExecution {
+function fromSummary(summary: DailySummary, args: Record<string, unknown>): ToolExecution {
   const records = [...summary.activities, ...summary.meetings, ...summary.checkpoints];
   const shown = records.slice(0, MAX_SENT_ITEMS);
   const lines = shown.map((record) => {
@@ -202,7 +204,7 @@ function fromSummary(summary: DailySummary): ToolExecution {
   for (const decision of summary.decisions.slice(0, MAX_SENT_ITEMS)) {
     lines.push(`decisão ${clip(decision.text)} | registro=${decision.recordId} | origem=${decision.origin}`);
   }
-  return success("consultar_resumo", records.length === 0, references, lines, {
+  return success("consultar_resumo", args, records.length === 0, references, lines, {
     tool: "consultar_resumo",
     domain: summary.domain,
     date: summary.date,
@@ -214,10 +216,10 @@ function fromSummary(summary: DailySummary): ToolExecution {
   });
 }
 
-function fromCheckpoint(domain: Domain, checkpoint: WorkRecord | null): ToolExecution {
+function fromCheckpoint(domain: Domain, checkpoint: WorkRecord | null, args: Record<string, unknown>): ToolExecution {
   if (!checkpoint) {
     const lines = [`Nenhum checkpoint no domínio ${domain}.`];
-    return success("consultar_checkpoint", true, [], lines, {
+    return success("consultar_checkpoint", args, true, [], lines, {
       tool: "consultar_checkpoint",
       domain,
       empty: true,
@@ -233,7 +235,7 @@ function fromCheckpoint(domain: Domain, checkpoint: WorkRecord | null): ToolExec
     `${checkpoint.id} [${checkpoint.type}] origem=${checkpoint.origin} | ${clip(checkpoint.text)}`,
     `próximo=${checkpoint.nextStep ? clip(checkpoint.nextStep) : "(nenhum)"}`,
   ];
-  return success("consultar_checkpoint", false, [checkpoint.id], lines, {
+  return success("consultar_checkpoint", args, false, [checkpoint.id], lines, {
     tool: "consultar_checkpoint",
     domain,
     empty: false,
@@ -245,17 +247,19 @@ function fromCheckpoint(domain: Domain, checkpoint: WorkRecord | null): ToolExec
 
 function success(
   name: string,
+  args: unknown,
   empty: boolean,
   references: string[],
   lines: string[],
   modelPayload: unknown,
 ): ToolExecution {
-  return { name, ok: true, empty, question: null, references, lines, modelPayload };
+  return { name, arguments: args, ok: true, empty, question: null, references, lines, modelPayload };
 }
 
-function failure(name: string, question: string): ToolExecution {
+function failure(name: string, args: unknown, question: string): ToolExecution {
   return {
     name,
+    arguments: args,
     ok: false,
     empty: null,
     question,

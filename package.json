@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "npm run build && node --disable-warning=ExperimentalWarning --test dist/tests/*.test.js",
-    "moah": "node --disable-warning=ExperimentalWarning dist/src/cli/main.js"
+    "moah": "node --disable-warning=ExperimentalWarning dist/src/cli/main.js",
+    "validar-llm": "node --disable-warning=ExperimentalWarning dist/src/cli/validate-local.js"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

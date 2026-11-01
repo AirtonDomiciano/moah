@@ -45,6 +45,42 @@ Variáveis, quando precisam sobrepor o arquivo: `MOAH_LLM_PROVIDER`, `MOAH_LLM_B
 
 Para voltar ao simulador: `--provedor simulator` ou `"provider": "simulator"`.
 
+`llm.modelsDir` ou `MOAH_LLM_MODELS_DIR` guardam o diretório absoluto dos pesos. Esse valor configura o motor; o adaptador HTTP não abre esses arquivos e o modelo não escolhe o caminho.
+
+## Modelo local
+
+A escolha registrada na [ADR 0006](../arquitetura/decisoes/0006-ollama-qwen35-9b.md) é o Ollama em `http://127.0.0.1:11434/v1`, com o candidato `qwen3.5:9b` (Q4_K_M, pacote de 7,6 GB). Em 29/10/2026 o motor e o modelo ainda não foram baixados.
+
+Quando o binário existir, o servidor desta validação sobe no usuário, sem serviço permanente:
+
+```bash
+OLLAMA_MODELS=/media/projetos/models/ollama OLLAMA_HOST=127.0.0.1:11434 OLLAMA_CONTEXT_LENGTH=4096 ollama serve
+```
+
+O contexto 4096 é o padrão documentado pelo Ollama. A janela máxima de 256K do Qwen3.5 não deve ser usada nesta GPU de 12 GiB até uma medição própria.
+
+A configuração correspondente da CLI:
+
+```bash
+export MOAH_LLM_PROVIDER=openai-compatible
+export MOAH_LLM_BASE_URL=http://127.0.0.1:11434/v1
+export MOAH_LLM_MODEL=qwen3.5:9b
+export MOAH_LLM_MODELS_DIR=/media/projetos/models/ollama
+export MOAH_LLM_TIMEOUT_MS=120000
+```
+
+A primeira carga pode passar de 30 segundos. Se o endpoint recusar ou estourar o tempo, a CLI termina com código 3 e a mensagem curta do adaptador. Ela não muda para o simulador.
+
+Parar o servidor: encerrar o processo `ollama serve` dessa sessão. `ollama stop qwen3.5:9b` descarrega o modelo da memória e deixa o servidor no ar.
+
+Os testes de `npm test` usam o simulador e respostas HTTP falsas. A avaliação com o modelo real é separada:
+
+```bash
+npm run validar-llm
+```
+
+Esse comando exige `MOAH_LLM_PROVIDER=openai-compatible`, cria registros sintéticos num diretório temporário e apaga esse diretório ao terminar. Sem o provedor real, ele para e não chama o simulador.
+
 ## Diagnosticar
 
 | Situação | O que aparece | Código |

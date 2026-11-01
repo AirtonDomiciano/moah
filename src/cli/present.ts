@@ -185,6 +185,7 @@ function actionJson(item: ActionView): unknown {
 export function printConversation(result: ConversationResult, json: boolean): void {
   const consulted = result.consultations.map((item) => ({
     name: item.name,
+    arguments: item.arguments,
     ok: item.ok,
     empty: item.empty,
     references: item.references,

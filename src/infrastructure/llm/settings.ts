@@ -1,3 +1,4 @@
+import path from "node:path";
 import { AppError } from "../../domain/errors.js";
 import { isLlmProviderId, type LlmProviderId } from "../../domain/llm.js";
 
@@ -5,6 +6,7 @@ export interface LlmSettings {
   provider: LlmProviderId;
   baseUrl: string | null;
   model: string | null;
+  modelsDir: string | null;
   timeoutMs: number;
   maxToolCalls: number;
 }
@@ -13,6 +15,7 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
   provider: "simulator",
   baseUrl: null,
   model: null,
+  modelsDir: null,
   timeoutMs: 30_000,
   maxToolCalls: 3,
 };
@@ -23,7 +26,7 @@ export function parseLlmConfig(value: unknown): Partial<LlmSettings> {
   }
   const record = value as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (!["provider", "baseUrl", "model", "timeoutMs", "maxToolCalls"].includes(key)) {
+    if (!["provider", "baseUrl", "model", "modelsDir", "timeoutMs", "maxToolCalls"].includes(key)) {
       throw new AppError(`Chave de llm desconhecida: ${key}.`, "validation");
     }
   }
@@ -39,6 +42,9 @@ export function parseLlmConfig(value: unknown): Partial<LlmSettings> {
   }
   if (record.model !== undefined) {
     parsed.model = parseModel(record.model);
+  }
+  if (record.modelsDir !== undefined) {
+    parsed.modelsDir = parseModelsDir(record.modelsDir);
   }
   if (record.timeoutMs !== undefined) {
     parsed.timeoutMs = parseBoundedInteger(record.timeoutMs, "llm.timeoutMs", 100, 120_000);
@@ -64,6 +70,9 @@ export function resolveLlmSettings(
   }
   if (merged.baseUrl) {
     merged.baseUrl = parseBaseUrl(merged.baseUrl);
+  }
+  if (merged.modelsDir) {
+    merged.modelsDir = parseModelsDir(merged.modelsDir);
   }
   if (merged.provider === "openai-compatible") {
     if (!merged.baseUrl) {
@@ -112,6 +121,10 @@ function readEnv(env: NodeJS.ProcessEnv): Partial<LlmSettings> {
   if (model) {
     parsed.model = parseModel(model);
   }
+  const modelsDir = env.MOAH_LLM_MODELS_DIR?.trim();
+  if (modelsDir) {
+    parsed.modelsDir = parseModelsDir(modelsDir);
+  }
   const timeout = env.MOAH_LLM_TIMEOUT_MS?.trim();
   if (timeout) {
     parsed.timeoutMs = parseBoundedInteger(Number(timeout), "MOAH_LLM_TIMEOUT_MS", 100, 120_000);
@@ -121,6 +134,20 @@ function readEnv(env: NodeJS.ProcessEnv): Partial<LlmSettings> {
     parsed.maxToolCalls = parseBoundedInteger(Number(calls), "MOAH_LLM_MAX_TOOL_CALLS", 1, 8);
   }
   return parsed;
+}
+
+export function parseModelsDir(value: unknown): string {
+  if (typeof value !== "string" || value.trim() === "" || value.includes("\0")) {
+    throw new AppError("llm.modelsDir deve ser um diretório absoluto.", "validation");
+  }
+  const directory = value.trim();
+  if (!path.isAbsolute(directory)) {
+    throw new AppError("llm.modelsDir deve ser um diretório absoluto.", "validation");
+  }
+  if (directory.length > 4096) {
+    throw new AppError("llm.modelsDir excede 4096 caracteres.", "validation");
+  }
+  return directory;
 }
 
 function parseModel(value: unknown): string {
