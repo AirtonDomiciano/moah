@@ -9,7 +9,9 @@ Decisões de desenvolvimento do MOAH ficam nesta pasta; ideias e preferências c
 | [0003](0003-persistencia-sqlite-cli.md) | Node 22, npm e SQLite da CLI | Aceita para o recorte do prompt 00 |
 | [0004](0004-documentacao-por-responsabilidade.md) | Documentação em quatro responsabilidades | Aceita; substitui a organização da ADR 0002 |
 | [0005](0005-conversa-texto-e-provedor.md) | Conversa por texto, adaptador HTTP e simulador | Aceita para o contrato; modelo real pendente |
+| [0006](0006-obsidian-e-graphify.md) | Obsidian e Graphify | Direção aceita; integração não implementada |
 | [0007](0007-ollama-qwen35-9b.md) | Ollama local e candidato qwen3.5:9b | Escolha registrada; download aguardando autorização |
+| [0008](0008-politica-e-aprovacao.md) | Política allow/ask/deny e aprovação de uso único | Aceita no recorte do prompt 14; sem sandbox |
 
 ## Processo
 

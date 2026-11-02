@@ -11,6 +11,10 @@ Comandos:
   moah onde-paramos --dominio <domínio> [--projeto <nome>]
   moah resumo [--data AAAA-MM-DD] [--dominio <domínio>] [--projeto <nome>]
   moah conversar --dominio <domínio> [--projeto <nome>] [--texto <pergunta>] [--provedor simulator|openai-compatible]
+  moah governanca propor --dominio <domínio> --alvo <alvo> [--ferramenta eco_sintetico] [--param chave=valor]
+  moah governanca conceder|negar|revogar|ver <id>
+  moah governanca executar --aprovacao <id> --dominio <domínio> --alvo <alvo> [--param chave=valor]
+  moah governanca pausar|retomar|pausa|auditoria
   moah ajuda
 
 Opções comuns de registro:
@@ -54,7 +58,8 @@ Arquivos:
   Variáveis: MOAH_LLM_PROVIDER, MOAH_LLM_BASE_URL, MOAH_LLM_MODEL, MOAH_LLM_MODELS_DIR, MOAH_LLM_TIMEOUT_MS, MOAH_LLM_MAX_TOOL_CALLS
   MOAH_LLM_API_KEY, se existir, só vai no cabeçalho Authorization e não entra no arquivo nem no log.
   Sem configuração, conversar usa o simulador. Os demais comandos não chamam modelo.
-  Banco: moah.sqlite no diretório de dados
+  governanca é decisão manual na CLI. O modelo não concede, não revoga e não executa.
+  Banco: moah.sqlite no diretório de dados. A política não isola o sistema operacional.
 
 Uma reunião registrada aqui é relato do usuário, não presença inferida da agenda.
 O resumo do dia agrupa os registros desse dia civil e mostra o estado atual das ações.

@@ -8,6 +8,7 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-10-29-001-prompt-11](2026-10-29-001-prompt-11.md) | 11, versão 1.0 | Concluída com simulador; modelo real pendente |
 | [2026-10-29-002-prompt-12](2026-10-29-002-prompt-12.md) | 12, versão 1.0 | Parcial; download aguardando autorização |
 | [2026-11-01-001-prompt-13](2026-11-01-001-prompt-13.md) | 13, versão 1.0 | Concluída no critério automático; modelo real pendente |
+| [2026-11-02-001-prompt-14](2026-11-02-001-prompt-14.md) | 14, versão 1.0 | Política testada; modelo real ainda bloqueado |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

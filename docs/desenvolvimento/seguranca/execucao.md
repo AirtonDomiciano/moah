@@ -1,6 +1,8 @@
 # Fronteiras de execução
 
-Arquitetura proposta, não instalada: modelo → proposta estruturada → motor de políticas → aprovação → executor → resultado/auditoria.
+Arquitetura pedida: modelo → proposta estruturada → motor de políticas → aprovação → executor → resultado/auditoria.
+
+Em 02/11/2026 o motor, o registro de aprovação, a auditoria e um executor falso estão na CLI. O executor falso não abre processo, não grava arquivo arbitrário e não usa rede. A pausa bloqueia um novo despacho desse executor. Não há sandbox do sistema operacional.
 
 ## Componentes
 
@@ -31,4 +33,4 @@ Uma allowlist na aplicação não é sandbox contra código arbitrário. O execu
 
 ## Estado atual
 
-Não mudar o cliente LLM ou ativar ferramentas de escrita por esta especificação. Implementar controles testáveis antes de expor capacidades adicionais à conversa.
+As consultas da conversa passam pela política e continuam somente leitura. O modelo não aprova, não altera a política e não chama o executor. Escrita de memória pela IA, terminal e conectores seguem desabilitados. Uma allowlist nesta CLI não isola o Windows nem o Debian.

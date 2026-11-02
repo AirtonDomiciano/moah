@@ -1,6 +1,6 @@
 # Segurança do MOAH
 
-Data: 01/11/2026. Origem: pedido de Airton por regras claras de autorização e responsabilidades, incluindo uso no Windows. Estado: especificação; controles de runtime ainda não implementados por esta documentação.
+Data: 01/11/2026, com o estado de runtime atualizado em 02/11/2026. Origem: pedido de Airton por regras claras de autorização e responsabilidades, incluindo uso no Windows. Estado: a primeira camada executável está no prompt 14; o restante desta pasta continua especificação. Isso não configura Windows, Debian, ACL nem sandbox.
 
 O modelo propõe. Código confiável verifica a política e a autorização. Só o executor pode realizar a ação. Uma frase no prompt não substitui esse controle.
 
@@ -27,3 +27,24 @@ Uma instrução explícita que já descreva exatamente a ação pode ser a autor
 Política da ferramenta, escopo de conta, domínio e restrições do SO são cumulativos; vale a mais restritiva. Memória, documento ou resposta do modelo não podem ampliar autoridade.
 
 As regras desta pasta especificam o futuro MOAH e orientam seu desenvolvimento. Não configuram automaticamente Cursor, Windows, Debian, ACLs ou sandbox. Cada ferramenta externa precisa de permissões próprias. Não declarar proteção implementada sem testes de negação.
+
+## Runtime em 02/11/2026
+
+Implementado e testado, no processo da CLI:
+
+- decisão `allow`, `ask` e `deny` sem confiar no domínio declarado pelo modelo;
+- consultas `consultar_pendencias`, `consultar_resumo` e `consultar_checkpoint` permitidas só no domínio da sessão;
+- negação de ferramenta desconhecida, ferramenta bloqueada, outro domínio, ampliação e filho acima do supervisor;
+- aprovação de uso único para `eco_sintetico`, com validade, negação, revogação, expiração e consumo atômico;
+- pausa persistente que bloqueia despacho novo e não desfaz efeito já feito;
+- auditoria local dos eventos mínimos, editável por quem escreve no SQLite.
+
+Ainda ausente:
+
+- sandbox, ACL, resolução segura de caminho, junction e link;
+- voz e qualquer aprovação lida de arquivo, e-mail ou transcrição;
+- permissão permanente ou global;
+- escrita por IA, shell, rede, instalador, Git, Azure e agenda como ferramentas;
+- prova com modelo real. A inspeção de 02/11/2026 não encontrou motor local.
+
+Guia operacional: [governanca](../../operacao/governanca.md). Decisão: [ADR 0008](../../arquitetura/decisoes/0008-politica-e-aprovacao.md).

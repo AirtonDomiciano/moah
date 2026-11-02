@@ -9,8 +9,8 @@ Decisão: [ADR 0005](../arquitetura/decisoes/0005-conversa-texto-e-provedor.md).
 1. `moah conversar` exige `--dominio pessoal`, `imex` ou `aluai`. `--projeto`, quando informado, fica fixo na sessão.
 2. A configuração resolve o provedor: `config.json`, depois as variáveis `MOAH_LLM_*`, depois `--provedor`. Sem nada disso, usa o simulador.
 3. A coordenação monta um pedido curto: instrução da sessão, até seis turnos anteriores só com o texto final, e a pergunta atual. O banco não vai inteiro.
-4. O provedor devolve texto ou chamadas de ferramenta. As ferramentas aceitas são `consultar_pendencias`, `consultar_resumo` e `consultar_checkpoint`.
-5. Cada chamada passa por validação. Domínio, projeto travado, data `AAAA-MM-DD` e chaves desconhecidas são recusados antes de uma consulta inválida. A data `hoje`, `sexta` ou `amanhã` não é interpretada.
+4. O provedor devolve texto ou chamadas de ferramenta. As ferramentas aceitas são `consultar_pendencias`, `consultar_resumo` e `consultar_checkpoint`. `eco_sintetico` e os comandos de governança não entram nessa lista.
+5. Cada chamada passa pela política com o domínio da sessão, definido pelo comando e não pelo modelo. Consulta concedida segue; ferramenta desconhecida ou bloqueada é negada e registrada na auditoria. A validação seguinte recusa chave estranha, outro projeto e data que não seja `AAAA-MM-DD`. A data `hoje`, `sexta` ou `amanhã` não é interpretada.
 6. A ferramenta chama `listPending`, `summarizeDay` ou `findCheckpoint`. O resultado leva no máximo 20 itens, texto cortado em 400 caracteres e o aviso de que o conteúdo é dado, não instrução.
 7. Há no máximo três chamadas por pergunta, salvo `llm.maxToolCalls` ou `MOAH_LLM_MAX_TOOL_CALLS` entre 1 e 8. O timeout padrão é 30 segundos, configurável de 100 a 120000.
 8. A saída separa `Dados consultados` da `Resposta do modelo` e mostra os IDs usados. Se não houver registro, a consulta diz isso.

@@ -20,6 +20,7 @@ import { resolveLlmSettings } from "../infrastructure/llm/settings.js";
 import { resolveDirs } from "../infrastructure/paths.js";
 import { parseActionSpec } from "./action-spec.js";
 import { HELP } from "./help.js";
+import { handleGovernance } from "./governanca.js";
 import { many, one, parseArgs, rejectUnknown } from "./parse-args.js";
 import {
   printActions,
@@ -197,6 +198,11 @@ export async function execute(argv: string[]): Promise<void> {
       throw new AppError("Informe --texto ou execute moah conversar em um terminal interativo.", "validation");
     }
     await conversationLoop(context, domain, project, provider, settings.maxToolCalls, parsed.json);
+    return;
+  }
+
+  if (command === "governanca") {
+    handleGovernance(parsed, { dataDir: context.dataDir, now: context.now });
     return;
   }
 

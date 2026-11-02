@@ -87,3 +87,7 @@ A máquina foi inspecionada e o Ollama foi escolhido como motor local do adaptad
 ## Evidência do prompt 13 — 01/11/2026
 
 O critério de `npm run validar-llm` foi corrigido antes de qualquer execução com modelo. A aprovação automática agora separa consulta, referências e resposta final, compara o estado lógico dos registros e declara que a VRAM observada e a RAM do host não são medidas exclusivas do modelo. A revisão humana continua necessária. Nenhum modelo foi baixado e a validação real permanece pendente. Evidência: [relatório](../../cursror-dev/execucoes/2026-11-01-001-prompt-13.md).
+
+## Evidência do prompt 14 — 02/11/2026
+
+A primeira camada de política, aprovação de uso único, auditoria e executor falso foi implementada e testada. A conversa permanece somente leitura. A inspeção do mesmo dia não encontrou motor local, então a avaliação real não rodou e nenhum modelo foi baixado. Esta evidência não significa que o Debian ou o Windows estejam isolados. Guia: [governanca](../operacao/governanca.md). Relatório: [prompt 14](../../cursror-dev/execucoes/2026-11-02-001-prompt-14.md). Decisão: [ADR 0008](../arquitetura/decisoes/0008-politica-e-aprovacao.md).

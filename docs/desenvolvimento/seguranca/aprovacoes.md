@@ -1,5 +1,9 @@
 # Aprovação de ações
 
+O ciclo persistido em 02/11/2026 cobre proposta, decisão da política, pendência, concessão ou negação manual, revogação, expiração, revalidação do fingerprint, consumo único e resultado. A aprovação nasce `pendente`. Texto do modelo, arquivo ou transcrição não a cria como `aprovada`. Não há reconhecimento por voz nem permissão global permanente.
+
+Ainda não há hash de arquivo, identidade de processo, reconciliação depois de timeout externo nem prévia de diff. O vínculo implementado é ação, ferramenta, domínio, alvo e parâmetros canônicos.
+
 ## Solicitação concreta
 
 Antes de uma ação que exige consentimento, apresentar:

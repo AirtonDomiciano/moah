@@ -18,7 +18,7 @@ Redação de logs é defesa adicional, não justificativa para coletar segredos.
 
 ## Auditoria mínima
 
-Guardar ID da ação/aprovação, domínio, ferramenta, alvo sanitizado, versão da política, estado, instante e evidência de resultado. Restringir leitura e alterações dos registros; definir retenção. Não prometer log inviolável apenas por ser arquivo local.
+Guardar ID da ação/aprovação, domínio, ferramenta, alvo sanitizado, versão da política, estado, instante e evidência de resultado. O prompt 14 grava esses campos no SQLite local. Quem consegue escrever no arquivo consegue alterar a auditoria. Não é um log inviolável. Retenção e backup desse registro ainda não foram definidos.
 
 ## Backup
 

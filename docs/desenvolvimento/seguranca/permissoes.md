@@ -2,6 +2,8 @@
 
 Proposta inicial conservadora e configurável por Airton através de canal confiável. A IA não edita a política em vigor.
 
+O runtime de 02/11/2026 aplica só o recorte abaixo. A tabela seguinte continua sendo a regra desejada para ferramentas que ainda não existem.
+
 | Capacidade | Regra inicial |
 | --- | --- |
 | Conversar, explicar e produzir rascunho | Permitido sem efeito externo |
@@ -17,6 +19,8 @@ Proposta inicial conservadora e configurável por Airton através de canal confi
 | Elevar privilégios, alterar ACL/política ou acessar credenciais genéricas | Bloqueado para o fluxo autônomo; configuração manual fora da IA |
 
 Registrar nota por comando manual explícito da CLI é diferente de autorizar novas escritas sugeridas pelo modelo. Preservar o comportamento atual e seus limites.
+
+No código atual, as três consultas da conversa recebem `allow` dentro do domínio da sessão. `eco_sintetico` recebe `ask` apenas quando a CLI de demonstração a concede. Shell, escrita, rede, instalação, Git, Azure, agenda, registro e conclusão, se pedidos como ferramenta do modelo, recebem `deny`. O comando manual `moah registrar` e `moah concluir` não passou a ser ferramenta do modelo.
 
 ## Escopo e delegação
 

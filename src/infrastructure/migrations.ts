@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const MIGRATION_V1 = `
 CREATE TABLE records (
@@ -45,4 +45,49 @@ CREATE TABLE record_refs (
 );
 `;
 
-export const MIGRATIONS = [{ version: 1, sql: MIGRATION_V1 }] as const;
+export const MIGRATION_V2 = `
+CREATE TABLE approvals (
+  id TEXT PRIMARY KEY,
+  state TEXT NOT NULL CHECK (state IN ('pendente', 'aprovada', 'negada', 'expirada', 'revogada', 'consumida')),
+  action TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  target TEXT NOT NULL,
+  agent TEXT NOT NULL,
+  parameters_json TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  valid_until TEXT NOT NULL,
+  decided_at TEXT,
+  consumed_at TEXT
+);
+
+CREATE INDEX idx_approvals_state ON approvals (state, valid_until);
+
+CREATE TABLE audit_events (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  approval_id TEXT,
+  tool TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  target TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_audit_created ON audit_events (created_at);
+
+CREATE TABLE executor_control (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  paused INTEGER NOT NULL CHECK (paused IN (0, 1))
+);
+
+INSERT INTO executor_control (id, paused) VALUES (1, 0);
+`;
+
+export const MIGRATIONS = [
+  { version: 1, sql: MIGRATION_V1 },
+  { version: 2, sql: MIGRATION_V2 },
+] as const;

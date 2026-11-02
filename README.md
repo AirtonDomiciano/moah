@@ -93,6 +93,8 @@ Outros comandos da mesma gramática, também exercitados com dados sintéticos: 
 
 `moah conversar --dominio pessoal --texto "quais são as pendências?"` consulta esses registros em linguagem natural. Sem configuração de modelo, a resposta vem do simulador e informa que a validação real está pendente. O caminho da mensagem, a troca do modelo e os erros estão em [docs/operacao/conversa.md](docs/operacao/conversa.md). Entrega do [prompt 11](cursror-dev/11-conversa-texto.md); decisão na [ADR 0005](docs/arquitetura/decisoes/0005-conversa-texto-e-provedor.md).
 
+`moah governanca` demonstra proposta, aprovação manual e um executor falso. O ciclo e os limites estão em [docs/operacao/governanca.md](docs/operacao/governanca.md).
+
 Uma ação com responsável e prazo usa `descricao ;; responsavel=Nome ;; prazo=AAAA-MM-DD`.
 
 ### Limitações desta CLI
@@ -101,7 +103,8 @@ Uma ação com responsável e prazo usa `descricao ;; responsavel=Nome ;; prazo=
 - Reunião registrada é relato do usuário. Não há leitura de agenda nem inferência de presença.
 - O resumo do dia agrupa os registros daquele dia civil e mostra o estado atual das ações.
 - Origem aceita: `user_report`. Agente aceito: `manual`.
-- Sem serviço, fila, servidor HTTP, microfone ou conta externa. O cliente de modelo é opcional; o padrão é o simulador, e nenhum modelo real foi validado em 29/10/2026.
+- Sem serviço, fila, servidor HTTP, microfone ou conta externa. O cliente de modelo é opcional; o padrão é o simulador. Em 29/10/2026 e de novo em 02/11/2026 nenhum modelo local estava instalado, então a validação real continua pendente.
+- O motor de políticas e o executor falso não isolam Windows nem Debian. Eles não impedem outro programa de ler o disco ou a rede.
 - Em Node 22, `node:sqlite` ainda é experimental na documentação da linha. O aviso é suprimido na CLI.
 - Duas invocações simultâneas esperam um lock de até 5 segundos. Se o banco continuar ocupado, a segunda falha sem substituir o arquivo.
 
