@@ -4,6 +4,9 @@ import { AppError } from "./errors.js";
 
 export const POLICY_VERSION = "1";
 
+/** Formato canônico que inclui o agente do contexto confiável. A versão 1 não tinha esse vínculo. */
+export const FINGERPRINT_VERSION = 2;
+
 export const READ_TOOLS = ["consultar_pendencias", "consultar_resumo", "consultar_checkpoint"] as const;
 
 /** Ferramenta falsa da demonstração. Não entra na lista oferecida ao modelo. */
@@ -38,6 +41,7 @@ export interface ActionProposal {
 /** Fornecido pelo código que chama a política. O modelo não preenche este objeto. */
 export interface AuthorityContext {
   sessionDomain: Domain;
+  agent: string;
   grantedTools: readonly string[];
   parentGrantedTools: readonly string[] | null;
 }
@@ -60,6 +64,7 @@ const LIMITS = {
 export function conversationAuthority(sessionDomain: Domain): AuthorityContext {
   return {
     sessionDomain,
+    agent: "conversa",
     grantedTools: READ_TOOLS,
     parentGrantedTools: null,
   };
@@ -68,6 +73,7 @@ export function conversationAuthority(sessionDomain: Domain): AuthorityContext {
 export function demoAuthority(sessionDomain: Domain): AuthorityContext {
   return {
     sessionDomain,
+    agent: "manual",
     grantedTools: [DEMO_EFFECT_TOOL],
     parentGrantedTools: null,
   };
@@ -89,6 +95,8 @@ export function validateProposal(input: ActionProposal): ActionProposal {
 export function canonicalAction(proposal: ActionProposal): string {
   const keys = Object.keys(proposal.parameters).sort();
   const lines = [
+    `fingerprint=${FINGERPRINT_VERSION}`,
+    `agent=${proposal.agent}`,
     `action=${proposal.action}`,
     `tool=${proposal.tool}`,
     `domain=${proposal.domain}`,
@@ -119,6 +127,12 @@ export function evaluatePolicy(proposal: ActionProposal, authority: AuthorityCon
   const widening = Object.keys(checked.parameters).find((key) => WIDENING_KEYS.has(key.toLowerCase()));
   if (widening) {
     return { decision: "deny", reason: `O parâmetro ${widening} tentaria ampliar a permissão.` };
+  }
+  if (checked.agent !== authority.agent) {
+    return {
+      decision: "deny",
+      reason: "A identidade declarada na proposta não comprova o agente autorizado.",
+    };
   }
   if (authority.parentGrantedTools !== null && !authority.parentGrantedTools.includes(checked.tool)) {
     return {

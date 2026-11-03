@@ -35,7 +35,7 @@ Implementado e testado, no processo da CLI:
 - decisão `allow`, `ask` e `deny` sem confiar no domínio declarado pelo modelo;
 - consultas `consultar_pendencias`, `consultar_resumo` e `consultar_checkpoint` permitidas só no domínio da sessão;
 - negação de ferramenta desconhecida, ferramenta bloqueada, outro domínio, ampliação e filho acima do supervisor;
-- aprovação de uso único para `eco_sintetico`, com validade, negação, revogação, expiração e consumo atômico;
+- aprovação de uso único para `eco_sintetico`, com validade, negação, revogação, expiração, consumo atômico e nova avaliação da autoridade imediatamente antes desse consumo; o agente vem do contexto confiável, e o fingerprint versão 1 não é reinterpretado;
 - pausa persistente que bloqueia despacho novo e não desfaz efeito já feito;
 - auditoria local dos eventos mínimos, editável por quem escreve no SQLite.
 

@@ -8,7 +8,7 @@ Estado em 02/11/2026: o recorte do motor, da aprovação e do executor falso foi
 - Negar pasta irmã com nome parecido, traversal e escape por link/junction. Ainda sem implementação.
 - Negar alvo que muda entre prévia e execução. Coberto para parâmetro, alvo e domínio da ação falsa. Não cobre arquivo real.
 - SSD indisponível não cria fonte alternativa. Não exercido nesta entrega.
-- Agente filho não herda acesso extra nem tokens de outras áreas. A interseção de ferramentas foi testada. Não há token de conector para herdar.
+- Agente filho não herda acesso extra nem tokens de outras áreas. A interseção de ferramentas foi testada na decisão e de novo na execução: delegação insuficiente depois da aprovação não consome a linha. Não há token de conector para herdar.
 
 ## Aprovação
 
@@ -16,7 +16,8 @@ Estado em 02/11/2026: o recorte do motor, da aprovação e do executor falso foi
 - Autorização exata já válida não gera perguntas repetidas. A CLI concede uma vez e a execução revalida; não há diálogo repetido no modelo.
 - Alterar destino, conteúdo ou argumentos exige nova decisão. Coberto no fingerprint.
 - Negação, expiração e revogação impedem execução. Coberto.
-- Duas tentativas simultâneas não consomem a mesma autorização duas vezes. Coberto com duas conexões e com duas invocações da CLI.
+- Permissão retirada depois da aprovação, execução por outro agente e fingerprint versão 1 impedem o consumo. Coberto na revisão do commit 93607f8; a linha antiga não tem o hash recalculado.
+- Duas tentativas simultâneas não consomem a mesma autorização duas vezes. Coberto com duas conexões e com duas invocações da CLI. A pausa do executor falso continua bloqueando despacho novo.
 - Timeout externo provoca reconciliação, não publicação duplicada. Ainda sem ferramenta externa.
 - Conteúdo “aprovado” em documento/áudio recuperado não concede autoridade. Não existe caminho de código que promova esse texto. Voz continua ausente.
 

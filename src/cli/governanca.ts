@@ -24,7 +24,7 @@ import { printJson } from "./present.js";
 export function handleGovernance(parsed: ParsedArgs, context: GovernanceContext): void {
   const sub = parsed.positionals[1];
   if (sub === "propor") {
-    rejectUnknown(parsed.options, ["ferramenta", "dominio", "alvo", "param", "agente", "acao", "validade-ms"]);
+    rejectUnknown(parsed.options, ["ferramenta", "dominio", "alvo", "param", "acao", "validade-ms"]);
     const proposal = proposalFrom(parsed, "eco_sintetico");
     const domain = requiredDomain(proposal.domain);
     const validForMs = one(parsed.options, "validade-ms");
@@ -58,13 +58,14 @@ export function handleGovernance(parsed: ParsedArgs, context: GovernanceContext)
     return;
   }
   if (sub === "executar") {
-    rejectUnknown(parsed.options, ["aprovacao", "ferramenta", "dominio", "alvo", "param", "agente", "acao"]);
+    rejectUnknown(parsed.options, ["aprovacao", "ferramenta", "dominio", "alvo", "param", "acao"]);
     const approvalId = one(parsed.options, "aprovacao");
     if (!approvalId) {
       throw new AppError("Informe --aprovacao <id>.", "validation");
     }
     const proposal = proposalFrom(parsed, "eco_sintetico");
-    const outcome = executeFake(context, proposal, approvalId);
+    const domain = requiredDomain(proposal.domain);
+    const outcome = executeFake(context, proposal, demoAuthority(domain), approvalId);
     printJson({
       status: outcome.status,
       motivo: outcome.reason,
@@ -116,7 +117,7 @@ function proposalFrom(parsed: ParsedArgs, fallbackTool: string): ActionProposal 
   return validateProposal({
     action: one(parsed.options, "acao") ?? "executar",
     tool: one(parsed.options, "ferramenta") ?? fallbackTool,
-    agent: one(parsed.options, "agente") ?? "manual",
+    agent: "manual",
     domain,
     target,
     parameters: parseParams(many(parsed.options, "param")),
@@ -164,6 +165,7 @@ function publicApproval(row: {
   agent: string;
   parameters: Record<string, string>;
   fingerprint: string;
+  fingerprintVersion: number;
   createdAt: string;
   validUntil: string;
   decidedAt: string | null;
@@ -179,6 +181,7 @@ function publicApproval(row: {
     agente: row.agent,
     parametros: row.parameters,
     fingerprint: row.fingerprint,
+    fingerprintVersao: row.fingerprintVersion,
     criadaEm: row.createdAt,
     validaAte: row.validUntil,
     decididaEm: row.decidedAt,

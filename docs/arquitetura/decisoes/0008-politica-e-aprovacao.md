@@ -30,3 +30,5 @@ A conversa do prompt 11 consulta três ferramentas de leitura. A pasta de segura
 Dá para demonstrar o ciclo com dados sintéticos e relógio injetado. A conversa não ganha ferramenta de efeito. O próximo passo de execução real continua sendo uma ferramenta pequena, com alvo resolvido no sistema operacional, depois que Airton autorizar esse escopo. A validação com Ollama continua aguardando download.
 
 Validação: testes de negação, expiração, revogação, fingerprint, consumo concorrente, pausa, reinício e conversa somente leitura. Não houve teste de caminho, junction, ACL ou processo real.
+
+Correção posterior ao commit 93607f8: a execução recebe a autoridade de novo e só consome se a política ainda devolver `ask`. O fingerprint versão 2 inclui o agente desse contexto. Linhas da versão 1 ficam armazenadas e são recusadas, sem atualização silenciosa do hash.

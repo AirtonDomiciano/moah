@@ -100,7 +100,12 @@ export function revokeApproval(context: GovernanceContext, id: string): Approval
   }));
 }
 
-export function executeFake(context: GovernanceContext, proposal: ActionProposal, approvalId: string): ExecutionOutcome {
+export function executeFake(
+  context: GovernanceContext,
+  proposal: ActionProposal,
+  authority: AuthorityContext,
+  approvalId: string,
+): ExecutionOutcome {
   const checked = validateProposal(proposal);
   if (checked.tool !== "eco_sintetico") {
     throw new AppError("O executor falso só demonstra eco_sintetico.", "validation");
@@ -119,7 +124,7 @@ export function executeFake(context: GovernanceContext, proposal: ActionProposal
       detail: `politica=${POLICY_VERSION}; tentativa de execução falsa`,
       createdAt: nowIso,
     });
-    const dispatched = dispatchFake(db, checked, approvalId, nowIso);
+    const dispatched = dispatchFake(db, checked, authority, approvalId, nowIso);
     if (dispatched.consumed) {
       insertAudit(db, {
         kind: "consumo",
@@ -191,7 +196,7 @@ export function governQuery(
     proposal = validateProposal({
       action: "consultar",
       tool: name,
-      agent: "conversa",
+      agent: authority.agent,
       domain: session.domain,
       target: session.domain,
       parameters: {},

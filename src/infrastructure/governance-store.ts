@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync, StatementResultingChanges } from "node:sqlite";
-import { actionFingerprint, type ActionProposal } from "../domain/policy.js";
+import { actionFingerprint, evaluatePolicy, FINGERPRINT_VERSION, type ActionProposal, type AuthorityContext } from "../domain/policy.js";
 import { openDatabase } from "./database.js";
 import { acquireProcessLock } from "./lock.js";
 import { databasePath } from "./paths.js";
@@ -19,6 +19,7 @@ export interface ApprovalRow {
   agent: string;
   parameters: Record<string, string>;
   fingerprint: string;
+  fingerprintVersion: number;
   createdAt: string;
   validUntil: string;
   decidedAt: string | null;
@@ -85,8 +86,8 @@ export function insertPendingApproval(
   db.prepare(
     `INSERT INTO approvals (
       id, state, action, tool, domain, target, agent, parameters_json, fingerprint,
-      created_at, valid_until, decided_at, consumed_at
-    ) VALUES (?, 'pendente', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
+      fingerprint_version, created_at, valid_until, decided_at, consumed_at
+    ) VALUES (?, 'pendente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
   ).run(
     id,
     proposal.action,
@@ -96,6 +97,7 @@ export function insertPendingApproval(
     proposal.agent,
     parametersJson,
     fingerprint,
+    FINGERPRINT_VERSION,
     createdAt,
     validUntil,
   );
@@ -187,9 +189,9 @@ export function consumeApprovalNow(filePath: string, id: string, fingerprint: st
         .prepare(
           `UPDATE approvals
            SET state = 'consumida', consumed_at = ?
-           WHERE id = ? AND state = 'aprovada' AND fingerprint = ? AND valid_until > ?`,
+           WHERE id = ? AND state = 'aprovada' AND fingerprint = ? AND fingerprint_version = ? AND valid_until > ?`,
         )
-        .run(nowIso, id, fingerprint, nowIso);
+        .run(nowIso, id, fingerprint, FINGERPRINT_VERSION, nowIso);
       return changes(result) === 1;
     });
   } finally {
@@ -200,6 +202,7 @@ export function consumeApprovalNow(filePath: string, id: string, fingerprint: st
 export function dispatchFake(
   db: DatabaseSync,
   proposal: ActionProposal,
+  authority: AuthorityContext,
   approvalId: string,
   nowIso: string,
 ): DispatchResult {
@@ -215,7 +218,40 @@ export function dispatchFake(
     if (!current) {
       return { status: "falha", reason: "Aprovação não encontrada.", consumed: false };
     }
-    const fingerprint = actionFingerprint(proposal);
+    if (current.fingerprintVersion !== FINGERPRINT_VERSION) {
+      return {
+        status: "negada",
+        reason: "A aprovação usa o fingerprint anterior e não será reinterpretada. Crie uma nova proposta.",
+        consumed: false,
+      };
+    }
+    const checked = proposal;
+    if (checked.agent !== authority.agent) {
+      return {
+        status: "negada",
+        reason: "A identidade declarada na proposta não comprova o agente autorizado.",
+        consumed: false,
+      };
+    }
+    if (current.agent !== authority.agent) {
+      return {
+        status: "negada",
+        reason: "A aprovação está vinculada a outro agente.",
+        consumed: false,
+      };
+    }
+    const policy = evaluatePolicy(checked, authority);
+    if (policy.decision === "deny") {
+      return { status: "negada", reason: policy.reason, consumed: false };
+    }
+    if (policy.decision !== "ask") {
+      return {
+        status: "negada",
+        reason: "A política atual não autoriza consumir esta aprovação.",
+        consumed: false,
+      };
+    }
+    const fingerprint = actionFingerprint(checked);
     if (!fingerprintMatchesStored(current)) {
       return { status: "falha", reason: "A autorização armazenada está inconsistente.", consumed: false };
     }
@@ -236,9 +272,9 @@ export function dispatchFake(
       .prepare(
         `UPDATE approvals
          SET state = 'consumida', consumed_at = ?
-         WHERE id = ? AND state = 'aprovada' AND fingerprint = ? AND valid_until > ?`,
+         WHERE id = ? AND state = 'aprovada' AND fingerprint = ? AND fingerprint_version = ? AND valid_until > ?`,
       )
-      .run(nowIso, approvalId, fingerprint, nowIso);
+      .run(nowIso, approvalId, fingerprint, FINGERPRINT_VERSION, nowIso);
     if (changes(result) !== 1) {
       return { status: "negada", reason: "A aprovação já foi consumida ou deixou de ser válida.", consumed: false };
     }
@@ -271,6 +307,9 @@ function mapApproval(row: Record<string, unknown>): ApprovalRow {
     agent: String(row.agent),
     parameters,
     fingerprint: String(row.fingerprint),
+    fingerprintVersion: row.fingerprint_version === undefined || row.fingerprint_version === null
+      ? 1
+      : Number(row.fingerprint_version),
     createdAt: String(row.created_at),
     validUntil: String(row.valid_until),
     decidedAt: row.decided_at === null ? null : String(row.decided_at),

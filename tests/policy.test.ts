@@ -40,15 +40,19 @@ describe("política", () => {
   it("nega delegação que ultrapassa o supervisor e permite a consulta concedida", () => {
     const child: AuthorityContext = {
       sessionDomain: "imex",
-      grantedTools: [...READ_TOOLS, DEMO_EFFECT_TOOL, "shell"],
+      agent: "filho",
+      grantedTools: [...READ_TOOLS, DEMO_EFFECT_TOOL],
       parentGrantedTools: ["consultar_pendencias"],
     };
     const widened = evaluatePolicy(
-      { ...base, action: "executar", tool: DEMO_EFFECT_TOOL, agent: "supervisor", target: "nota" },
+      { ...base, action: "executar", tool: DEMO_EFFECT_TOOL, agent: "filho", target: "nota" },
       child,
     );
     assert.equal(widened.decision, "deny");
     assert.match(widened.reason, /supervisor/);
+    const renamed = evaluatePolicy({ ...base, agent: "supervisor" }, child);
+    assert.equal(renamed.decision, "deny");
+    assert.match(renamed.reason, /não comprova/);
     const allowed = evaluatePolicy({ ...base, agent: "filho" }, child);
     assert.equal(allowed.decision, "allow");
   });
@@ -56,7 +60,7 @@ describe("política", () => {
   it("pede aprovação para a ferramenta falsa e não transforma um sim genérico em allow", () => {
     const asked = evaluatePolicy(
       { ...base, action: "executar", tool: DEMO_EFFECT_TOOL, agent: "manual", target: "nota-sintetica", parameters: { texto: "eco" } },
-      { sessionDomain: "imex", grantedTools: [DEMO_EFFECT_TOOL], parentGrantedTools: null },
+      { sessionDomain: "imex", agent: "manual", grantedTools: [DEMO_EFFECT_TOOL], parentGrantedTools: null },
     );
     assert.equal(asked.decision, "ask");
     assert.equal(applyGenericConsent(asked, true).decision, "ask");

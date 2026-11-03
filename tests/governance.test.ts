@@ -17,9 +17,10 @@ import {
 import { registerRecord } from "../src/application/work-log.js";
 import { QUERY_TOOL_DEFINITIONS } from "../src/application/query-tools.js";
 import { validateRecord } from "../src/domain/validate.js";
-import { DEMO_EFFECT_TOOL, type ActionProposal } from "../src/domain/policy.js";
+import { DEMO_EFFECT_TOOL, type ActionProposal, type AuthorityContext } from "../src/domain/policy.js";
 import type { LlmCompletion, LlmProvider } from "../src/domain/llm.js";
 import { databasePath } from "../src/infrastructure/paths.js";
+import { openDatabase } from "../src/infrastructure/database.js";
 import { cliWorkspace, runCli, runCliAsync, tempDir } from "./helpers.js";
 
 const START = "2026-11-02T15:00:00.000Z";
@@ -49,7 +50,7 @@ describe("aprovações e executor falso", () => {
       grantApproval(ctx, revocableId);
       revokeApproval(ctx, revocableId);
       assert.equal(readApproval(ctx, revocableId).state, "revogada");
-      const blocked = executeFake(ctx, proposal({ texto: "eco" }), revocableId);
+      const blocked = executeFake(ctx, proposal({ texto: "eco" }), demo("pessoal"), revocableId);
       assert.equal(blocked.status, "negada");
       assert.equal(readApproval(ctx, revocableId).state, "revogada");
     } finally {
@@ -64,13 +65,13 @@ describe("aprovações e executor falso", () => {
       const created = proposeAction(ctx, proposal({ texto: "eco" }, "imex"), demo("imex"));
       const id = created.approval?.id ?? "";
       grantApproval(ctx, id);
-      const changed = executeFake(ctx, proposal({ texto: "outro" }, "imex"), id);
+      const changed = executeFake(ctx, proposal({ texto: "outro" }, "imex"), demo("imex"), id);
       assert.equal(changed.status, "negada");
       assert.equal(readApproval(ctx, id).state, "aprovada");
-      const done = executeFake(ctx, proposal({ texto: "eco" }, "imex"), id);
+      const done = executeFake(ctx, proposal({ texto: "eco" }, "imex"), demo("imex"), id);
       assert.equal(done.status, "concluida");
       assert.equal(done.approval?.state, "consumida");
-      const again = executeFake(ctx, proposal({ texto: "eco" }, "imex"), id);
+      const again = executeFake(ctx, proposal({ texto: "eco" }, "imex"), demo("imex"), id);
       assert.equal(again.status, "negada");
       assert.match(again.reason, /consumida|não pode/);
     } finally {
@@ -111,10 +112,86 @@ describe("aprovações e executor falso", () => {
       assert.equal(readApproval(second, id).state, "pendente");
       assert.equal(executorIsPaused(second), true);
       grantApproval(second, id);
-      const blocked = executeFake(second, proposal({ texto: "eco" }), id);
+      const blocked = executeFake(second, proposal({ texto: "eco" }), demo("pessoal"), id);
       assert.equal(blocked.status, "bloqueada");
       assert.match(blocked.reason, /não desfaz/);
       assert.equal(readApproval(second, id).state, "aprovada");
+    } finally {
+      workspace.cleanup();
+    }
+  });
+
+  it("reavalia a autoridade antes de consumir e mantém o fluxo autorizado", () => {
+    const workspace = tempDir("moah-gov-");
+    const ctx = clock().context(workspace.dir);
+    try {
+      const declared = proposeAction(ctx, { ...proposal({ texto: "eco" }), agent: "modelo" }, demo("pessoal"));
+      assert.equal(declared.policy.decision, "deny");
+      assert.equal(declared.approval, null);
+      assert.match(declared.policy.reason, /não comprova/);
+
+      const created = proposeAction(ctx, proposal({ texto: "eco" }), demo("pessoal"));
+      const id = created.approval?.id ?? "";
+      assert.equal(created.approval?.agent, "manual");
+      assert.equal(created.approval?.fingerprintVersion, 2);
+      grantApproval(ctx, id);
+
+      const withdrawn = executeFake(ctx, proposal({ texto: "eco" }), demo("pessoal", { grantedTools: [] }), id);
+      assert.equal(withdrawn.status, "negada");
+      assert.match(withdrawn.reason, /escopo/);
+      assert.equal(readApproval(ctx, id).state, "aprovada");
+
+      const other = executeFake(
+        ctx,
+        { ...proposal({ texto: "eco" }), agent: "outro" },
+        demo("pessoal", { agent: "outro" }),
+        id,
+      );
+      assert.equal(other.status, "negada");
+      assert.match(other.reason, /outro agente/);
+      assert.equal(readApproval(ctx, id).state, "aprovada");
+
+      const delegated = executeFake(
+        ctx,
+        proposal({ texto: "eco" }),
+        demo("pessoal", { parentGrantedTools: ["consultar_pendencias"] }),
+        id,
+      );
+      assert.equal(delegated.status, "negada");
+      assert.match(delegated.reason, /supervisor/);
+      assert.equal(readApproval(ctx, id).state, "aprovada");
+
+      const done = executeFake(ctx, proposal({ texto: "eco" }), demo("pessoal"), id);
+      assert.equal(done.status, "concluida");
+      const again = executeFake(ctx, proposal({ texto: "eco" }), demo("pessoal"), id);
+      assert.equal(again.status, "negada");
+      assert.match(again.reason, /consumida|não pode/);
+    } finally {
+      workspace.cleanup();
+    }
+  });
+
+  it("não reinterpreta aprovação gravada com o fingerprint anterior", () => {
+    const workspace = tempDir("moah-gov-");
+    const ctx = clock().context(workspace.dir);
+    try {
+      const created = proposeAction(ctx, proposal({ texto: "eco" }), demo("pessoal"));
+      const id = created.approval?.id ?? "";
+      const fingerprint = created.approval?.fingerprint ?? "";
+      grantApproval(ctx, id);
+      const db = openDatabase(databasePath(workspace.dir));
+      try {
+        db.prepare("UPDATE approvals SET fingerprint_version = 1 WHERE id = ?").run(id);
+      } finally {
+        db.close();
+      }
+      const refused = executeFake(ctx, proposal({ texto: "eco" }), demo("pessoal"), id);
+      assert.equal(refused.status, "negada");
+      assert.match(refused.reason, /fingerprint anterior/);
+      const stored = readApproval(ctx, id);
+      assert.equal(stored.state, "aprovada");
+      assert.equal(stored.fingerprint, fingerprint);
+      assert.equal(stored.fingerprintVersion, 1);
     } finally {
       workspace.cleanup();
     }
@@ -262,6 +339,20 @@ describe("CLI de governança e conversa", () => {
       workspace.cleanup();
     }
   });
+
+  it("recusa um agente declarado na opção da CLI", () => {
+    const workspace = cliWorkspace();
+    try {
+      const refused = runCli(
+        ["--json", "governanca", "propor", "--dominio", "pessoal", "--alvo", "nota-sintetica", "--agente", "modelo", "--param", "texto=eco"],
+        workspace.env,
+      );
+      assert.equal(refused.status, 1);
+      assert.match(refused.stderr, /desconhecida: --agente/);
+    } finally {
+      workspace.cleanup();
+    }
+  });
 });
 
 function proposal(parameters: Record<string, string>, domain: "pessoal" | "imex" | "aluai" = "pessoal"): ActionProposal {
@@ -275,8 +366,17 @@ function proposal(parameters: Record<string, string>, domain: "pessoal" | "imex"
   };
 }
 
-function demo(domain: "pessoal" | "imex" | "aluai") {
-  return { sessionDomain: domain, grantedTools: [DEMO_EFFECT_TOOL], parentGrantedTools: null };
+function demo(
+  domain: "pessoal" | "imex" | "aluai",
+  extra: Partial<AuthorityContext> = {},
+): AuthorityContext {
+  return {
+    sessionDomain: domain,
+    agent: "manual",
+    grantedTools: [DEMO_EFFECT_TOOL],
+    parentGrantedTools: null,
+    ...extra,
+  };
 }
 
 function clock() {

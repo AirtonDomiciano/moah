@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const MIGRATION_V1 = `
 CREATE TABLE records (
@@ -87,7 +87,12 @@ CREATE TABLE executor_control (
 INSERT INTO executor_control (id, paused) VALUES (1, 0);
 `;
 
+export const MIGRATION_V3 = `
+ALTER TABLE approvals ADD COLUMN fingerprint_version INTEGER NOT NULL DEFAULT 1;
+`;
+
 export const MIGRATIONS = [
   { version: 1, sql: MIGRATION_V1 },
   { version: 2, sql: MIGRATION_V2 },
+  { version: 3, sql: MIGRATION_V3 },
 ] as const;

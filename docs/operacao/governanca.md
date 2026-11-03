@@ -24,13 +24,13 @@ moah governanca revogar <id>
 
 ## Onde a autorização fica
 
-No mesmo `moah.sqlite` da memória de trabalho, tabelas `approvals` e `audit_events`, migração 2. Cada aprovação nasce `pendente`. A representação canônica junta ação, ferramenta, domínio, alvo e parâmetros ordenados; o fingerprint é o SHA-256 disso. Mudar parâmetro, alvo ou domínio impede o consumo.
+No mesmo `moah.sqlite` da memória de trabalho, tabelas `approvals` e `audit_events`. A migração 3 marca aprovações antigas com `fingerprint_version` 1. Cada aprovação nova nasce `pendente`, versão 2, vinculada ao agente do contexto confiável. A representação canônica junta essa identidade, a ação, a ferramenta, o domínio, o alvo e os parâmetros ordenados; o fingerprint é o SHA-256 disso. Mudar agente, parâmetro, alvo ou domínio impede o consumo. Uma aprovação da versão 1 não é regravada nem aceita: a execução pede uma proposta nova.
 
 Estados: `pendente`, `aprovada`, `negada`, `expirada`, `revogada`, `consumida`. A validade padrão é 15 minutos. O consumo é um `UPDATE` condicional: duas tentativas não executam a mesma autorização duas vezes.
 
 ## Quem executa
 
-Só `moah governanca executar`, e só a ferramenta `eco_sintetico`. Ela devolve um resultado falso e não abre shell, não grava arquivo arbitrário, não usa rede e não altera Git, Azure ou agenda. Antes de consumir, a política e o fingerprint são conferidos de novo.
+Só `moah governanca executar`, e só a ferramenta `eco_sintetico`. Ela devolve um resultado falso e não abre shell, não grava arquivo arbitrário, não usa rede e não altera Git, Azure ou agenda. O comando usa o agente `manual` do código da CLI. Um `--agente` informado na linha não comprova outra identidade. Imediatamente antes de consumir, a mesma transação reavalia a política com essa autoridade. Negação, delegação insuficiente ou retirada da ferramenta deixam a aprovação intacta.
 
 ```bash
 moah governanca propor --dominio pessoal --alvo nota-sintetica --param texto=eco
