@@ -6,6 +6,7 @@ import { importTranscript, readMeeting } from "../application/meetings.js";
 import { markServiceStarted, markServiceStopped, processOnce, recoverService, requestServiceStop, serviceHealth, stopRequested } from "../application/service.js";
 import { backupDatabase, migrateDatabase, previewMigration, restoreDatabase } from "../application/storage.js";
 import { AppError } from "../domain/errors.js";
+import { isDomain, type Domain } from "../domain/constants.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { checkVolume, parseMountTable, pathIsInside } from "../infrastructure/volume.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
@@ -153,8 +154,11 @@ function handleAgenda(
   };
   if (action === "sincronizar") {
     rejectUnknown(parsed.options, ["arquivo"]);
-    const events = readSyntheticEvents(requiredPath(one(parsed.options, "arquivo")));
-    printJson({ ...syncSyntheticCalendar(calendar, events), aviso: "Agenda sintética. Evento não comprova participação." });
+    const snapshot = readSyntheticCalendar(requiredPath(one(parsed.options, "arquivo")));
+    printJson({
+      ...syncSyntheticCalendar(calendar, snapshot.domain, snapshot.events),
+      aviso: "Agenda sintética. Evento não comprova participação.",
+    });
     return;
   }
   if (action === "tick") {
@@ -291,10 +295,17 @@ function requiredPath(value: string | null): string {
   return value;
 }
 
-function readSyntheticEvents(file: string): CalendarEventInput[] {
-  const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as { sintetica?: boolean; eventos?: CalendarEventInput[] };
+function readSyntheticCalendar(file: string): { domain: Domain; events: CalendarEventInput[] } {
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    sintetica?: boolean;
+    dominio?: unknown;
+    eventos?: CalendarEventInput[];
+  };
   if (parsed.sintetica !== true || !Array.isArray(parsed.eventos)) {
     throw new AppError("A agenda precisa ser um arquivo marcado como sintético.", "validation");
   }
-  return parsed.eventos;
+  if (typeof parsed.dominio !== "string" || !isDomain(parsed.dominio)) {
+    throw new AppError("A agenda precisa declarar dominio pessoal, imex ou aluai.", "validation");
+  }
+  return { domain: parsed.dominio, events: parsed.eventos };
 }

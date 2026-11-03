@@ -9,6 +9,8 @@ import { processOnce } from "../src/application/service.js";
 import { backupDatabase, migrateDatabase, restoreDatabase } from "../src/application/storage.js";
 import { checkVolume, parseMountTable, pathIsInside } from "../src/infrastructure/volume.js";
 import { loadConfig } from "../src/infrastructure/config.js";
+import { openDatabase } from "../src/infrastructure/database.js";
+import { databasePath } from "../src/infrastructure/paths.js";
 import type { LlmProvider } from "../src/domain/llm.js";
 import { cliWorkspace, runCli, tempDir } from "./helpers.js";
 
@@ -123,16 +125,16 @@ test("lembrete sintético distingue entrega, silêncio e vencimento", () => {
       quietStart: "22:00",
       quietEnd: "07:00",
     };
-    syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T12:00:00.000Z") }, [
+    syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T12:00:00.000Z") }, "pessoal", [
       event("evt-1", "1", "2026-11-02T15:00:00.000Z"),
       event("evt-2", "1", "2026-11-02T18:00:00.000Z"),
     ]);
-    const repeated = syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T12:00:00.000Z") }, [
+    const repeated = syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T12:00:00.000Z") }, "pessoal", [
       event("evt-1", "1", "2026-11-02T15:00:00.000Z"),
       event("evt-2", "1", "2026-11-02T18:00:00.000Z"),
     ]);
     assert.equal(repeated.upserted, 0);
-    const changed = syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T16:00:00.000Z") }, [
+    const changed = syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T16:00:00.000Z") }, "pessoal", [
       { ...event("evt-2", "2", "2026-11-02T18:00:00.000Z"), title: "Evento alterado" },
     ]);
     assert.equal(changed.cancelled, 1);
@@ -151,7 +153,7 @@ test("lembrete sintético distingue entrega, silêncio e vencimento", () => {
       quietEnd: "07:00",
     };
     const fire = "2026-11-03T01:30:00.000Z";
-    syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T12:00:00.000Z") }, [event("evt-q", "1", fire)]);
+    syncSyntheticCalendar({ ...base, now: () => new Date("2026-11-02T12:00:00.000Z") }, "pessoal", [event("evt-q", "1", fire)]);
     const quiet = tickReminders({ ...base, now: () => new Date(fire) });
     assert.equal(quiet.deferred, 1);
     assert.equal(quiet.delivered, 0);
@@ -241,16 +243,54 @@ test("sincronização de um domínio preserva o outro", () => {
       quietEnd: "07:00",
       now: () => new Date("2026-11-02T12:00:00.000Z"),
     };
-    syncSyntheticCalendar(base, [
-      event("evt-1", "1", "2026-11-02T15:00:00.000Z", "imex"),
-      event("evt-1", "1", "2026-11-02T15:00:00.000Z", "aluai"),
-    ]);
-    const changed = syncSyntheticCalendar(base, [event("evt-2", "1", "2026-11-02T16:00:00.000Z", "imex")]);
+    syncSyntheticCalendar(base, "imex", [event("evt-1", "1", "2026-11-02T15:00:00.000Z", "imex")]);
+    syncSyntheticCalendar(base, "aluai", [event("evt-1", "1", "2026-11-02T15:00:00.000Z", "aluai")]);
+    const changed = syncSyntheticCalendar(base, "imex", [event("evt-2", "1", "2026-11-02T16:00:00.000Z", "imex")]);
     assert.equal(changed.cancelled, 1);
     const listed = listEvents(workspace.dataDir);
     assert.equal(listed.filter((item) => item.domain === "aluai" && item.status === "confirmado").length, 1);
     assert.equal(listed.filter((item) => item.domain === "imex" && item.status === "cancelado").length, 1);
     assert.equal(listed.filter((item) => item.domain === "imex" && item.status === "confirmado").length, 1);
+  } finally {
+    workspace.cleanup();
+  }
+});
+
+test("lista vazia cancela só o domínio declarado", () => {
+  const workspace = cliWorkspace();
+  try {
+    const base = {
+      dataDir: workspace.dataDir,
+      timeZone: "America/Sao_Paulo",
+      quietStart: "22:00",
+      quietEnd: "07:00",
+      now: () => new Date("2026-11-02T12:00:00.000Z"),
+    };
+    syncSyntheticCalendar(base, "imex", [event("evt-ultimo", "1", "2026-11-02T15:00:00.000Z", "imex")]);
+    syncSyntheticCalendar(base, "aluai", [event("evt-outro", "1", "2026-11-02T15:00:00.000Z", "aluai")]);
+    assert.throws(
+      () => syncSyntheticCalendar(base, "imex", [event("evt-outro", "1", "2026-11-02T15:00:00.000Z", "aluai")]),
+      /domínio declarado/,
+    );
+    const cleared = syncSyntheticCalendar(base, "imex", []);
+    assert.equal(cleared.cancelled, 1);
+    assert.equal(cleared.upserted, 0);
+    const listed = listEvents(workspace.dataDir);
+    assert.equal(listed.filter((item) => item.domain === "imex" && item.status === "cancelado").length, 1);
+    assert.equal(listed.filter((item) => item.domain === "aluai" && item.status === "confirmado").length, 1);
+    const db = openDatabase(databasePath(workspace.dataDir));
+    try {
+      const reminders = db
+        .prepare(
+          `SELECT reminders.state AS state, calendar_events.domain AS domain
+           FROM reminders JOIN calendar_events ON calendar_events.id = reminders.event_id`,
+        )
+        .all() as unknown as Array<{ state: string; domain: string }>;
+      assert.equal(reminders.filter((item) => item.domain === "imex" && item.state === "cancelado").length, 1);
+      assert.equal(reminders.filter((item) => item.domain === "aluai" && item.state === "agendado").length, 1);
+    } finally {
+      db.close();
+    }
   } finally {
     workspace.cleanup();
   }

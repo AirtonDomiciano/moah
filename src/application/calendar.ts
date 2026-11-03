@@ -38,19 +38,26 @@ function eventKey(domain: string, externalId: string): string {
   return `${domain}\u0000${externalId}`;
 }
 
-export function syncSyntheticCalendar(context: CalendarContext, events: CalendarEventInput[]): { upserted: number; cancelled: number } {
+export function syncSyntheticCalendar(
+  context: CalendarContext,
+  scope: Domain,
+  events: CalendarEventInput[],
+): { upserted: number; cancelled: number } {
+  if (!isDomain(scope)) {
+    throw new AppError("A sincronização precisa de um domínio pessoal, imex ou aluai.", "validation");
+  }
+  for (const event of events) {
+    if (event.domain !== scope) {
+      throw new AppError("O evento não pertence ao domínio declarado na sincronização.", "validation");
+    }
+  }
   return withDb(context.dataDir, (db) =>
     runInTransaction(db, () => {
       const now = context.now().toISOString();
       const seen = new Set<string>();
-      const domains = new Set<Domain>();
       let upserted = 0;
       for (const event of events) {
-        if (!isDomain(event.domain)) {
-          throw new AppError("Domínio de evento inválido.", "validation");
-        }
-        domains.add(event.domain);
-        seen.add(eventKey(event.domain, event.externalId));
+        seen.add(eventKey(scope, event.externalId));
         const current = db
           .prepare("SELECT id, version FROM calendar_events WHERE source = ? AND domain = ? AND external_id = ?")
           .get(SOURCE, event.domain, event.externalId) as { id: string; version: string } | undefined;
@@ -87,7 +94,7 @@ export function syncSyntheticCalendar(context: CalendarContext, events: Calendar
       }>;
       let cancelled = 0;
       for (const row of existing) {
-        if (!isDomain(row.domain) || !domains.has(row.domain) || seen.has(eventKey(row.domain, row.external_id))) {
+        if (row.domain !== scope || seen.has(eventKey(row.domain, row.external_id))) {
           continue;
         }
         db.prepare("UPDATE calendar_events SET status = 'cancelado', updated_at = ? WHERE id = ?").run(now, row.id);
