@@ -122,3 +122,7 @@ Data: 01/11/2026. Origem: pedido explícito de Airton por regras claras, inclusi
 
 Data: 02/11/2026. Origem: pedido explícito de Airton. Estado: recorte local testado no prompt 15; modelo real e calendário real bloqueados. Entregue volume com verificação de montagem e UUID, backup SQLite, fila persistente, agenda sintética e importação de transcrição em texto. A análise de reunião com modelo real e o conector de agenda permanecem pendentes. Não houve commit nesta execução. Fonte: [prompt 15](cursror-dev/15-rotina-tech-lead.md).
 
+
+## MOAH-035 — Referências do Pestinha para contexto e presença no desktop
+
+Data: 03/11/2026. Origem: pedido explícito de Airton para levantamento e separação entre agora e futuro. Responsabilidades: arquitetura, contexto do computador, interface e segurança. Estado: avaliação documentada; sem adoção de código, instalação ou captura. Proposta: estudar agora separação de camadas, adaptadores, pausa e memória isolada; priorizar validação do prompt 15, modelo real, agenda e serviço. Sensores reais, painel, avatar e personalidade ficam para etapas posteriores. Rede spiking não substitui LLM e aprendizado não muda permissões. Fonte: [levantamento](docs/arquitetura/avaliacao-pestinha.md).

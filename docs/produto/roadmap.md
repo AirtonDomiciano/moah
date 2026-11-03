@@ -97,3 +97,7 @@ A primeira camada de política, aprovação de uso único, auditoria e executor 
 A rotina local ganhou volume verificável, cópia consistente do SQLite, fila que solta o lock durante a tarefa, agenda sintética com lembrete sem modelo e importação de transcrição em texto. A consulta `consultar_reuniao` passa pela política e não executa o texto importado. A inspeção do mesmo dia não encontrou motor local; nenhum modelo foi baixado e a avaliação real não rodou. Nenhum calendário externo foi autenticado e nenhum serviço permanente foi instalado.
 
 Isso não conclui os módulos 01, 02, 03, 04 ou 07. Cobre o recorte testado com fixture. Evidência: [relatório](../../cursror-dev/execucoes/2026-11-02-003-prompt-15.md). Decisões: [0009](../arquitetura/decisoes/0009-volume-e-backup-sqlite.md), [0010](../arquitetura/decisoes/0010-servico-e-fila.md), [0011](../arquitetura/decisoes/0011-agenda-sintetica.md) e [0012](../arquitetura/decisoes/0012-importacao-de-reuniao.md).
+
+## Referência externa — Pestinha, 03/11/2026
+
+O [levantamento](../arquitetura/avaliacao-pestinha.md) separa estudos imediatos e exploração futura. A prioridade permanece validar o recorte do prompt 15 e avançar para modelo real, agenda de leitura e rotina supervisionada. Contexto real do desktop, painel, avatar e personalidade são propostas futuras, sem implementação ou permissão de coleta concedida por este registro. Nenhuma tecnologia vigente foi substituída.
