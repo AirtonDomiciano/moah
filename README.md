@@ -2,7 +2,7 @@
 
 MOAH será o agente principal de Airton: organizar compromissos, preservar contexto e coordenar agentes especializados, apoiando sua entrada como Tech Leader.
 
-**Estado em 28/10/2026:** o [prompt 00](cursror-dev/00-bootstrap-typescript.md) entregou uma CLI local de memória de trabalho, testada neste repositório. Os módulos 01 a 10 continuam planejados. A existência de um prompt ou de um SKILL.md não significa que o recurso funciona.
+**Estado em 02/11/2026:** a CLI de memória, a conversa de leitura, a política e o recorte local do [prompt 15](cursror-dev/15-rotina-tech-lead.md) estão testados. Os módulos 01 a 10 continuam planejados: o serviço permanente, o modelo local e o calendário real ainda não foram validados. A existência de um prompt ou de um SKILL.md não significa que o recurso funciona.
 
 ## Visão aprovada na conversa
 
@@ -40,7 +40,7 @@ A pasta `cursror-dev` mantém a grafia solicitada por Airton. Cada módulo cont�
 
 A CLI local registra atividades, reuniões relatadas, decisões, pendências e checkpoints, e consulta esses dados depois que o processo termina. Entrega do [prompt 00](cursror-dev/00-bootstrap-typescript.md); relatório em [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Escolhas de runtime e SQLite: [ADR 0001](docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
 
-Serviço contínuo, calendário, convites e lembretes ficam para as etapas seguintes. Lembretes, quando existirem, devem funcionar mesmo com o modelo descarregado. A conversa de leitura usa um provedor configurável e, por padrão, um simulador; os demais comandos não chamam modelo. O launcher e os especialistas podem continuar em outras linguagens.
+O recorte do prompt 15 acrescenta fila local, agenda sintética e importação de transcrição. O lembrete não depende do modelo. O serviço permanente não foi instalado, nenhum calendário externo foi conectado e a avaliação com modelo real continua pendente. A conversa de leitura usa um provedor configurável e, por padrão, um simulador. O launcher e os especialistas podem continuar em outras linguagens.
 
 Organização: [prompts](cursror-dev/README.md), [histórico de execuções](cursror-dev/execucoes/README.md) e [decisões arquiteturais](docs/arquitetura/decisoes/README.md).
 

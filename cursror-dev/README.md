@@ -45,6 +45,8 @@ Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Laun
 
 [14 — Política, aprovação e modelo local](14-politica-e-aprovacao.md), versão 1.0: executado em 02/11/2026. A política e o executor falso foram testados. O download do modelo continua sem autorização. Relatório em [execuções](execucoes/2026-11-02-001-prompt-14.md). Decisão em [ADR 0008](../docs/arquitetura/decisoes/0008-politica-e-aprovacao.md).
 
+[15 — Rotina inicial de Tech Lead](15-rotina-tech-lead.md), versão 1.0: executado em 02/11/2026 no recorte local. Volume, fila, agenda sintética e importação de texto foram testados com fixture. Modelo real e calendário real continuam bloqueados. Relatório em [execuções](execucoes/2026-11-02-003-prompt-15.md).
+
 ## Organização de prompts e decisões
 
 - Prompts completos e versionados: esta pasta.

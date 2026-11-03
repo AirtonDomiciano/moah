@@ -117,3 +117,8 @@ Data: 29/10/2026. Origem: pedido explícito de Airton. Estado: decisão document
 ## MOAH-033 — Políticas de acesso e aprovação de ações
 
 Data: 01/11/2026. Origem: pedido explícito de Airton por regras claras, inclusive no Windows. Estado em 02/11/2026: primeira camada executável testada no prompt 14. A conversa segue somente leitura. Escrita por IA, shell, conectores, voz e sandbox do sistema operacional continuam ausentes. A inspeção do modelo local foi repetida e o download segue sem autorização. Fonte: [segurança](docs/desenvolvimento/seguranca/README.md) e [guia](docs/operacao/governanca.md). Próximo passo: autorizar o download do Ollama ou uma ferramenta com efeito real em diretório temporário. Esta decisão não configura Cursor nem permissões do SO.
+
+## MOAH-034 — Rotina local de Tech Lead
+
+Data: 02/11/2026. Origem: pedido explícito de Airton. Estado: recorte local testado no prompt 15; modelo real e calendário real bloqueados. Entregue volume com verificação de montagem e UUID, backup SQLite, fila persistente, agenda sintética e importação de transcrição em texto. A análise de reunião com modelo real e o conector de agenda permanecem pendentes. Não houve commit nesta execução. Fonte: [prompt 15](cursror-dev/15-rotina-tech-lead.md).
+

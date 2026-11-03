@@ -12,6 +12,10 @@ Decisões de desenvolvimento do MOAH ficam nesta pasta; ideias e preferências c
 | [0006](0006-obsidian-e-graphify.md) | Obsidian e Graphify | Direção aceita; integração não implementada |
 | [0007](0007-ollama-qwen35-9b.md) | Ollama local e candidato qwen3.5:9b | Escolha registrada; download aguardando autorização |
 | [0008](0008-politica-e-aprovacao.md) | Política allow/ask/deny e aprovação de uso único | Aceita no recorte do prompt 14; sem sandbox |
+| [0009](0009-volume-e-backup-sqlite.md) | Volume configurável e backup consistente | Aceita no recorte local; migração real não executada |
+| [0010](0010-servico-e-fila.md) | Fila persistente e serviço de um processo | Aceita; unidade permanente não instalada |
+| [0011](0011-agenda-sintetica.md) | Agenda e lembretes sem modelo | Aceita para fixture; conector real pendente |
+| [0012](0012-importacao-de-reuniao.md) | Importação de transcrição em texto | Aceita para fixture; análise real pendente |
 
 ## Processo
 
