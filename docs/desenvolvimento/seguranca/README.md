@@ -48,6 +48,6 @@ Ainda ausente:
 - conector real de agenda e aceite de convite;
 - prova com modelo real. A inspeção de 02/11/2026 não encontrou motor local.
 
-O prompt 15 acrescenta `consultar_reuniao` às consultas de leitura. A transcrição importada continua sendo dado: ela não cria aprovação, tarefa ou comando. O prompt 16 acrescenta o laço de voz por nome, também sem conceder autorização: a conversa segue somente leitura e o microfone não abre sem um detector validado. Guia: [reuniões](../../operacao/reunioes.md) e [voz](../../operacao/voz.md).
+O prompt 15 acrescenta `consultar_reuniao` às consultas de leitura. A transcrição importada continua sendo dado: ela não cria aprovação, tarefa ou comando. O prompt 16 acrescenta o laço de voz por nome, também sem conceder autorização: a conversa segue somente leitura. A escuta contínua não abre sem um detector validado. A prova de hardware abre o dispositivo nomeado só com `--habilitar sim`, fecha antes da saudação e não trata o áudio como reconhecimento. Guia: [reuniões](../../operacao/reunioes.md) e [voz](../../operacao/voz.md).
 
 Guia operacional: [governanca](../../operacao/governanca.md). Decisão: [ADR 0008](../../arquitetura/decisoes/0008-politica-e-aprovacao.md).

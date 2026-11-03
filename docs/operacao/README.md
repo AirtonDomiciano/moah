@@ -9,7 +9,7 @@ Responsabilidade: execução local, limitações, medições e recuperação.
 - [Serviço](servico.md): fila local, saúde e recuperação.
 - [Agenda](agenda.md): fonte sintética e lembretes sem modelo.
 - [Reuniões](reunioes.md): importação de transcrição em texto.
-- [Voz](voz.md): ativação pelo nome, ainda sem detector confirmado no hardware.
+- [Voz](voz.md): ativação pelo nome; headset medido e nome falado ainda sem detector.
 - [Relatório da primeira entrega](../../cursror-dev/execucoes/2026-10-28-001-prompt-00.md).
 - [Relatório da conversa](../../cursror-dev/execucoes/2026-10-29-001-prompt-11.md).
 - [Lições aprendidas](licoes/README.md): problemas reais e correções.

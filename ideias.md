@@ -129,4 +129,8 @@ Data: 03/11/2026. Origem: pedido explícito de Airton para levantamento e separa
 
 ## MOAH-036 — Voz ativada pelo nome MOAH
 
-Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel testados com fixtures no prompt 16; reconhecimento falado, microfone e caixas pendentes. A ativação não autoriza ações e a conversa segue somente leitura. O modelo “hey pran” não foi reutilizado como detector deste nome. Fonte: [voz](docs/operacao/voz.md).
+Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel testados com fixtures; captura e saudação medidas no JBL Quantum 360; reconhecimento falado pendente. A ativação não autoriza ações e a conversa segue somente leitura. O modelo “hey pran” não foi reutilizado como detector deste nome. Fonte: [voz](docs/operacao/voz.md).
+
+## MOAH-037 — Treinar um detector da pronúncia MOAH
+
+Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: decisão pendente; nenhum download nem treino foi iniciado. Os classificadores prontos do openWakeWord não cobrem o nome. O plano usa o gerador e os negativos já presentes na máquina, mais exemplos falados por Airton, e só então liga STT, conversa e TTS.

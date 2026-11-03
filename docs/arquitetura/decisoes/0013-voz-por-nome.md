@@ -1,7 +1,7 @@
 # ADR 0013 — Voz por ativação do nome, sem detector confirmado
 
 - Data: 03/11/2026
-- Estado: contrato testado com fixtures; microfone, caixas e a palavra falada não foram validados
+- Estado: contrato testado com fixtures; captura e saudação medidas no headset em 03/11/2026; a palavra falada continua sem detector
 - Origem: pedido de Airton para a primeira interface em que “MOAH” inicia a conversa
 
 ## Contexto
@@ -25,4 +25,4 @@ A conversa de texto já consulta a memória em modo somente leitura. No Debian d
 
 ## Consequências
 
-O módulo 08 continua planejado. A próxima prova útil é um modelo treinado para “MOAH”, com exemplos da voz e negativos, executado localmente diante do microfone e das caixas.
+O módulo 08 continua planejado. No mesmo dia, `moah voz hardware --habilitar sim --microfone jbl` abriu o microfone do JBL Quantum 360, tocou “Estou aqui.” no alto-falante desse headset e liberou o dispositivo. Os classificadores prontos do openWakeWord não incluem “MOAH”; o treino não foi iniciado. A próxima prova útil continua sendo um modelo dessa pronúncia, executado enquanto Airton fala o nome.

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { AppError } from "../domain/errors.js";
 import { fixtureWakeDetector, unavailableWakeDetector, voicePanel, type VoiceSample } from "../domain/voice.js";
+import { probeHeadset } from "../infrastructure/audio-probe.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
 import { printJson } from "./present.js";
 
@@ -31,13 +32,25 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     printJson(await runFixture(file));
     return true;
   }
+  if (action === "hardware") {
+    rejectUnknown(parsed.options, ["habilitar", "microfone"]);
+    if (one(parsed.options, "habilitar") !== "sim") {
+      throw new AppError("A prova de hardware exige --habilitar sim.", "validation");
+    }
+    const choice = one(parsed.options, "microfone") ?? "jbl";
+    if (choice !== "jbl" && choice !== "camera") {
+      throw new AppError("Use --microfone jbl ou --microfone camera.", "validation");
+    }
+    printJson(await probeHeadset(true, choice));
+    return true;
+  }
   if (action === "microfone") {
     throw new AppError(
       "O detector local de MOAH não está instalado nem validado. A escuta do microfone permanece desligada.",
       "unavailable",
     );
   }
-  throw new AppError("Uso: moah voz estado|simular --roteiro <arquivo>|microfone.", "validation");
+  throw new AppError("Uso: moah voz estado|simular --roteiro <arquivo>|hardware --habilitar sim.", "validation");
 }
 
 async function runFixture(file: string): Promise<unknown> {
