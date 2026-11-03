@@ -133,4 +133,4 @@ Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel te
 
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 
-Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: decisão pendente; nenhum download nem treino foi iniciado. Os classificadores prontos do openWakeWord não cobrem o nome. O plano usa o gerador e os negativos já presentes na máquina, mais exemplos falados por Airton, e só então liga STT, conversa e TTS.
+Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: treino local executado fora do Git; aceite falado pendente. O PRAN foi consultado e não integrado. O modelo oficial colapsou e a segunda passagem ainda dispara com música e ambiente. A coleta da voz de Airton está preparada e não foi executada.

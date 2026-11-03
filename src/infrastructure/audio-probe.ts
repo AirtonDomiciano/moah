@@ -3,7 +3,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { AppError } from "../domain/errors.js";
-import { parseWpctl, runGreetingProbe, type ProbeReport } from "../infrastructure/audio-hardware.js";
+import { parseWpctl, runGreetingProbe, selectDevice, type ProbeReport } from "../infrastructure/audio-hardware.js";
+
+export async function deviceIds(choice: "jbl" | "camera"): Promise<{ source: string; sink: string }> {
+  try {
+    const selected = selectDevice(parseWpctl(await run("wpctl", ["status"])), choice);
+    return { source: selected.source.id, sink: selected.sink.id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Dispositivo de áudio indisponível.";
+    throw new AppError(message, "not_found");
+  }
+}
 
 export async function probeHeadset(enabled: boolean, choice: "jbl" | "camera"): Promise<ProbeReport> {
   const status = await run("wpctl", ["status"]);

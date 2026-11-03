@@ -1,8 +1,10 @@
 import fs from "node:fs";
+import path from "node:path";
 import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { AppError } from "../domain/errors.js";
 import { fixtureWakeDetector, unavailableWakeDetector, voicePanel, type VoiceSample } from "../domain/voice.js";
-import { probeHeadset } from "../infrastructure/audio-probe.js";
+import { deviceIds, probeHeadset } from "../infrastructure/audio-probe.js";
+import { runVoiceScript, trainedModelPath, voiceDirectory } from "../infrastructure/wake-command.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
 import { printJson } from "./present.js";
 
@@ -14,12 +16,18 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
   if (action === "estado") {
     rejectUnknown(parsed.options, []);
     const detector = unavailableWakeDetector();
+    const dir = voiceDirectory(process.env);
+    const model = trainedModelPath(dir);
+    const installed = fs.existsSync(model);
     printJson({
       escuta: "desligada",
       microfone: "liberado",
-      detector: detector.id,
-      detectorConfirmado: detector.confirmedOnHardware,
-      aviso: "O microfone só abre depois de uma habilitação explícita e de um detector de MOAH validado no hardware.",
+      detector: installed ? "moah-local" : detector.id,
+      detectorConfirmado: false,
+      modelo: installed ? model : null,
+      aviso: installed
+        ? "O modelo local existe, mas a palavra falada por Airton ainda não foi confirmada. A escuta só abre com --habilitar sim."
+        : "O microfone só abre depois de uma habilitação explícita e de um detector de MOAH validado no hardware.",
     });
     return true;
   }
@@ -44,13 +52,64 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     printJson(await probeHeadset(true, choice));
     return true;
   }
+  if (action === "escutar") {
+    rejectUnknown(parsed.options, ["habilitar", "microfone", "duracao"]);
+    if (one(parsed.options, "habilitar") !== "sim") {
+      throw new AppError("A escuta exige --habilitar sim.", "validation");
+    }
+    const choice = microphoneChoice(one(parsed.options, "microfone"));
+    const dir = voiceDirectory(process.env);
+    const model = trainedModelPath(dir);
+    if (!fs.existsSync(model)) {
+      throw new AppError("O detector completo de MOAH ainda não foi treinado. A escuta permanece desligada.", "unavailable");
+    }
+    const devices = await deviceIds(choice);
+    const duration = one(parsed.options, "duracao");
+    await runVoiceScript(process.env, "escutar.py", [
+      "--habilitar",
+      "sim",
+      "--modelo",
+      model,
+      "--recursos",
+      resourcesOf(dir),
+      "--origem",
+      devices.source,
+      "--destino",
+      devices.sink,
+      ...(duration ? ["--duracao", duration] : []),
+    ]);
+    return true;
+  }
+  if (action === "coletar") {
+    rejectUnknown(parsed.options, ["iniciar", "microfone", "vezes", "segundos"]);
+    if (one(parsed.options, "iniciar") !== "sim") {
+      throw new AppError("A coleta exige --iniciar sim.", "validation");
+    }
+    const choice = microphoneChoice(one(parsed.options, "microfone"));
+    const devices = await deviceIds(choice);
+    const times = one(parsed.options, "vezes") ?? "8";
+    const seconds = one(parsed.options, "segundos") ?? "2";
+    await runVoiceScript(process.env, "coletar.py", [
+      "--iniciar",
+      "sim",
+      "--saida",
+      voiceDirectory(process.env),
+      "--origem",
+      devices.source,
+      "--vezes",
+      times,
+      "--segundos",
+      seconds,
+    ]);
+    return true;
+  }
   if (action === "microfone") {
     throw new AppError(
       "O detector local de MOAH não está instalado nem validado. A escuta do microfone permanece desligada.",
       "unavailable",
     );
   }
-  throw new AppError("Uso: moah voz estado|simular --roteiro <arquivo>|hardware --habilitar sim.", "validation");
+  throw new AppError("Uso: moah voz estado|simular|hardware|escutar|coletar.", "validation");
 }
 
 async function runFixture(file: string): Promise<unknown> {
@@ -101,4 +160,24 @@ async function runFixture(file: string): Promise<unknown> {
     falas: snapshot.spoken,
     consultasAoModelo: snapshot.llmCalls,
   };
+}
+
+function microphoneChoice(value: string | null | undefined): "jbl" | "camera" {
+  const choice = value ?? "jbl";
+  if (choice !== "jbl" && choice !== "camera") {
+    throw new AppError("Use --microfone jbl ou --microfone camera.", "validation");
+  }
+  return choice;
+}
+
+function resourcesOf(dir: string): string {
+  const file = path.join(dir, "runtime.json");
+  if (!fs.existsSync(file)) {
+    throw new AppError("O treino local ainda não registrou os recursos do detector.", "unavailable");
+  }
+  const runtime = JSON.parse(fs.readFileSync(file, "utf8")) as { recursos?: string };
+  if (!runtime.recursos) {
+    throw new AppError("O registro do treino não informa os recursos.", "unavailable");
+  }
+  return runtime.recursos;
 }

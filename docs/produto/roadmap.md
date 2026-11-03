@@ -100,7 +100,7 @@ Isso não conclui os módulos 01, 02, 03, 04 ou 07. Cobre o recorte testado com 
 
 ## Evidência do prompt 16 — 03/11/2026
 
-O laço de voz espera o nome, responde e volta a esperar, com a conversa de leitura já existente. A prova do laço é de fixtures rotuladas. No mesmo dia, uma prova separada abriu o microfone do JBL Quantum 360, tocou “Estou aqui.” nesse headset e liberou o dispositivo. Nenhum detector foi confirmado com a palavra falada “MOAH”. O módulo 08 continua planejado. Evidência: [fixture](../../cursror-dev/execucoes/2026-11-03-001-prompt-16.md), [hardware](../../cursror-dev/execucoes/2026-11-03-002-voz-hardware.md) e [ADR 0013](../arquitetura/decisoes/0013-voz-por-nome.md).
+O laço de voz espera o nome, responde e volta a esperar, com a conversa de leitura já existente. A prova do laço é de fixtures rotuladas. No mesmo dia, o headset foi medido e um detector local foi treinado fora do Git. Esse modelo não está aceito: a voz de Airton não foi coletada e música e ambiente disparam. O módulo 08 continua planejado. Evidência: [fixture](../../cursror-dev/execucoes/2026-11-03-001-prompt-16.md), [hardware](../../cursror-dev/execucoes/2026-11-03-002-voz-hardware.md), [treino](../../cursror-dev/execucoes/2026-11-03-003-voz-pran.md) e [ADR 0013](../arquitetura/decisoes/0013-voz-por-nome.md).
 
 ## Referência externa — Pestinha, 03/11/2026
 

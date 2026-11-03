@@ -24,6 +24,8 @@ Comandos:
   moah reuniao ver --id <reu_> --dominio <domínio>
   moah voz estado|simular --roteiro <json-simulacao>
   moah voz hardware --habilitar sim [--microfone jbl|camera]
+  moah voz escutar --habilitar sim [--microfone jbl|camera]
+  moah voz coletar --iniciar sim [--microfone jbl|camera] [--vezes 8] [--segundos 2]
   moah ajuda
 
 Opções comuns de registro:

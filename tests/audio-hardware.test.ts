@@ -51,6 +51,19 @@ test("a saudação de hardware só toca com o microfone fechado", async () => {
   }), /habilitação/);
 });
 
+test("escuta e coleta exigem ordem explícita", () => {
+  const workspace = cliWorkspace();
+  try {
+    const listen = runCli(["voz", "escutar", "--microfone", "jbl"], workspace.env);
+    assert.equal(listen.status, 1);
+    assert.match(listen.stderr, /habilitar sim/);
+    const collect = runCli(["voz", "coletar", "--microfone", "jbl"], workspace.env);
+    assert.equal(collect.status, 1);
+    assert.match(collect.stderr, /iniciar sim/);
+  } finally {
+    workspace.cleanup();
+  }
+});
 test("hardware sem habilitação não abre o microfone", () => {
   const workspace = cliWorkspace();
   try {
