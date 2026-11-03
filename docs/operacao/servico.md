@@ -7,10 +7,11 @@ moah servico saude
 moah servico enfileirar --tipo eco --chave exemplo-sintetico
 moah servico processar
 moah servico recuperar
+moah servico iniciar
 moah servico parar
 ```
 
-`processar` executa no máximo uma tarefa e termina. `recuperar` marca como `incerta` a tarefa que estava `executando` quando o processo caiu. Ela não vira sucesso sozinha. A mesma `--chave` devolve a tarefa já gravada. Cancelar vale para `pendente` e `executando` e não reescreve uma tarefa já concluída.
+`processar` executa no máximo uma tarefa e termina. `parar` grava `moah.service.stop` e remove o pid. O sinal permanece, e `processar` não reserva outra tarefa enquanto ele existir. `iniciar` apaga esse sinal. `recuperar` marca como `incerta` a tarefa que estava `executando` quando o processo caiu. Ela não vira sucesso sozinha. A mesma `--chave` devolve a tarefa já gravada. Cancelar vale para `pendente` e `executando` e não reescreve uma tarefa já concluída.
 
 O tipo `eco` não chama shell, rede, arquivo de usuário nem agenda. A fila não promete efeito externo exatamente uma vez.
 

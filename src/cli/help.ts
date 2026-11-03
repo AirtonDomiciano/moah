@@ -16,7 +16,7 @@ Comandos:
   moah governanca executar --aprovacao <id> --dominio <domínio> --alvo <alvo> [--param chave=valor]
   moah governanca pausar|retomar|pausa|auditoria
   moah armazenamento verificar|backup|restaurar|previa|migrar
-  moah servico saude|enfileirar|processar|parar|recuperar
+  moah servico saude|iniciar|enfileirar|processar|parar|recuperar
   moah agenda sincronizar --arquivo <json-sintetico>
   moah agenda tick|listar
   moah agenda adiar --lembrete <id> --ate <instante ISO>

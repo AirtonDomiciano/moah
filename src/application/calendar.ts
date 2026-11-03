@@ -34,20 +34,26 @@ export interface ReminderTick {
 
 const SOURCE = "sintetica";
 
+function eventKey(domain: string, externalId: string): string {
+  return `${domain}\u0000${externalId}`;
+}
+
 export function syncSyntheticCalendar(context: CalendarContext, events: CalendarEventInput[]): { upserted: number; cancelled: number } {
   return withDb(context.dataDir, (db) =>
     runInTransaction(db, () => {
       const now = context.now().toISOString();
       const seen = new Set<string>();
+      const domains = new Set<Domain>();
       let upserted = 0;
       for (const event of events) {
         if (!isDomain(event.domain)) {
           throw new AppError("Domínio de evento inválido.", "validation");
         }
-        seen.add(event.externalId);
+        domains.add(event.domain);
+        seen.add(eventKey(event.domain, event.externalId));
         const current = db
-          .prepare("SELECT id, version FROM calendar_events WHERE source = ? AND external_id = ?")
-          .get(SOURCE, event.externalId) as { id: string; version: string } | undefined;
+          .prepare("SELECT id, version FROM calendar_events WHERE source = ? AND domain = ? AND external_id = ?")
+          .get(SOURCE, event.domain, event.externalId) as { id: string; version: string } | undefined;
         if (current && current.version === event.version) {
           continue;
         }
@@ -74,13 +80,14 @@ export function syncSyntheticCalendar(context: CalendarContext, events: Calendar
         }
         upserted += 1;
       }
-      const existing = db.prepare("SELECT id, external_id FROM calendar_events WHERE source = ? AND status = 'confirmado'").all(SOURCE) as unknown as Array<{
+      const existing = db.prepare("SELECT id, domain, external_id FROM calendar_events WHERE source = ? AND status = 'confirmado'").all(SOURCE) as unknown as Array<{
         id: string;
+        domain: string;
         external_id: string;
       }>;
       let cancelled = 0;
       for (const row of existing) {
-        if (seen.has(row.external_id)) {
+        if (!isDomain(row.domain) || !domains.has(row.domain) || seen.has(eventKey(row.domain, row.external_id))) {
           continue;
         }
         db.prepare("UPDATE calendar_events SET status = 'cancelado', updated_at = ? WHERE id = ?").run(now, row.id);

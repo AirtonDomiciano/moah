@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const MIGRATION_V1 = `
 CREATE TABLE records (
@@ -175,9 +175,35 @@ CREATE TABLE meeting_analyses (
 );
 `;
 
+export const MIGRATION_V5 = `
+CREATE TABLE calendar_events_v5 (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  external_id TEXT NOT NULL,
+  version TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  title TEXT NOT NULL,
+  starts_at TEXT NOT NULL,
+  ends_at TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('confirmado', 'cancelado')),
+  updated_at TEXT NOT NULL,
+  UNIQUE (source, domain, external_id)
+);
+
+INSERT INTO calendar_events_v5 (
+  id, source, external_id, version, domain, title, starts_at, ends_at, status, updated_at
+)
+SELECT id, source, external_id, version, domain, title, starts_at, ends_at, status, updated_at
+FROM calendar_events;
+
+DROP TABLE calendar_events;
+ALTER TABLE calendar_events_v5 RENAME TO calendar_events;
+`;
+
 export const MIGRATIONS = [
   { version: 1, sql: MIGRATION_V1 },
   { version: 2, sql: MIGRATION_V2 },
   { version: 3, sql: MIGRATION_V3 },
   { version: 4, sql: MIGRATION_V4 },
+  { version: 5, sql: MIGRATION_V5 },
 ] as const;

@@ -3,11 +3,11 @@ import path from "node:path";
 import { listEvents, snoozeReminder, syncSyntheticCalendar, tickReminders, type CalendarEventInput } from "../application/calendar.js";
 import { enqueueJob } from "../application/jobs.js";
 import { importTranscript, readMeeting } from "../application/meetings.js";
-import { markServiceStopped, processOnce, recoverService, requestServiceStop, serviceHealth } from "../application/service.js";
+import { markServiceStarted, markServiceStopped, processOnce, recoverService, requestServiceStop, serviceHealth, stopRequested } from "../application/service.js";
 import { backupDatabase, migrateDatabase, previewMigration, restoreDatabase } from "../application/storage.js";
 import { AppError } from "../domain/errors.js";
 import type { AppConfig } from "../infrastructure/config.js";
-import { checkVolume, parseMountTable } from "../infrastructure/volume.js";
+import { checkVolume, parseMountTable, pathIsInside } from "../infrastructure/volume.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
 import { printJson } from "./present.js";
 
@@ -110,7 +110,16 @@ async function handleService(
     printJson(enqueueJob(jobContext, { kind, payload: { eco: true }, idempotencyKey: one(parsed.options, "chave") }));
     return;
   }
+  if (action === "iniciar") {
+    markServiceStarted(context.dataDir);
+    printJson({ iniciado: true });
+    return;
+  }
   if (action === "processar") {
+    if (stopRequested(context.dataDir)) {
+      printJson({ processada: false, parada: true });
+      return;
+    }
     const job = await processOnce(jobContext, {
       eco: async () => ({ done: true, checkpoint: { passo: 1 } }),
     });
@@ -120,14 +129,14 @@ async function handleService(
   if (action === "parar") {
     requestServiceStop(context.dataDir);
     markServiceStopped(context.dataDir);
-    printJson({ parado: true });
+    printJson({ parado: true, sinal: true });
     return;
   }
   if (action === "recuperar") {
     printJson({ incertas: recoverService(jobContext) });
     return;
   }
-  throw new AppError("Uso: moah servico saude|enfileirar|processar|parar|recuperar.", "validation");
+  throw new AppError("Uso: moah servico saude|iniciar|enfileirar|processar|parar|recuperar.", "validation");
 }
 
 function handleAgenda(
@@ -270,7 +279,7 @@ function assertVolume(config: AppConfig, destination: string): void {
   if (check && !check.ok) {
     throw new AppError(check.diagnosis, "validation");
   }
-  if (config.storage.volume && !destination.startsWith(config.storage.volume.mount)) {
+  if (config.storage.volume && !pathIsInside(config.storage.volume.mount, destination)) {
     throw new AppError("O destino não está no volume confirmado.", "validation");
   }
 }

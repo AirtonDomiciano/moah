@@ -11,7 +11,7 @@ O banco continua em `MOAH_DATA_DIR`, com o fallback XDG já usado pela CLI. O pr
 ## Decisão
 
 - `config.json` aceita `storage.volume` com `mount`, `uuid` e `label`, além de `documentsDir`, `derivedDir` e `backupDir`, todos absolutos. Sem `volume`, o banco segue o diretório de dados e nada é criado em outro disco.
-- A verificação lê a tabela de montagem e compara o UUID do dispositivo. Falha de montagem ou UUID diferente impede backup, migração e importação que dependam desse volume. Não há diretório alternativo silencioso.
+- A verificação lê a tabela de montagem e compara o UUID do dispositivo. Falha de montagem ou UUID diferente impede backup, migração e importação que dependam desse volume. O destino é comparado pelo caminho resolvido, não pelo prefixo do texto. Não há diretório alternativo silencioso.
 - A cópia usa `backup()` do `node:sqlite`, que tira um snapshot consistente, inclusive com WAL. A restauração só grava em diretório vazio. A migração exige prévia e `--confirmar sim`, confere a contagem e não apaga a origem nem troca `MOAH_DATA_DIR`.
 - Se origem e destino têm o mesmo `dev`, a CLI avisa que a cópia não protege contra perda física do SSD.
 

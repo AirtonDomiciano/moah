@@ -13,6 +13,9 @@ export async function processOnce(
   context: JobContext,
   handlers: Record<string, (job: JobRow) => Promise<{ done: boolean; checkpoint?: unknown; error?: string }>>,
 ): Promise<JobRow | null> {
+  if (stopRequested(context.dataDir)) {
+    return null;
+  }
   const job = claimNext(context);
   if (!job) {
     return null;
@@ -71,7 +74,6 @@ export function stopRequested(dataDir: string): boolean {
 
 export function markServiceStopped(dataDir: string): void {
   fs.rmSync(path.join(dataDir, "moah.service.pid"), { force: true });
-  fs.rmSync(path.join(dataDir, "moah.service.stop"), { force: true });
 }
 
 export function recoverService(context: JobContext): number {

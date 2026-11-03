@@ -20,6 +20,6 @@ moah armazenamento previa --destino /diretorio/vazio
 moah armazenamento migrar --destino /diretorio/vazio --confirmar sim
 ```
 
-A migração não apaga a origem e não altera `MOAH_DATA_DIR`. Se o destino está no mesmo dispositivo, a mensagem avisa que a cópia não protege contra perda física do SSD. Nenhum dado real foi migrado nesta entrega.
+A migração não apaga a origem e não altera `MOAH_DATA_DIR`. O destino precisa continuar dentro do ponto de montagem depois da resolução do caminho: um prefixo como `/media/projetos-outro` ou um `../` que saia do volume é recusado. Se o destino está no mesmo dispositivo, a mensagem avisa que a cópia não protege contra perda física do SSD. Nenhum dado real foi migrado nesta entrega.
 
 Decisão: [ADR 0009](../arquitetura/decisoes/0009-volume-e-backup-sqlite.md).

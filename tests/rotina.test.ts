@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { syncSyntheticCalendar, tickReminders } from "../src/application/calendar.js";
+import { listEvents, syncSyntheticCalendar, tickReminders } from "../src/application/calendar.js";
 import { cancelJob, claimNext, enqueueJob, finishJob, recoverExecuting } from "../src/application/jobs.js";
 import { analyzeImportedMeeting, importTranscript, readMeeting } from "../src/application/meetings.js";
 import { processOnce } from "../src/application/service.js";
 import { backupDatabase, migrateDatabase, restoreDatabase } from "../src/application/storage.js";
-import { checkVolume, parseMountTable } from "../src/infrastructure/volume.js";
+import { checkVolume, parseMountTable, pathIsInside } from "../src/infrastructure/volume.js";
 import { loadConfig } from "../src/infrastructure/config.js";
 import type { LlmProvider } from "../src/domain/llm.js";
 import { cliWorkspace, runCli, tempDir } from "./helpers.js";
@@ -210,11 +210,78 @@ test("importação repetida, correção e texto malicioso não criam efeito", as
   }
 });
 
-function event(externalId: string, version: string, reminderAt: string) {
+test("parada impede o próximo processamento", () => {
+  const workspace = cliWorkspace();
+  try {
+    assert.equal(runCli(["servico", "enfileirar", "--tipo", "eco"], workspace.env).status, 0);
+    assert.equal(runCli(["servico", "parar"], workspace.env).status, 0);
+    assert.equal(fs.existsSync(path.join(workspace.dataDir, "moah.service.stop")), true);
+    const blocked = runCli(["servico", "processar"], workspace.env);
+    assert.equal(blocked.status, 0);
+    assert.match(blocked.stdout, /"parada": true/);
+    const health = runCli(["servico", "saude"], workspace.env);
+    assert.match(health.stdout, /"pendente": 1/);
+    assert.match(health.stdout, /"concluida": 0/);
+    assert.equal(runCli(["servico", "iniciar"], workspace.env).status, 0);
+    const processed = runCli(["servico", "processar"], workspace.env);
+    assert.equal(processed.status, 0);
+    assert.match(processed.stdout, /"state": "concluida"/);
+  } finally {
+    workspace.cleanup();
+  }
+});
+
+test("sincronização de um domínio preserva o outro", () => {
+  const workspace = cliWorkspace();
+  try {
+    const base = {
+      dataDir: workspace.dataDir,
+      timeZone: "America/Sao_Paulo",
+      quietStart: "22:00",
+      quietEnd: "07:00",
+      now: () => new Date("2026-11-02T12:00:00.000Z"),
+    };
+    syncSyntheticCalendar(base, [
+      event("evt-1", "1", "2026-11-02T15:00:00.000Z", "imex"),
+      event("evt-1", "1", "2026-11-02T15:00:00.000Z", "aluai"),
+    ]);
+    const changed = syncSyntheticCalendar(base, [event("evt-2", "1", "2026-11-02T16:00:00.000Z", "imex")]);
+    assert.equal(changed.cancelled, 1);
+    const listed = listEvents(workspace.dataDir);
+    assert.equal(listed.filter((item) => item.domain === "aluai" && item.status === "confirmado").length, 1);
+    assert.equal(listed.filter((item) => item.domain === "imex" && item.status === "cancelado").length, 1);
+    assert.equal(listed.filter((item) => item.domain === "imex" && item.status === "confirmado").length, 1);
+  } finally {
+    workspace.cleanup();
+  }
+});
+
+test("destino do volume exige o caminho resolvido", () => {
+  assert.equal(pathIsInside("/media/projetos", "/media/projetos/backup"), true);
+  assert.equal(pathIsInside("/media/projetos", "/media/projetos-outro"), false);
+  assert.equal(pathIsInside("/media/projetos", "/media/projetos/../etc"), false);
+});
+
+test("transcrição com CRLF é aceita", () => {
+  const workspace = cliWorkspace();
+  const docs = tempDir("moah-docs-");
+  try {
+    const file = path.join(docs.dir, "win.txt");
+    fs.writeFileSync(file, transcript("v1", "aluai", "Texto com quebra do Windows.").replace(/\n/g, "\r\n"));
+    const imported = importTranscript({ dataDir: workspace.dataDir, now: () => NOW, documentsDir: docs.dir }, file);
+    assert.equal(imported.meeting.domain, "aluai");
+    assert.match(imported.meeting.transcript, /Windows/);
+  } finally {
+    workspace.cleanup();
+    docs.cleanup();
+  }
+});
+
+function event(externalId: string, version: string, reminderAt: string, domain: "pessoal" | "imex" | "aluai" = "pessoal") {
   return {
     externalId,
     version,
-    domain: "pessoal" as const,
+    domain,
     title: `Evento ${externalId}`,
     startsAt: reminderAt,
     endsAt: reminderAt,

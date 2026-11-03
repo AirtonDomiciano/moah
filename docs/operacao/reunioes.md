@@ -14,7 +14,7 @@ participantes: Ana; Bruno
 Texto da transcrição.
 ```
 
-`projeto`, `data` e `participantes` podem faltar. O importador não inventa esses campos.
+`projeto`, `data` e `participantes` podem faltar. O importador não inventa esses campos. Quebra de linha CRLF ou CR é normalizada antes da leitura.
 
 ```bash
 moah reuniao importar --arquivo /caminho/transcricao.txt

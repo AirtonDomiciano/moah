@@ -13,7 +13,7 @@ A CLI já serializa o SQLite com um lock de arquivo em volta de cada operação 
 - A migração 4 grava `jobs` com id, tipo, estado, tentativas, erro, checkpoint e chave de idempotência. Estados: `pendente`, `executando`, `concluida`, `falha`, `cancelada` e `incerta`.
 - O worker reserva a tarefa com `UPDATE` condicional e solta o lock antes do tratador. Dois workers não levam a mesma linha `pendente`. A chave repetida devolve a tarefa existente.
 - No início, toda tarefa `executando` passa a `incerta`. Não é promovida a sucesso. Cancelar `pendente` ou `executando` não reescreve uma conclusão posterior.
-- O comando `servico processar` executa uma tarefa e termina. `servico parar` grava o pedido e remove o pid. Não há servidor de rede. O único tipo aceito na CLI é `eco`, sem shell nem arquivo.
+- O comando `servico processar` executa uma tarefa e termina, desde que não exista sinal de parada. `servico parar` grava esse sinal e remove o pid; o sinal só sai com `servico iniciar`. Não há servidor de rede. O único tipo aceito na CLI é `eco`, sem shell nem arquivo.
 - A unidade systemd de exemplo fica na documentação e não é instalada. O Agendador de Tarefas do Windows também não é criado.
 
 ## Alternativas

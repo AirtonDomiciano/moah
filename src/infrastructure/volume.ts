@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export interface MountEntry {
   source: string;
   mount: string;
@@ -70,6 +72,13 @@ export function checkVolume(
     fstype: found.fstype,
     uuid,
   };
+}
+
+export function pathIsInside(root: string, target: string): boolean {
+  const base = path.resolve(root);
+  const resolved = path.resolve(target);
+  const relative = path.relative(base, resolved);
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
 function decodeMount(value: string): string {

@@ -10,7 +10,7 @@ A conversa já consulta a memória por ferramentas de leitura. Uma transcrição
 
 ## Decisão
 
-- O formato mínimo é texto com cabeçalho `fonte`, `versao` e `dominio`, campos opcionais `projeto`, `data` e `participantes`, uma linha `---` e o corpo. Participante e data omitidos ficam vazios.
+- O formato mínimo é texto com cabeçalho `fonte`, `versao` e `dominio`, campos opcionais `projeto`, `data` e `participantes`, uma linha `---` e o corpo. Participante e data omitidos ficam vazios. CRLF é aceito.
 - `reuniao importar` é comando manual. Se `documentsDir` estiver configurado, o arquivo real precisa permanecer dentro dele. A mesma fonte, versão e domínio devolvem o registro existente. Uma versão nova marca a análise `valida` anterior como `substituida`.
 - A análise pede JSON ao adaptador: resumo, assuntos, decisões, regras com `confirmada`, sugestões, dúvidas e ações. `confirmada` é classificação do modelo, não aceite de Airton. JSON inválido fica `invalida`. Sem provedor, ou com o simulador, a análise permanece `pendente`.
 - A ação extraída é candidata. A importação não enfileira tarefa, não cria aprovação e não altera a agenda. `consultar_reuniao` entra nas ferramentas de leitura, recebe só o id e usa o domínio da sessão. A política continua na frente.

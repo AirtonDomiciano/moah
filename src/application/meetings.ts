@@ -53,7 +53,7 @@ export function parseTranscriptFile(filePath: string, documentsDir: string | nul
       throw new AppError("O arquivo está fora do diretório de documentos autorizado.", "validation");
     }
   }
-  const text = fs.readFileSync(resolved, "utf8");
+  const text = fs.readFileSync(resolved, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const split = text.split(/\n---\n/);
   if (split.length < 2) {
     throw new AppError("A transcrição precisa de cabeçalho e uma linha --- antes do texto.", "validation");
