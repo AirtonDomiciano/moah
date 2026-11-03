@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const MIGRATION_V1 = `
 CREATE TABLE records (
@@ -91,8 +91,93 @@ export const MIGRATION_V3 = `
 ALTER TABLE approvals ADD COLUMN fingerprint_version INTEGER NOT NULL DEFAULT 1;
 `;
 
+export const MIGRATION_V4 = `
+CREATE TABLE jobs (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (state IN ('pendente', 'executando', 'concluida', 'falha', 'cancelada', 'incerta')),
+  payload_json TEXT NOT NULL,
+  attempts INTEGER NOT NULL,
+  max_attempts INTEGER NOT NULL,
+  error TEXT,
+  checkpoint_json TEXT,
+  idempotency_key TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  started_at TEXT,
+  finished_at TEXT
+);
+
+CREATE UNIQUE INDEX idx_jobs_idempotency ON jobs (idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+CREATE TABLE calendar_events (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  external_id TEXT NOT NULL,
+  version TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  title TEXT NOT NULL,
+  starts_at TEXT NOT NULL,
+  ends_at TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('confirmado', 'cancelado')),
+  updated_at TEXT NOT NULL,
+  UNIQUE (source, external_id)
+);
+
+CREATE TABLE reminders (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL,
+  fire_at TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (state IN ('agendado', 'adiado', 'entregue', 'vencido', 'cancelado')),
+  snooze_until TEXT,
+  attempts INTEGER NOT NULL,
+  delivered_at TEXT
+);
+
+CREATE UNIQUE INDEX idx_reminders_event_fire ON reminders (event_id, fire_at) WHERE state IN ('agendado', 'adiado');
+
+CREATE TABLE notifications (
+  id TEXT PRIMARY KEY,
+  reminder_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE runtime_marks (
+  name TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE imported_meetings (
+  id TEXT PRIMARY KEY,
+  source_id TEXT NOT NULL,
+  source_version TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  project TEXT,
+  occurred_on TEXT,
+  transcript TEXT NOT NULL,
+  participants_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (domain, source_id, source_version)
+);
+
+CREATE TABLE meeting_analyses (
+  id TEXT PRIMARY KEY,
+  meeting_id TEXT NOT NULL,
+  source_version TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pendente', 'valida', 'invalida', 'substituida')),
+  model TEXT NOT NULL,
+  simulated INTEGER NOT NULL,
+  summary TEXT,
+  payload_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`;
+
 export const MIGRATIONS = [
   { version: 1, sql: MIGRATION_V1 },
   { version: 2, sql: MIGRATION_V2 },
   { version: 3, sql: MIGRATION_V3 },
+  { version: 4, sql: MIGRATION_V4 },
 ] as const;

@@ -117,7 +117,7 @@ describe("persistência", () => {
       );
       assert.equal(reloaded.some((record) => record.id === meetingId), true);
       const versions = second.prepare("SELECT COUNT(*) AS total FROM schema_migrations").get() as { total: number };
-      assert.equal(versions.total, 3);
+      assert.equal(versions.total, 4);
     } finally {
       second.close();
       workspace.cleanup();
