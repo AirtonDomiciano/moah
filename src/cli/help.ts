@@ -22,6 +22,7 @@ Comandos:
   moah agenda adiar --lembrete <id> --ate <instante ISO>
   moah reuniao importar --arquivo <transcricao.txt>
   moah reuniao ver --id <reu_> --dominio <domínio>
+  moah voz estado|simular --roteiro <json-simulacao>
   moah ajuda
 
 Opções comuns de registro:

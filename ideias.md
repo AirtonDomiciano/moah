@@ -126,3 +126,7 @@ Data: 02/11/2026. Origem: pedido explícito de Airton. Estado: recorte local tes
 ## MOAH-035 — Referências do Pestinha para contexto e presença no desktop
 
 Data: 03/11/2026. Origem: pedido explícito de Airton para levantamento e separação entre agora e futuro. Responsabilidades: arquitetura, contexto do computador, interface e segurança. Estado: avaliação documentada; sem adoção de código, instalação ou captura. Proposta: estudar agora separação de camadas, adaptadores, pausa e memória isolada; priorizar validação do prompt 15, modelo real, agenda e serviço. Sensores reais, painel, avatar e personalidade ficam para etapas posteriores. Rede spiking não substitui LLM e aprendizado não muda permissões. Fonte: [levantamento](docs/arquitetura/avaliacao-pestinha.md).
+
+## MOAH-036 — Voz ativada pelo nome MOAH
+
+Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel testados com fixtures no prompt 16; reconhecimento falado, microfone e caixas pendentes. A ativação não autoriza ações e a conversa segue somente leitura. O modelo “hey pran” não foi reutilizado como detector deste nome. Fonte: [voz](docs/operacao/voz.md).

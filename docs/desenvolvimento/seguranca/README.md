@@ -42,12 +42,12 @@ Implementado e testado, no processo da CLI:
 Ainda ausente:
 
 - sandbox, ACL, resolução segura de caminho, junction e link;
-- voz e qualquer aprovação lida de arquivo, e-mail ou transcrição;
+- detector falado de “MOAH”, captura real e interrupção por voz durante a fala;
 - permissão permanente ou global;
 - escrita por IA, shell, rede, instalador, Git e Azure como ferramentas;
 - conector real de agenda e aceite de convite;
 - prova com modelo real. A inspeção de 02/11/2026 não encontrou motor local.
 
-O prompt 15 acrescenta `consultar_reuniao` às consultas de leitura. A transcrição importada continua sendo dado: ela não cria aprovação, tarefa ou comando. Guia: [reuniões](../../operacao/reunioes.md).
+O prompt 15 acrescenta `consultar_reuniao` às consultas de leitura. A transcrição importada continua sendo dado: ela não cria aprovação, tarefa ou comando. O prompt 16 acrescenta o laço de voz por nome, também sem conceder autorização: a conversa segue somente leitura e o microfone não abre sem um detector validado. Guia: [reuniões](../../operacao/reunioes.md) e [voz](../../operacao/voz.md).
 
 Guia operacional: [governanca](../../operacao/governanca.md). Decisão: [ADR 0008](../../arquitetura/decisoes/0008-politica-e-aprovacao.md).

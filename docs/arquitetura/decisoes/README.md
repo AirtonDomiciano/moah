@@ -16,6 +16,7 @@ Decisões de desenvolvimento do MOAH ficam nesta pasta; ideias e preferências c
 | [0010](0010-servico-e-fila.md) | Fila persistente e serviço de um processo | Aceita; unidade permanente não instalada |
 | [0011](0011-agenda-sintetica.md) | Agenda e lembretes sem modelo | Aceita para fixture; conector real pendente |
 | [0012](0012-importacao-de-reuniao.md) | Importação de transcrição em texto | Aceita para fixture; análise real pendente |
+| [0013](0013-voz-por-nome.md) | Ativação por nome e painel de voz | Contrato testado com fixture; hardware pendente |
 
 ## Processo
 

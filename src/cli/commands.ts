@@ -22,6 +22,7 @@ import { parseActionSpec } from "./action-spec.js";
 import { HELP } from "./help.js";
 import { handleGovernance } from "./governanca.js";
 import { handleRoutine } from "./rotina.js";
+import { handleVoice } from "./voz.js";
 import { many, one, parseArgs, rejectUnknown } from "./parse-args.js";
 import {
   printActions,
@@ -209,6 +210,10 @@ export async function execute(argv: string[]): Promise<void> {
   }
 
   if (await handleRoutine(parsed, context)) {
+    return;
+  }
+
+  if (await handleVoice(parsed)) {
     return;
   }
 

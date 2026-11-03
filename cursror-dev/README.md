@@ -47,6 +47,8 @@ Os prompts 02, 04, 05, 06, 07, 08 e 09 foram refinados para a visão atual. Laun
 
 [15 — Rotina inicial de Tech Lead](15-rotina-tech-lead.md), versão 1.0: executado em 02/11/2026 no recorte local. Volume, fila, agenda sintética e importação de texto foram testados com fixture. Modelo real e calendário real continuam bloqueados. Relatório em [execuções](execucoes/2026-11-02-003-prompt-15.md).
 
+[16 — Voz ativada pelo nome](16-voz-ativacao-nome.md), versão 1.0: contrato executado em 03/11/2026 com fixtures. O detector falado de “MOAH” não foi validado. Relatório em [execuções](execucoes/2026-11-03-001-prompt-16.md).
+
 ## Organização de prompts e decisões
 
 - Prompts completos e versionados: esta pasta.
