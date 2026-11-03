@@ -21,6 +21,7 @@ import { resolveDirs } from "../infrastructure/paths.js";
 import { parseActionSpec } from "./action-spec.js";
 import { HELP } from "./help.js";
 import { handleGovernance } from "./governanca.js";
+import { handleRoutine } from "./rotina.js";
 import { many, one, parseArgs, rejectUnknown } from "./parse-args.js";
 import {
   printActions,
@@ -70,6 +71,7 @@ export async function execute(argv: string[]): Promise<void> {
     dataDir: dirs.dataDir,
     timeZone: config.timezone,
     now: () => new Date(),
+    config,
   };
 
   if (command === "registrar" || command === "checkpoint") {
@@ -203,6 +205,10 @@ export async function execute(argv: string[]): Promise<void> {
 
   if (command === "governanca") {
     handleGovernance(parsed, { dataDir: context.dataDir, now: context.now });
+    return;
+  }
+
+  if (await handleRoutine(parsed, context)) {
     return;
   }
 

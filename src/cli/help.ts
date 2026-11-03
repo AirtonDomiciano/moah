@@ -15,6 +15,13 @@ Comandos:
   moah governanca conceder|negar|revogar|ver <id>
   moah governanca executar --aprovacao <id> --dominio <domínio> --alvo <alvo> [--param chave=valor]
   moah governanca pausar|retomar|pausa|auditoria
+  moah armazenamento verificar|backup|restaurar|previa|migrar
+  moah servico saude|enfileirar|processar|parar|recuperar
+  moah agenda sincronizar --arquivo <json-sintetico>
+  moah agenda tick|listar
+  moah agenda adiar --lembrete <id> --ate <instante ISO>
+  moah reuniao importar --arquivo <transcricao.txt>
+  moah reuniao ver --id <reu_> --dominio <domínio>
   moah ajuda
 
 Opções comuns de registro:
@@ -52,7 +59,10 @@ Códigos de saída:
 Arquivos:
   Dados: $MOAH_DATA_DIR, ou $XDG_DATA_HOME/moah, ou ~/.local/share/moah
   Configuração: $MOAH_CONFIG_DIR, ou $XDG_CONFIG_HOME/moah, ou ~/.config/moah
-  config.json: { "timezone": "America/Sao_Paulo" }
+  config.json: { "timezone": "America/Sao_Paulo", "storage": {}, "agenda": {} }
+  storage opcional: volume.mount, volume.uuid, volume.label, documentsDir, derivedDir, backupDir
+  agenda opcional: quietStart e quietEnd em HH:mm; omissão usa 22:00–07:00
+  O volume só é aceito depois da verificação de montagem e UUID. Pasta existente não confirma o SSD.
   llm opcional: provider, baseUrl, model, modelsDir, timeoutMs, maxToolCalls
   modelsDir é o diretório dos pesos, absoluto e fora do Git. O adaptador HTTP não lê esses arquivos.
   Variáveis: MOAH_LLM_PROVIDER, MOAH_LLM_BASE_URL, MOAH_LLM_MODEL, MOAH_LLM_MODELS_DIR, MOAH_LLM_TIMEOUT_MS, MOAH_LLM_MAX_TOOL_CALLS

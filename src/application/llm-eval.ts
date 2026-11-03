@@ -46,7 +46,7 @@ export interface Reread {
   diagnosis: string | null;
 }
 
-const KNOWN_TOOLS = new Set(["consultar_pendencias", "consultar_resumo", "consultar_checkpoint"]);
+const KNOWN_TOOLS = new Set(["consultar_pendencias", "consultar_resumo", "consultar_checkpoint", "consultar_reuniao"]);
 const ABSENCE = /não há|nenhum registro|nenhuma pendência/i;
 const ASKS_DATE = /AAAA-MM-DD|data explícita|informe a data|qual data|que data/i;
 const ISO_DATE = /\b\d{4}-\d{2}-\d{2}\b/;

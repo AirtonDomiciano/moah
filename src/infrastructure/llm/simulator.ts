@@ -38,6 +38,10 @@ export class SimulatorProvider implements LlmProvider {
       return this.say("Esta conversa só consulta. Não registro fatos nem concluo pendências.");
     }
     const wants = [PENDING_INTENT.test(text), SUMMARY_INTENT.test(text), CHECKPOINT_INTENT.test(text)].filter(Boolean);
+    const meeting = /reuni[aã]o\s+(reu_[0-9a-f-]{8,})/i.exec(text);
+    if (meeting?.[1]) {
+      return this.call("consultar_reuniao", { id: meeting[1] });
+    }
     if (wants.length > 1) {
       return this.say("A pergunta mistura assuntos. Escolha pendências, resumo de uma data AAAA-MM-DD ou último checkpoint.");
     }

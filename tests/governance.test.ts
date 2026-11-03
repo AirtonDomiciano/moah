@@ -281,7 +281,7 @@ describe("CLI de governança e conversa", () => {
     try {
       assert.deepEqual(
         QUERY_TOOL_DEFINITIONS.map((tool) => tool.name),
-        ["consultar_pendencias", "consultar_resumo", "consultar_checkpoint"],
+        ["consultar_pendencias", "consultar_resumo", "consultar_checkpoint", "consultar_reuniao"],
       );
       assert.equal(QUERY_TOOL_DEFINITIONS.some((tool) => tool.name === DEMO_EFFECT_TOOL), false);
       const ctx = {

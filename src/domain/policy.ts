@@ -7,7 +7,7 @@ export const POLICY_VERSION = "1";
 /** Formato canônico que inclui o agente do contexto confiável. A versão 1 não tinha esse vínculo. */
 export const FINGERPRINT_VERSION = 2;
 
-export const READ_TOOLS = ["consultar_pendencias", "consultar_resumo", "consultar_checkpoint"] as const;
+export const READ_TOOLS = ["consultar_pendencias", "consultar_resumo", "consultar_checkpoint", "consultar_reuniao"] as const;
 
 /** Ferramenta falsa da demonstração. Não entra na lista oferecida ao modelo. */
 export const DEMO_EFFECT_TOOL = "eco_sintetico";

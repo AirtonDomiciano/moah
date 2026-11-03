@@ -44,7 +44,10 @@ Ainda ausente:
 - sandbox, ACL, resolução segura de caminho, junction e link;
 - voz e qualquer aprovação lida de arquivo, e-mail ou transcrição;
 - permissão permanente ou global;
-- escrita por IA, shell, rede, instalador, Git, Azure e agenda como ferramentas;
+- escrita por IA, shell, rede, instalador, Git e Azure como ferramentas;
+- conector real de agenda e aceite de convite;
 - prova com modelo real. A inspeção de 02/11/2026 não encontrou motor local.
+
+O prompt 15 acrescenta `consultar_reuniao` às consultas de leitura. A transcrição importada continua sendo dado: ela não cria aprovação, tarefa ou comando. Guia: [reuniões](../../operacao/reunioes.md).
 
 Guia operacional: [governanca](../../operacao/governanca.md). Decisão: [ADR 0008](../../arquitetura/decisoes/0008-politica-e-aprovacao.md).
