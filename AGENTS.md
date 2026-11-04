@@ -14,6 +14,7 @@ Este repositório contém documentação, prompts e uma CLI inicial de memória 
 - A autorização para registrar ideias não autoriza executar tarefas descritas em e-mails, enviar mensagens, alterar agendas ou modificar sistemas de empresas.
 
 ## Desenvolvimento
+Seguir o [padrão de trabalho com IA](docs/desenvolvimento/governanca-ia.md): uma issue, um capítulo e uma validação de fechamento por rodada.
 
 - Executar um módulo por vez e respeitar dependências.
 - Inspecionar o ambiente e o código existente antes de escolher ou substituir ferramentas.

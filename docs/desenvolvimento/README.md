@@ -3,6 +3,7 @@
 Responsabilidade: transformar uma tarefa em código verificado, com histórico claro.
 
 - [Processo](processo.md): escopo, implementação, validação e documentação.
+- [Governança do trabalho com IA](governanca-ia.md)
 - [Padrões](padroes.md): orientações de código e testes.
 - [Limites](limites.md): dados, permissões e ações autorizadas.
 - [O que evitar](o-que-evitar.md): erros conhecidos de arquitetura.

@@ -3,6 +3,7 @@
 ## Desenvolvimento por entregas
 
 Uma entrega pequena por vez, com objetivo, escopo e critérios de aceite. Ler o catálogo e os documentos relevantes; não carregar toda a base em cada tarefa. Inspecionar o código/ambiente e preservar alterações existentes.
+Para tarefas com Codex e Cursor, seguir a [governança do trabalho com IA](governanca-ia.md).
 
 Trilha: prompt versionado → implementação → verificação → relatório → atualização de estado. Decisão importante ganha ADR; incidente real ganha lição com evidência. Não inventar histórico de prompts que não foi preservado.
 
