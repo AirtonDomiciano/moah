@@ -18,7 +18,11 @@ export function voiceScriptDir(): string {
 }
 
 export function trainedModelPath(dir: string): string {
-  return path.join(dir, "completo", "moah.onnx");
+  return path.join(dir, "completo", "moah-corrigido.onnx");
+}
+
+export function experimentalModelPath(dir: string): string {
+  return path.join(dir, "completo", "moah-experimental.onnx");
 }
 
 export async function runVoiceScript(

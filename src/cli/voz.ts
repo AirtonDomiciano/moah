@@ -4,7 +4,7 @@ import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { AppError } from "../domain/errors.js";
 import { fixtureWakeDetector, unavailableWakeDetector, voicePanel, type VoiceSample } from "../domain/voice.js";
 import { deviceIds, probeHeadset } from "../infrastructure/audio-probe.js";
-import { runVoiceScript, trainedModelPath, voiceDirectory } from "../infrastructure/wake-command.js";
+import { experimentalModelPath, runVoiceScript, trainedModelPath, voiceDirectory } from "../infrastructure/wake-command.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
 import { printJson } from "./present.js";
 
@@ -18,15 +18,19 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const detector = unavailableWakeDetector();
     const dir = voiceDirectory(process.env);
     const model = trainedModelPath(dir);
+    const experimental = experimentalModelPath(dir);
     const installed = fs.existsSync(model);
     printJson({
       escuta: "desligada",
       microfone: "liberado",
-      detector: installed ? "moah-local" : detector.id,
+      detector: installed ? "moah-corrigido" : detector.id,
       detectorConfirmado: false,
       modelo: installed ? model : null,
+      modeloExperimental: fs.existsSync(experimental) ? experimental : null,
+      limiar: 0.5,
+      vad: 0,
       aviso: installed
-        ? "O modelo local existe, mas a palavra falada por Airton ainda não foi confirmada. A escuta só abre com --habilitar sim."
+        ? "O modelo em uso acertou 2 de 3 tomadas separadas e ficou abaixo de 0,5 na música reservada. A saudação disparou em 8 de 9. Não está confirmado. O experimental continua separado."
         : "O microfone só abre depois de uma habilitação explícita e de um detector de MOAH validado no hardware.",
     });
     return true;
@@ -81,7 +85,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     return true;
   }
   if (action === "coletar") {
-    rejectUnknown(parsed.options, ["iniciar", "microfone", "vezes", "segundos"]);
+    rejectUnknown(parsed.options, ["iniciar", "microfone", "vezes", "segundos", "frase", "prefixo"]);
     if (one(parsed.options, "iniciar") !== "sim") {
       throw new AppError("A coleta exige --iniciar sim.", "validation");
     }
@@ -89,6 +93,8 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const devices = await deviceIds(choice);
     const times = one(parsed.options, "vezes") ?? "8";
     const seconds = one(parsed.options, "segundos") ?? "2";
+    const phrase = one(parsed.options, "frase") ?? "MOAH";
+    const prefix = one(parsed.options, "prefixo") ?? "moah";
     await runVoiceScript(process.env, "coletar.py", [
       "--iniciar",
       "sim",
@@ -100,6 +106,10 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       times,
       "--segundos",
       seconds,
+      "--frase",
+      phrase,
+      "--prefixo",
+      prefix,
     ]);
     return true;
   }

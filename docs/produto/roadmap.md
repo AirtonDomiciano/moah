@@ -100,7 +100,7 @@ Isso não conclui os módulos 01, 02, 03, 04 ou 07. Cobre o recorte testado com 
 
 ## Evidência do prompt 16 — 03/11/2026
 
-O laço de voz espera o nome, responde e volta a esperar, com a conversa de leitura já existente. A prova do laço é de fixtures rotuladas. No mesmo dia, o headset foi medido e um detector local foi treinado fora do Git. Esse modelo não está aceito: a voz de Airton não foi coletada e música e ambiente disparam. O módulo 08 continua planejado. Evidência: [fixture](../../cursror-dev/execucoes/2026-11-03-001-prompt-16.md), [hardware](../../cursror-dev/execucoes/2026-11-03-002-voz-hardware.md), [treino](../../cursror-dev/execucoes/2026-11-03-003-voz-pran.md) e [ADR 0013](../arquitetura/decisoes/0013-voz-por-nome.md).
+O laço de voz espera o nome, responde e volta a esperar, com a conversa de leitura já existente. A prova do laço é de fixtures rotuladas. No mesmo dia, o headset foi medido e um detector local foi treinado fora do Git. O modelo oficial responde cerca de zero. O experimental continua identificado à parte e dispara em música e ambiente. A correção seguinte, sem usar as três tomadas finais no ajuste, acertou 2 de 3 no limiar 0,5 e não disparou na música reservada. A saudação disparou em 8 de 9. Não está aceita. O módulo 08 continua planejado. Evidência: [fixture](../../cursror-dev/execucoes/2026-11-03-001-prompt-16.md), [hardware](../../cursror-dev/execucoes/2026-11-03-002-voz-hardware.md), [treino](../../cursror-dev/execucoes/2026-11-03-003-voz-pran.md), [correção](../../cursror-dev/execucoes/2026-11-03-004-voz-correcao.md) e [ADR 0013](../arquitetura/decisoes/0013-voz-por-nome.md).
 
 ## Referência externa — Pestinha, 03/11/2026
 
