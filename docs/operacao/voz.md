@@ -2,14 +2,14 @@
 
 A escuta fica desligada até uma habilitação explícita. Depois disso, o laço aguarda o nome, responde e volta a esperar, sem um botão para cada pergunta. O painel mostra o estado e oferece desligar a escuta, o que libera o microfone e não volta a ouvir sozinho.
 
-Nesta entrega o arquivo ONNX existe fora do Git, mas a palavra falada por Airton não foi confirmada. `moah voz microfone` continua recusado. A escuta nomeada exige `--habilitar sim` e o modelo completo.
+Nesta entrega o arquivo ONNX existe fora do Git, mas a palavra falada por Airton não foi confirmada. `moah voz microfone` continua recusado. A escuta nomeada exige `--habilitar sim` e usa o modelo experimental.
 
 ```bash
 moah voz estado
 moah voz simular --roteiro /caminho/roteiro.json
 moah voz hardware --habilitar sim --microfone jbl
 moah voz escutar --habilitar sim --microfone jbl
-moah voz coletar --iniciar sim --microfone jbl --vezes 8 --segundos 2
+moah voz coletar --iniciar sim --microfone jbl --sessao 01 --vezes 10 --segundos 4 --ouvir sim
 ```
 
 ```json
@@ -101,14 +101,21 @@ As cinco tomadas usadas no treino passaram de 0,998. Isso mostra memória dessas
 
 Sessenta segundos de silêncio produziram um pico de 0,98 entre 1,52 s e 1,60 s, na entrada do fluxo, e depois o pico foi 0,0015. A taxa de 60 acionamentos/hora nesse minuto descreve esse arranque, não o silêncio contínuo.
 
-Oito tomadas não bastam. A coleta seguinte não sobrescreve as que já existem e não deve ser usada para mexer neste resultado. Falta gravar mais “MOAH”, palavras parecidas, a saudação e alguns segundos em silêncio:
+A escuta voltou ao modelo experimental, `moah-experimental.onnx`. Os modelos corrigidos ficam ao lado e não são o detector em uso.
+
+## Próxima coleta
+
+As oito tomadas já gravadas permanecem. A coleta nova entra em `coleta/sessoes/` e recusa a sessão se já houver arquivo. Cada sessão tem 4 segundos, com silêncio antes e depois da palavra, contagem visual e reprodução opcional. Um aviso de possível corte olha só o envelope; energia e silêncio não comprovam a palavra.
+
+O papel de cada sessão foi marcado antes de existir áudio: 01 e 02 treinam, 03 valida, 04 é o teste fechado. São 36 tomadas. Os números já vistos, inclusive `moah-06` a `moah-08` e os clipes atuais de saudação, parecidas, música e ambiente, não serão o teste final do próximo modelo.
+
+A primeira sessão, que só Airton inicia, é:
 
 ```bash
-npm run moah -- voz coletar --iniciar sim --microfone jbl --vezes 12 --segundos 2
-npm run moah -- voz coletar --iniciar sim --microfone jbl --vezes 4 --segundos 2 --frase "boa" --prefixo boa
-npm run moah -- voz coletar --iniciar sim --microfone jbl --vezes 2 --segundos 2 --frase "Estou aqui." --prefixo saudacao
-npm run moah -- voz coletar --iniciar sim --microfone jbl --vezes 2 --segundos 2 --frase - --prefixo silencio
+npm run moah -- voz coletar --iniciar sim --microfone jbl --sessao 01 --vezes 10 --segundos 4 --ouvir sim
 ```
+
+No embedding, com a janela medida um segundo depois do pico, `moah-03` e `moah-04` ficam em cosseno 0,67. A saudação fica a 0,67 e 0,62. A distância entre a palavra e a saudação é da mesma ordem da distância entre duas falas da palavra. O último treino tinha muitas janelas de música e duas saudações negativas. Mais repetições iguais de “MOAH” não separam essas classes sozinhas. Num arquivo de 4 s, o quadro final pode ser só o silêncio; o treino futuro tem de usar o quadro da fala.
 
 Isso não é o aceite. `moah-06` a `moah-08` continuam fora de qualquer treino futuro até haver tomadas novas. STT e a conversa de leitura continuam para a etapa seguinte.
 

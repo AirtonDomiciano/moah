@@ -133,4 +133,4 @@ Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel te
 
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 
-Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: correção medida fora do Git; aceite falado pendente. Os oito WAV originais foram preservados. Só `moah-03` e `moah-04` têm a palavra inteira no grupo de treino. O modelo novo, no limiar 0,5 e sem VAD, acertou 2 de 3 tomadas separadas e não disparou na música nem no ambiente reservados; a saudação disparou em 8 de 9. A coleta não sobrescreve um nome existente.
+Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: detector experimental mantido; coleta nova preparada e ainda não gravada. Quatro sessões já têm papel fixo, 36 tomadas no total, com a sessão 04 fechada para teste. Os resultados já vistos não serão o teste final. O embedding não separa “MOAH” da saudação só com mais repetições iguais.
