@@ -25,7 +25,8 @@ Comandos:
   moah voz estado|simular --roteiro <json-simulacao>
   moah voz hardware --habilitar sim [--microfone jbl|camera]
   moah voz escutar --habilitar sim [--microfone jbl|camera]
-  moah voz coletar --iniciar sim [--microfone jbl|camera] [--sessao 01] [--vezes 10] [--segundos 4] [--ouvir sim] [--frase MOAH] [--prefixo moah]
+  moah voz coletar --iniciar sim [--microfone jbl|camera] [--sessao 01] [--tomada 2] [--vezes 10] [--segundos 4] [--ouvir sim] [--frase MOAH] [--prefixo moah]
+  moah voz validar [--sessao 01]
   moah ajuda
 
 Opções comuns de registro:

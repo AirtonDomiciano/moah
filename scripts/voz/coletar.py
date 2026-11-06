@@ -36,6 +36,7 @@ def main() -> None:
     parser.add_argument("--frase", default="MOAH")
     parser.add_argument("--prefixo", default="moah")
     parser.add_argument("--sessao", default="")
+    parser.add_argument("--tomada", type=int, default=0)
     parser.add_argument("--ouvir", default="nao")
     parser.add_argument("--destino", default="")
     args = parser.parse_args()
@@ -55,10 +56,19 @@ def main() -> None:
         papel, instrucao = SESSOES[args.sessao]
         destino = Path(args.saida).resolve() / "coleta" / "sessoes" / f"sessao-{args.sessao}"
         destino.mkdir(parents=True, exist_ok=True)
-        if any(destino.glob("tomada-*.wav")):
-            raise SystemExit(f"A sessão {args.sessao} já tem tomadas. Nada foi sobrescrito.")
         print(f"Sessão {args.sessao}, papel {papel}. {instrucao}", flush=True)
-        nomes = [destino / f"tomada-{indice:02d}.wav" for indice in range(1, args.vezes + 1)]
+        if args.tomada:
+            if args.tomada < 1 or args.tomada > 40:
+                raise SystemExit("A tomada precisa estar entre 1 e 40.")
+            arquivo = destino / f"tomada-{args.tomada:02d}.wav"
+            if arquivo.exists():
+                raise SystemExit(f"{arquivo.name} já existe. A coleta não sobrescreve uma tomada.")
+            print(f"Regravando apenas a tomada {args.tomada:02d}. As outras permanecem.", flush=True)
+            nomes = [arquivo]
+        else:
+            if any(destino.glob("tomada-*.wav")):
+                raise SystemExit(f"A sessão {args.sessao} já tem tomadas. Nada foi sobrescrito.")
+            nomes = [destino / f"tomada-{indice:02d}.wav" for indice in range(1, args.vezes + 1)]
     else:
         if not args.prefixo.replace("-", "").isalnum():
             raise SystemExit("O prefixo só pode ter letras, números e hífen.")
@@ -76,7 +86,7 @@ def main() -> None:
         _gravar(args.origem, arquivo, args.segundos, args.frase)
         _envelope(arquivo)
         if args.ouvir == "sim":
-            print("Reproduzindo para conferência. A reprodução não valida a palavra.", flush=True)
+            print("Reproduzindo para conferência. Confira se o headset não está mudo. A reprodução não valida a palavra.", flush=True)
             subprocess.run(["pw-play", "--target", args.destino, arquivo.as_posix()], check=False)
         print(arquivo.as_posix(), flush=True)
     print("Coleta encerrada. Nenhum arquivo foi enviado.", flush=True)

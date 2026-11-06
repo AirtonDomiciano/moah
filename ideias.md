@@ -133,4 +133,4 @@ Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel te
 
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 
-Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: detector experimental mantido; coleta nova preparada e ainda não gravada. Quatro sessões já têm papel fixo, 36 tomadas no total, com a sessão 04 fechada para teste. Os resultados já vistos não serão o teste final. O embedding não separa “MOAH” da saudação só com mais repetições iguais.
+Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: detector experimental mantido; validação acústica independente nas sessões 01 a 03, sem treino. As sessões 01 e 02 têm dez tomadas; a 03 tem duas de oito; a 04 continua fechada. Quatro sessões já têm papel fixo, com a sessão 04 reservada para teste. Os resultados já vistos não serão o teste final. O embedding não separa “MOAH” da saudação só com mais repetições iguais.

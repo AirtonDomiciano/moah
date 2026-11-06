@@ -17,6 +17,8 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-11-03-004-voz-correcao](2026-11-03-004-voz-correcao.md) | continuação de 16 | Diagnóstico e correção medidos; 1 de 3 tomadas reais; aceite pendente |
 | [2026-11-03-005-voz-tomadas](2026-11-03-005-voz-tomadas.md) | continuação de 16 | Oito WAV preservados; música reservada em 0; saudação em 8 de 9 |
 | [2026-11-03-006-voz-coleta](2026-11-03-006-voz-coleta.md) | continuação de 16 | Experimental mantido; sessões separadas; aguardando Airton |
+| [2026-11-03-007-sessao-01](2026-11-03-007-sessao-01.md) | continuação de 16 | Sessão 01 conferida; sessão 02 ainda não gravada |
+| [2026-11-03-008-validacao-acustica](2026-11-03-008-validacao-acustica.md) | continuação de 16 | Validação acústica das sessões 01 a 03; sem treino |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

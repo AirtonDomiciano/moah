@@ -4,6 +4,7 @@ import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { AppError } from "../domain/errors.js";
 import { fixtureWakeDetector, unavailableWakeDetector, voicePanel, type VoiceSample } from "../domain/voice.js";
 import { deviceIds, probeHeadset } from "../infrastructure/audio-probe.js";
+import { validateSessions } from "../infrastructure/voice-validate.js";
 import { correctedModelPath, runVoiceScript, trainedModelPath, voiceDirectory } from "../infrastructure/wake-command.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
 import { printJson } from "./present.js";
@@ -85,7 +86,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     return true;
   }
   if (action === "coletar") {
-    rejectUnknown(parsed.options, ["iniciar", "microfone", "vezes", "segundos", "frase", "prefixo", "sessao", "ouvir"]);
+    rejectUnknown(parsed.options, ["iniciar", "microfone", "vezes", "segundos", "frase", "prefixo", "sessao", "ouvir", "tomada"]);
     if (one(parsed.options, "iniciar") !== "sim") {
       throw new AppError("A coleta exige --iniciar sim.", "validation");
     }
@@ -97,6 +98,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const phrase = one(parsed.options, "frase") ?? "MOAH";
     const prefix = one(parsed.options, "prefixo") ?? "moah";
     const listen = one(parsed.options, "ouvir") === "sim";
+    const take = one(parsed.options, "tomada");
     await runVoiceScript(process.env, "coletar.py", [
       "--iniciar",
       "sim",
@@ -113,8 +115,24 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "--prefixo",
       prefix,
       ...(session ? ["--sessao", session] : []),
+      ...(take ? ["--tomada", take] : []),
       ...(listen ? ["--ouvir", "sim", "--destino", devices.sink] : []),
     ]);
+    return true;
+  }
+  if (action === "validar") {
+    rejectUnknown(parsed.options, ["sessao"]);
+    const pedida = one(parsed.options, "sessao");
+    const sessoes = pedida ? [normalizarSessao(pedida)] : ["01", "02", "03"];
+    const dir = voiceDirectory(process.env);
+    const relatorio = validateSessions(dir, sessoes);
+    if (relatorio.sessoes.some((sessao) => !sessao.arquivosIntactos)) {
+      throw new AppError("Um WAV mudou durante a validação. Nenhum original foi alterado pelo comando.", "conflict");
+    }
+    const destino = path.join(dir, "correcao");
+    fs.mkdirSync(destino, { recursive: true });
+    fs.writeFileSync(path.join(destino, "validacao-acustica.json"), `${JSON.stringify(relatorio, null, 2)}\n`);
+    printJson(relatorio);
     return true;
   }
   if (action === "microfone") {
@@ -123,7 +141,15 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "unavailable",
     );
   }
-  throw new AppError("Uso: moah voz estado|simular|hardware|escutar|coletar.", "validation");
+  throw new AppError("Uso: moah voz estado|simular|hardware|escutar|coletar|validar.", "validation");
+}
+
+function normalizarSessao(valor: string): string {
+  const texto = valor.trim();
+  if (!/^\d{1,2}$/.test(texto)) {
+    throw new AppError("Use --sessao 01, 02 ou 03.", "validation");
+  }
+  return texto.padStart(2, "0");
 }
 
 async function runFixture(file: string): Promise<unknown> {

@@ -9,7 +9,7 @@ moah voz estado
 moah voz simular --roteiro /caminho/roteiro.json
 moah voz hardware --habilitar sim --microfone jbl
 moah voz escutar --habilitar sim --microfone jbl
-moah voz coletar --iniciar sim --microfone jbl --sessao 01 --vezes 10 --segundos 4 --ouvir sim
+moah voz validar
 ```
 
 ```json
@@ -103,17 +103,21 @@ Sessenta segundos de silêncio produziram um pico de 0,98 entre 1,52 s e 1,60 s,
 
 A escuta voltou ao modelo experimental, `moah-experimental.onnx`. Os modelos corrigidos ficam ao lado e não são o detector em uso.
 
-## Próxima coleta
+## Coleta por sessão
 
 As oito tomadas já gravadas permanecem. A coleta nova entra em `coleta/sessoes/` e recusa a sessão se já houver arquivo. Cada sessão tem 4 segundos, com silêncio antes e depois da palavra, contagem visual e reprodução opcional. Um aviso de possível corte olha só o envelope; energia e silêncio não comprovam a palavra.
 
 O papel de cada sessão foi marcado antes de existir áudio: 01 e 02 treinam, 03 valida, 04 é o teste fechado. São 36 tomadas. Os números já vistos, inclusive `moah-06` a `moah-08` e os clipes atuais de saudação, parecidas, música e ambiente, não serão o teste final do próximo modelo.
 
-A primeira sessão, que só Airton inicia, é:
+A sessão 01 já está em `coleta/sessoes/sessao-01/`, com dez tomadas de 3,80 s a 3,95 s, 16 kHz, mono, PCM 16 bits, sem saturação. O deslocamento do microfone continua perto de −143. Nenhuma borda alta em `tomada-01` a `tomada-07` nem em `tomada-10`. `tomada-08` fica com RMS 52 e o maior bloco de 50 ms em 80, nível baixo. `tomada-09` tem o maior bloco nos primeiros 0,05 s, possível corte no início. Esses avisos não dizem se a palavra está completa. Os arquivos não foram regravados.
+
+A validação acústica é outra etapa, em TypeScript, e não importa PyTorch, não treina e não abre modelo. O comando lê as sessões 01, 02 e 03. A sessão 04 continua fechada: `moah voz validar --sessao 04` para antes de abrir a pasta. A duração esperada vem do manifesto, 4 s, com tolerância de 0,25 s por causa da parada da captura. Uma tomada de 2 s só passa quando a duração esperada é 2 s. O RMS 250, a borda de 150 ms e o teto de 16 bits continuam os mesmos da coleta. Aprovar o envelope não afirma que a palavra esteja completa nem que a fala seja “MOAH”.
 
 ```bash
-npm run moah -- voz coletar --iniciar sim --microfone jbl --sessao 01 --vezes 10 --segundos 4 --ouvir sim
+npm run moah -- voz validar
 ```
+
+Na leitura de 03/11/2026, as sessões 01 e 02 tinham dez tomadas e a 03 tinha duas das oito. Vinte passaram no envelope e duas da sessão 01 não: `tomada-08` ficou com o maior bloco de 50 ms em 80, e `tomada-09` teve atividade nos primeiros 150 ms. Nenhuma saturou. Os SHA-256 conferidos antes e depois são os mesmos. O ganho de captura não estava nos arquivos; Airton informou 85%. O manifesto guarda esse informe com valor medido vazio. O registro completo fica em `voz/correcao/validacao-acustica.json`, fora do Git.
 
 No embedding, com a janela medida um segundo depois do pico, `moah-03` e `moah-04` ficam em cosseno 0,67. A saudação fica a 0,67 e 0,62. A distância entre a palavra e a saudação é da mesma ordem da distância entre duas falas da palavra. O último treino tinha muitas janelas de música e duas saudações negativas. Mais repetições iguais de “MOAH” não separam essas classes sozinhas. Num arquivo de 4 s, o quadro final pode ser só o silêncio; o treino futuro tem de usar o quadro da fala.
 
