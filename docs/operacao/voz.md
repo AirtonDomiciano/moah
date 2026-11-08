@@ -119,9 +119,25 @@ npm run moah -- voz validar
 
 Na leitura de 03/11/2026, as sessões 01 e 02 tinham dez tomadas e a 03 tinha duas das oito. Vinte passaram no envelope e duas da sessão 01 não: `tomada-08` ficou com o maior bloco de 50 ms em 80, e `tomada-09` teve atividade nos primeiros 150 ms. Nenhuma saturou. Os SHA-256 conferidos antes e depois são os mesmos. O ganho de captura não estava nos arquivos; Airton informou 85%. O manifesto guarda esse informe com valor medido vazio. O registro completo fica em `voz/correcao/validacao-acustica.json`, fora do Git.
 
-No embedding, com a janela medida um segundo depois do pico, `moah-03` e `moah-04` ficam em cosseno 0,67. A saudação fica a 0,67 e 0,62. A distância entre a palavra e a saudação é da mesma ordem da distância entre duas falas da palavra. O último treino tinha muitas janelas de música e duas saudações negativas. Mais repetições iguais de “MOAH” não separam essas classes sozinhas. Num arquivo de 4 s, o quadro final pode ser só o silêncio; o treino futuro tem de usar o quadro da fala.
+Em 08/11/2026 a sessão 03 ficou completa com oito tomadas aprovadas no envelope. Nas sessões 01 e 02, 18 tomadas passaram e as mesmas duas da 01 continuam reprovadas. Airton conferiu de ouvido as aprovadas de 01 e 02. O script `scripts/voz/candidato.py` treinou `moah-candidato.onnx` só com essas 18, usando o quadro da fala, e manteve `moah-experimental.onnx` como detector em uso. Negativos de treino: “Estou aqui” via espeak, palavras parecidas e conversa geradas no treino, mais música/ambiente não reservados. Os WAV de `avaliacao/gerado` e a sessão 03 não entraram no treino. A sessão 04 não foi aberta.
 
-Isso não é o aceite. `moah-06` a `moah-08` continuam fora de qualquer treino futuro até haver tomadas novas. STT e a conversa de leitura continuam para a etapa seguinte.
+A sessão 03 escolheu o limiar 0,95 (máximo de acertos, depois menos falsos). Comparação no mesmo conjunto negativo (416,25 s):
+
+| Modelo | Limiar | Acertos sessão 03 | Saudação | Parecidas | Conversa | Música | Ambiente |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Candidato | 0,95 | 8 de 8 | 9 de 9 | 27 de 28 | 12 de 12 | 2 de 8 | 4 de 8 |
+| Experimental (em uso) | 0,95 | 5 de 8 | 0 de 9 | 18 de 28 | 8 de 12 | 8 de 8 | 2 de 8 |
+| Experimental (em uso) | 0,5 | 7 de 8 | 0 de 9 | 23 de 28 | 9 de 12 | 8 de 8 | 7 de 8 |
+
+O candidato não foi promovido: acerta a validação e dispara em saudação e fala parecida. Repetir só a validação:
+
+```bash
+/home/airtondev/hey_pran_work/hey_pran_env/bin/python scripts/voz/candidato.py avaliar
+```
+
+No embedding, com a janela medida um segundo depois do pico, `moah-03` e `moah-04` ficam em cosseno 0,67. A saudação fica a 0,67 e 0,62. A distância entre a palavra e a saudação é da mesma ordem da distância entre duas falas da palavra. O último treino tinha muitas janelas de música e duas saudações negativas. Mais repetições iguais de “MOAH” não separam essas classes sozinhas. Num arquivo de 4 s, o quadro final pode ser só o silêncio; o treino das sessões usa o quadro da fala.
+
+Isso não é o aceite. A sessão 04 continua reservada para o teste final. STT e a conversa de leitura continuam para a etapa seguinte.
 
 ## Tomadas originais — 03/11/2026
 
