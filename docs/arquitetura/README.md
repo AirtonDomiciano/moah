@@ -2,6 +2,7 @@
 
 Responsabilidade: divisão técnica, contratos e escolhas.
 
+- [Estrutura alvo e cenários](estrutura/README.md).
 - [Visão geral](visao-geral.md): componentes, recursos e integrações.
 - [Agentes e memória](agentes-e-memoria.md): tarefas, resumos, histórico e permissões.
 - [Decisões](decisoes/README.md): contexto e motivos das escolhas.
