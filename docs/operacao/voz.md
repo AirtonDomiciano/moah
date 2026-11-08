@@ -129,10 +129,11 @@ A sessão 03 escolheu o limiar 0,95 (máximo de acertos, depois menos falsos). C
 | Experimental (em uso) | 0,95 | 5 de 8 | 0 de 9 | 18 de 28 | 8 de 12 | 8 de 8 | 2 de 8 |
 | Experimental (em uso) | 0,5 | 7 de 8 | 0 de 9 | 23 de 28 | 9 de 12 | 8 de 8 | 7 de 8 |
 
-O candidato não foi promovido: acerta a validação e dispara em saudação e fala parecida. Repetir só a validação:
+O candidato não foi promovido: acerta a validação e dispara em saudação e fala parecida. O diagnóstico de 08/11/2026 reproduziu esses falsos: o pico cai ~1,4–1,8 s no áudio com pad; na mesma janela PyTorch e ONNX coincidem (Δ ≤ 1e-6); no alinhamento de treino o mesmo clipe já fica ~0,001. Causa: o treino só rotulou a janela final. Correção proposta (ainda não executada): janelas deslizantes nos negativos/positivos de fala e negativos Piper separados de `avaliacao/gerado`. Experimental e sessão 04 intactos.
 
 ```bash
 /home/airtondev/hey_pran_work/hey_pran_env/bin/python scripts/voz/candidato.py avaliar
+/home/airtondev/hey_pran_work/hey_pran_env/bin/python scripts/voz/diagnosticar-candidato.py
 ```
 
 No embedding, com a janela medida um segundo depois do pico, `moah-03` e `moah-04` ficam em cosseno 0,67. A saudação fica a 0,67 e 0,62. A distância entre a palavra e a saudação é da mesma ordem da distância entre duas falas da palavra. O último treino tinha muitas janelas de música e duas saudações negativas. Mais repetições iguais de “MOAH” não separam essas classes sozinhas. Num arquivo de 4 s, o quadro final pode ser só o silêncio; o treino das sessões usa o quadro da fala.

@@ -20,6 +20,7 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-11-03-007-sessao-01](2026-11-03-007-sessao-01.md) | continuação de 16 | Sessão 01 conferida; sessão 02 ainda não gravada |
 | [2026-11-03-008-validacao-acustica](2026-11-03-008-validacao-acustica.md) | continuação de 16 | Validação acústica das sessões 01 a 03; sem treino |
 | [2026-11-08-001-voz-candidato](2026-11-08-001-voz-candidato.md) | continuação de 16 / MOAH-037 | Candidato ONNX nas sessões 01–03; experimental mantido; 04 fechada |
+| [2026-11-08-002-voz-diagnostico-candidato](2026-11-08-002-voz-diagnostico-candidato.md) | continuação de 16 / MOAH-037 | Falsos do candidato: janela intermediária; Torch≈ONNX; sem promoção |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 
