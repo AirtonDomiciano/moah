@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Escuta o microfone nomeado e responde à pronúncia treinada.
+"""Escuta o microfone nomeado, responde à pronúncia e transcreve o pedido.
 
-Não grava o ambiente. Fecha a captura antes da saudação. Encerra o processo
-de gravação ao sair.
+Não grava o ambiente. Fecha a captura antes da saudação. Descarta o buffer do
+pedido após a transcrição. Encerra o processo de gravação ao sair.
 """
 
 from __future__ import annotations
@@ -19,6 +19,11 @@ from pathlib import Path
 
 import numpy as np
 
+TAXA = 16_000
+QUADRO = 1280
+PEDIDO_S = 8.0
+PICO_MUDO = 50.0
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -29,6 +34,7 @@ def main() -> None:
     parser.add_argument("--destino", required=True)
     parser.add_argument("--limiar", type=float, default=0.5)
     parser.add_argument("--duracao", type=float, default=0)
+    parser.add_argument("--pedido", type=float, default=PEDIDO_S)
     parser.add_argument("--provar-eco", action="store_true")
     args = parser.parse_args()
     if args.habilitar != "sim":
@@ -36,11 +42,17 @@ def main() -> None:
     modelo = Path(args.modelo)
     if not modelo.is_file():
         raise SystemExit(f"Modelo ausente: {modelo}")
+    stt_dir = _voz_dir() / "stt" / "faster-whisper-small"
+    if not (stt_dir / "model.bin").is_file():
+        raise SystemExit(f"Modelo STT ausente: {stt_dir}")
     sys.path.insert(0, str(Path(args.recursos) / "hey_pran_openwakeword_v060"))
     from openwakeword.model import Model
+    from faster_whisper import WhisperModel
 
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
     detector = Model(wakeword_models=[str(modelo)], inference_framework="onnx", vad_threshold=0)
     chave = next(iter(detector.models))
+    stt = WhisperModel(str(stt_dir), device="cpu", compute_type="int8", local_files_only=True)
     inicio = time.time()
     captura: subprocess.Popen[bytes] | None = None
     pico = 0.0
@@ -75,7 +87,15 @@ def main() -> None:
             acertos += 1
             _estado("saudacao", microfone="liberado", pico=pico, acertos=acertos)
             _saudacao(args.destino)
-            _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos)
+            _estado("ouvindo", microfone="retido", pico=pico, acertos=acertos)
+            captura = _abrir(args.origem)
+            amostras = _capturar_pedido(captura, args.pedido)
+            _fechar(captura)
+            captura = None
+            texto = _transcrever(stt, amostras)
+            del amostras
+            print(texto, flush=True)
+            _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
         _fechar(captura)
@@ -105,18 +125,46 @@ def _ler(detector, chave: str, captura: subprocess.Popen[bytes], limiar: float, 
     return pico
 
 
+def _capturar_pedido(captura: subprocess.Popen[bytes], segundos: float) -> np.ndarray:
+    fim = time.time() + max(0.1, segundos)
+    blocos: list[np.ndarray] = []
+    while time.time() < fim:
+        quadro = _quadro(captura)
+        if quadro is None:
+            break
+        blocos.append(quadro.copy())
+    if not blocos:
+        return np.zeros(0, dtype=np.int16)
+    return np.concatenate(blocos)
+
+
+def _transcrever(stt, amostras: np.ndarray) -> str:
+    if _muda(amostras):
+        return ""
+    audio = amostras.astype(np.float32) / 32768.0
+    segmentos, _ = stt.transcribe(audio, language="pt")
+    return "".join(segmento.text for segmento in segmentos).strip()
+
+
+def _muda(amostras: np.ndarray) -> bool:
+    if not amostras.size or not np.any(amostras):
+        return True
+    sem = amostras.astype(np.float32) - float(np.mean(amostras))
+    return float(np.max(np.abs(sem))) < PICO_MUDO
+
+
 def _quadro(captura: subprocess.Popen[bytes]) -> np.ndarray | None:
     if captura.stdout is None:
         return None
-    bruto = captura.stdout.read(1280 * 2)
-    if len(bruto) < 1280 * 2:
+    bruto = captura.stdout.read(QUADRO * 2)
+    if len(bruto) < QUADRO * 2:
         return None
     return np.frombuffer(bruto, dtype=np.int16)
 
 
 def _abrir(origem: str) -> subprocess.Popen[bytes]:
     return subprocess.Popen(
-        ["pw-record", "--target", origem, "--rate", "16000", "--channels", "1", "--format", "s16", "--raw", "-"],
+        ["pw-record", "--target", origem, "--rate", str(TAXA), "--channels", "1", "--format", "s16", "--raw", "-"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     )
@@ -140,11 +188,32 @@ def _saudacao(destino: str) -> None:
         subprocess.run(["pw-play", "--target", destino, str(arquivo)], check=True)
 
 
-def _estado(fase: str, microfone: str, pico: float = 0, acertos: int = 0, eco: bool = False) -> None:
-    json.dump(
-        {"fase": fase, "microfone": microfone, "pico": round(pico, 4), "acertos": acertos, "eco": eco, "detectorConfirmado": False},
-        sys.stdout,
-    )
+def _voz_dir() -> Path:
+    override = os.environ.get("MOAH_VOICE_DIR", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    return Path.home() / ".local" / "share" / "moah" / "voz"
+
+
+def _estado(
+    fase: str,
+    microfone: str,
+    pico: float = 0,
+    acertos: int = 0,
+    eco: bool = False,
+    texto: str | None = None,
+) -> None:
+    payload = {
+        "fase": fase,
+        "microfone": microfone,
+        "pico": round(pico, 4),
+        "acertos": acertos,
+        "eco": eco,
+        "detectorConfirmado": False,
+    }
+    if texto is not None:
+        payload["texto"] = texto
+    json.dump(payload, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     sys.stdout.flush()
 

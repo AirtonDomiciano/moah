@@ -129,7 +129,7 @@ Data: 03/11/2026. Origem: pedido explícito de Airton para levantamento e separa
 
 ## MOAH-036 — Voz ativada pelo nome MOAH
 
-Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel testados com fixtures; captura e saudação medidas no JBL Quantum 360; reconhecimento falado pendente. A ativação não autoriza ações e a conversa segue somente leitura. O modelo “hey pran” não foi reutilizado como detector deste nome. Fonte: [voz](docs/operacao/voz.md).
+Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel testados com fixtures; captura e saudação medidas no JBL Quantum 360; em 08/11/2026 o `escutar` transcreve o pedido com faster-whisper local após “Estou aqui.” e volta a aguardar, sem consulta à memória. Aceite falado do detector e resposta falada pendentes. A ativação não autoriza ações e a conversa segue somente leitura. O modelo “hey pran” não foi reutilizado como detector deste nome. Fonte: [voz](docs/operacao/voz.md).
 
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 

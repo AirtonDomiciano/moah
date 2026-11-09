@@ -33,7 +33,7 @@ moah voz validar
 | --- | --- | --- |
 | Detector do nome | ONNX local, contrato `WakeDetector` | Modelo fora do Git. A voz de Airton não foi confirmada |
 | Fim de fala | limite de silêncio e duração máxima no laço | Testado com relógio injetado |
-| Transcrição | função que recebe o buffer temporário | Fixture. Sem STT instalado |
+| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos em `$MOAH_VOICE_DIR/stt/faster-whisper-small`. `escutar` captura o pedido após a saudação, imprime o texto e volta a aguardar. Sem consulta à memória nem resposta falada |
 | Conversa | `rememberAsk` chama `converse` | Somente leitura. O roteiro simulado não usa essa consulta |
 | Fala | texto “Estou aqui.” e a resposta | A saudação foi tocada no headset. A resposta da memória ainda não |
 | Painel | `voicePanel` e `ui/src/voice-panel.ts` | Estado visível. React ainda não foi instalado nem aberto no navegador |
@@ -137,7 +137,7 @@ O diagnóstico de 08/11/2026 mostrou que o treino só rotulava a janela final; o
 
 No embedding, com a janela medida um segundo depois do pico, `moah-03` e `moah-04` ficam em cosseno 0,67. A saudação fica a 0,67 e 0,62. A distância entre a palavra e a saudação é da mesma ordem da distância entre duas falas da palavra. O último treino tinha muitas janelas de música e duas saudações negativas. Mais repetições iguais de “MOAH” não separam essas classes sozinhas. Num arquivo de 4 s, o quadro final pode ser só o silêncio; o treino das sessões usa o quadro da fala.
 
-Isso não é o aceite. A sessão 04 continua reservada para o teste final. STT e a conversa de leitura continuam para a etapa seguinte.
+Isso não é o aceite. A sessão 04 continua reservada para o teste final. O STT offline entra no `escutar` após “Estou aqui.”; a conversa de leitura falada continua para a etapa seguinte.
 
 ## Tomadas originais — 03/11/2026
 
