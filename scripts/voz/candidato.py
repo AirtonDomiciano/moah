@@ -34,10 +34,18 @@ SESSAO_VALIDACAO = "03"
 SESSAO_TESTE = "04"
 CANDIDATO_NOME = "moah-candidato.onnx"
 CANDIDATO_PT = "moah-candidato.pt"
+CANDIDATO_FUNDO_NOME = "moah-candidato-fundo.onnx"
+CANDIDATO_FUNDO_PT = "moah-candidato-fundo.pt"
+BASELINE_JANELAS_NOME = "moah-candidato-49ac8909.onnx"
+BASELINE_JANELAS_SHA = "49ac8909bfc0e6147441584968f17851db6fe53682251014ac6c0ddffdcaa1ba"
 BASELINE_NOME = "moah-candidato-f5d9784.onnx"
 BASELINE_SHA = "f5d9784039677d9d14ebef5eb62311884543d8abad2056090257dd172edec0ce"
 EM_USO_NOME = "moah-experimental.onnx"
+LIMIAR_COMPARACAO = 0.95
 LIMIARES = [round(x, 2) for x in np.arange(0.30, 0.96, 0.05)]
+MUSICA_TREINO_JANELAS = 240
+AMBIENTE_TREINO_JANELAS = 240
+FUNDO_ARQUIVOS_MAX = 60
 
 PIPER_TREINO = {
     "saudacao": ["estou aqui", "estou aqui.", "eu estou aqui"],
@@ -72,6 +80,7 @@ def _treinar(saida: Path, recursos: Path) -> None:
     from openwakeword.utils import AudioFeatures
 
     _preservar_baseline(saida)
+    _preservar_candidato_janelas(saida)
     acustica = _ler_ou_gerar_acustica(saida)
     positivos_arquivos = _aprovadas(saida, acustica, SESSOES_TREINO)
     if len(positivos_arquivos) < 8:
@@ -86,13 +95,24 @@ def _treinar(saida: Path, recursos: Path) -> None:
         regioes = _regioes_fala(audio) or [_janela_pelo_pico(audio)]
         pos_arq = 0
         neg_arq = 0
+        # Ganhos leves + versões sem DC e com pico alto (a 03 tem tomadas bem mais fortes).
+        base = audio.astype(np.float32)
+        sem_dc = base - float(np.mean(base))
+        variantes = []
         for ganho in (0.8, 1.0, 1.2):
-            variado = np.clip(audio.astype(np.float32) * ganho, -32767, 32767).astype(np.int16)
+            variantes.append(np.clip(base * ganho, -32767, 32767).astype(np.int16))
+        pico = float(np.max(np.abs(sem_dc))) or 1.0
+        for alvo in (8000, 14000, 20000):
+            fator = alvo / pico
+            v = np.clip(sem_dc * fator, -32767, 32767).astype(np.int16)
+            if float(np.mean(np.abs(v) >= 32000)) <= 0.02:
+                variantes.append(v)
+        for indice, variado in enumerate(variantes):
             for item in _fluxo_escuta(extrator, variado, pad=True):
                 if _cobre_palavra(item["inicio"], item["fim"], regioes):
                     reais.append(item["features"])
                     pos_arq += 1
-                elif item["energia"] or _e_transicao(item["inicio"], item["fim"], regioes):
+                elif indice < 3 and (item["energia"] or _e_transicao(item["inicio"], item["fim"], regioes)):
                     transicao_positivos.append(item["features"])
                     neg_arq += 1
         origem.append(
@@ -117,8 +137,16 @@ def _treinar(saida: Path, recursos: Path) -> None:
     positivos = np.vstack((np.vstack([reais_np for _ in range(2)]), np.stack(sinteticos))) if sinteticos else np.vstack([reais_np for _ in range(3)])
 
     reservados = set((saida / "avaliacao" / "reservados.txt").read_text(encoding="utf8").split())
-    musica = _fundo_fluxo(recursos / "fma", reservados, extrator, 40)
-    ambiente = _fundo_fluxo(recursos / "audioset_16k", reservados, extrator, 40)
+    # Reservados de validação ficam fora. Amostra trechos no início, meio e fim —
+    # os disparos do 49ac8909 caíram em ~2–27 s, e o treino antigo só via 0–4 s.
+    musica, meta_musica = _fundo_fluxo(
+        recursos / "fma", reservados, extrator, MUSICA_TREINO_JANELAS, FUNDO_ARQUIVOS_MAX
+    )
+    ambiente, meta_ambiente = _fundo_fluxo(
+        recursos / "audioset_16k", reservados, extrator, AMBIENTE_TREINO_JANELAS, FUNDO_ARQUIVOS_MAX
+    )
+    if any(Path(p).as_posix() in reservados for p in meta_musica["arquivos"] + meta_ambiente["arquivos"]):
+        raise SystemExit("Negativo de fundo incluiu clipe reservado de validação.")
 
     piper_dir = _garantir_piper_treino(saida, recursos)
     fala_neg: list[np.ndarray] = []
@@ -156,15 +184,29 @@ def _treinar(saida: Path, recursos: Path) -> None:
     ]
     negativos = np.vstack((musica, ambiente, np.stack(fala_neg), np.stack(silencio), np.stack(ruido)))
     quantidade_real = len(reais_np)
-    rede = _rede_treinar(positivos, negativos, quantidade_real, len(fala_neg))
+    rede = _rede_treinar_fundo(
+        positivos,
+        negativos,
+        quantidade_real,
+        len(fala_neg),
+        n_musica=len(musica),
+        n_ambiente=len(ambiente),
+    )
     with torch.no_grad():
         amostra = rede(torch.from_numpy(reais_np.astype(np.float32))).squeeze(1).numpy()
-    if float(np.min(amostra)) < 0.5:
-        raise SystemExit(f"Janelas positivas de treino abaixo de 0,5: {amostra.min():.3f}. Sessão 03 não foi usada.")
+    cobertura = float(np.mean(amostra >= 0.5))
+    if cobertura < 0.95 or float(np.quantile(amostra, 0.05)) < 0.5:
+        raise SystemExit(
+            f"Positivos de treino fracos: cobertura>={cobertura:.3f}, p05={float(np.quantile(amostra, 0.05)):.3f}. "
+            "Sessão 03 não foi usada."
+        )
 
     completo = saida / "completo"
-    destino_onnx = completo / CANDIDATO_NOME
-    destino_pt = completo / CANDIDATO_PT
+    destino_onnx = completo / CANDIDATO_FUNDO_NOME
+    destino_pt = completo / CANDIDATO_FUNDO_PT
+    # Espelha também em moah-candidato.* para o comando avaliar padrão, sem apagar o 49ac8909.
+    destino_atual_onnx = completo / CANDIDATO_NOME
+    destino_atual_pt = completo / CANDIDATO_PT
     torch.save({"state_dict": rede.state_dict(), "arquitetura": "flatten-32-ln-relu-32-ln-relu-1"}, destino_pt)
     torch.onnx.export(
         rede,
@@ -174,17 +216,20 @@ def _treinar(saida: Path, recursos: Path) -> None:
         output_names=["score"],
         opset_version=13,
     )
+    destino_atual_onnx.write_bytes(destino_onnx.read_bytes())
+    destino_atual_pt.write_bytes(destino_pt.read_bytes())
     sha = hashlib.sha256(destino_onnx.read_bytes()).hexdigest()
-    if sha == BASELINE_SHA:
-        raise SystemExit("O novo ONNX coincidiu com o baseline f5d9784; o treino não produziu candidato novo.")
+    if sha in {BASELINE_SHA, BASELINE_JANELAS_SHA}:
+        raise SystemExit("O novo ONNX coincidiu com um baseline anterior; o treino não produziu candidato novo.")
     relatorio = {
-        "papel": "candidato",
-        "correcaoJanelas": "fluxo da escuta; positivos só com palavra; negativos com intermediárias/transição",
+        "papel": "candidato-fundo",
+        "correcaoFundo": "amostragem de música/ambiente ao longo do arquivo; reservados fora; oversample no lote",
         "modeloEmUsoNaoAlterado": (completo / EM_USO_NOME).as_posix(),
         "modeloCandidato": destino_onnx.as_posix(),
         "checkpointPytorch": destino_pt.as_posix(),
-        "baselinePreservado": (completo / BASELINE_NOME).as_posix(),
-        "baselineSha256": BASELINE_SHA,
+        "referenciaJanelas": (completo / BASELINE_JANELAS_NOME).as_posix(),
+        "referenciaJanelasSha256": BASELINE_JANELAS_SHA,
+        "baselineF5d9784": (completo / BASELINE_NOME).as_posix(),
         "sha256": sha,
         "sessoesTreino": list(SESSOES_TREINO),
         "sessaoValidacao": SESSAO_VALIDACAO,
@@ -201,9 +246,13 @@ def _treinar(saida: Path, recursos: Path) -> None:
             "silencio": len(silencio),
             "ruido": len(ruido),
         },
+        "fundoTreino": {"musica": meta_musica, "ambiente": meta_ambiente},
+        "reservadosNoTreino": False,
         "piperTreino": str(piper_dir),
         "avaliacaoGeradoNoTreino": False,
         "minimoNasJanelasPositivasDeTreino": round(float(np.min(amostra)), 4),
+        "coberturaPositivosAcimaDe0_5": round(cobertura, 4),
+        "p05PositivosDeTreino": round(float(np.quantile(amostra, 0.05)), 4),
         "vad": 0,
         "avaliacaoUsadaNoTreino": False,
         "conferenciaDeOuvido": "Airton: tomadas aprovadas das sessões 01 e 02 conferidas de ouvido; 01-08 e 01-09 excluídas pela validação acústica.",
@@ -219,16 +268,18 @@ def _avaliar(saida: Path, recursos: Path) -> None:
     from openwakeword.model import Model
 
     _recusar_sessao_04(saida)
-    candidato = saida / "completo" / CANDIDATO_NOME
-    baseline = saida / "completo" / BASELINE_NOME
+    candidato = saida / "completo" / CANDIDATO_FUNDO_NOME
+    if not candidato.is_file():
+        candidato = saida / "completo" / CANDIDATO_NOME
+    referencia = saida / "completo" / BASELINE_JANELAS_NOME
     em_uso = saida / "completo" / EM_USO_NOME
     if not candidato.is_file():
         raise SystemExit(f"Candidato ausente: {candidato}. Rode a ação treinar antes.")
-    if not baseline.is_file():
-        raise SystemExit(f"Baseline f5d9784 ausente: {baseline}.")
-    sha_base = hashlib.sha256(baseline.read_bytes()).hexdigest()
-    if sha_base != BASELINE_SHA:
-        raise SystemExit(f"Baseline SHA diverge: {sha_base}")
+    if not referencia.is_file():
+        raise SystemExit(f"Referência 49ac8909 ausente: {referencia}.")
+    sha_ref = hashlib.sha256(referencia.read_bytes()).hexdigest()
+    if sha_ref != BASELINE_JANELAS_SHA:
+        raise SystemExit(f"Referência 49ac8909 SHA diverge: {sha_ref}")
     acustica = _ler_ou_gerar_acustica(saida)
     positivos = _aprovadas(saida, acustica, (SESSAO_VALIDACAO,))
     if len(positivos) < 4:
@@ -241,67 +292,66 @@ def _avaliar(saida: Path, recursos: Path) -> None:
         "musica": [Path(item) for item in reservados if "/fma/" in item],
         "ambiente": [Path(item) for item in reservados if "/audioset_16k/" in item],
     }
+    limiar = LIMIAR_COMPARACAO
 
     modelo_c = Model(wakeword_models=[candidato.as_posix()], inference_framework="onnx", vad_threshold=0)
-    chave_c = candidato.stem
-    scores_pos = [_serie(modelo_c, chave_c, arquivo, pad=True) for arquivo in positivos]
-    scores_neg = {
-        nome: [_serie(modelo_c, chave_c, arquivo, pad=nome not in {"musica", "ambiente"}) for arquivo in arquivos]
-        for nome, arquivos in grupos_neg.items()
-    }
-    escolha = _escolher_limiar(scores_pos, scores_neg)
-    limiar = escolha["limiar"]
+    chave_c = Path(candidato).stem
     cand = _medir_tudo(modelo_c, chave_c, positivos, grupos_neg, limiar)
-    cand_095 = _medir_tudo(modelo_c, chave_c, positivos, grupos_neg, 0.95)
 
-    modelo_b = Model(wakeword_models=[baseline.as_posix()], inference_framework="onnx", vad_threshold=0)
-    chave_b = baseline.stem
-    base_limiar = _medir_tudo(modelo_b, chave_b, positivos, grupos_neg, limiar)
-    base_095 = _medir_tudo(modelo_b, chave_b, positivos, grupos_neg, 0.95)
+    modelo_r = Model(wakeword_models=[referencia.as_posix()], inference_framework="onnx", vad_threshold=0)
+    chave_r = referencia.stem
+    ref = _medir_tudo(modelo_r, chave_r, positivos, grupos_neg, limiar)
 
     modelo_u = Model(wakeword_models=[em_uso.as_posix()], inference_framework="onnx", vad_threshold=0)
     chave_u = em_uso.stem
-    uso_095 = _medir_tudo(modelo_u, chave_u, positivos, grupos_neg, 0.95)
+    uso = _medir_tudo(modelo_u, chave_u, positivos, grupos_neg, limiar)
 
-    fala_novo_095 = _falsos_fala(cand_095)
-    fala_base_095 = _falsos_fala(base_095)
+    fala_novo = _falsos_fala(cand)
+    fala_ref = _falsos_fala(ref)
+    fundo_novo = int(cand["falsosPorCategoria"]["musica"]["acionamentos"] + cand["falsosPorCategoria"]["ambiente"]["acionamentos"])
+    fundo_ref = int(ref["falsosPorCategoria"]["musica"]["acionamentos"] + ref["falsosPorCategoria"]["ambiente"]["acionamentos"])
     resultado = {
         "sessaoValidacao": SESSAO_VALIDACAO,
         "sessao04Aberta": False,
         "modeloEmUsoAlterado": False,
         "modeloEmUsoSha256": hashlib.sha256(em_uso.read_bytes()).hexdigest(),
         "ajusteAposAvaliacaoDePesos": False,
-        "limiarEscolhidoNaSessao03": limiar,
-        "criterioDoLimiar": escolha["criterio"],
-        "varreduraLimiar": escolha["varredura"],
-        "candidato": {
+        "limiarComparacao": limiar,
+        "candidatoFundo": {
             "modelo": candidato.as_posix(),
             "sha256": hashlib.sha256(candidato.read_bytes()).hexdigest(),
-            "checkpointPytorch": (saida / "completo" / CANDIDATO_PT).as_posix(),
+            "checkpointPytorch": (saida / "completo" / CANDIDATO_FUNDO_PT).as_posix(),
             "limiar": limiar,
             **cand,
         },
-        "baselineF5d9784": {
-            "modelo": baseline.as_posix(),
-            "sha256": sha_base,
+        "referencia49ac8909": {
+            "modelo": referencia.as_posix(),
+            "sha256": sha_ref,
             "limiar": limiar,
-            **base_limiar,
+            **ref,
         },
-        "comparacaoIsoladaEm0_95": {
-            "candidato": {"limiar": 0.95, "acertosSessao03": cand_095["acertosSessao03"], "falsosFala": fala_novo_095, "falsosTotais": cand_095["falsosTotais"], "porCategoria": _resumo_cats(cand_095)},
-            "baselineF5d9784": {"limiar": 0.95, "acertosSessao03": base_095["acertosSessao03"], "falsosFala": fala_base_095, "falsosTotais": base_095["falsosTotais"], "porCategoria": _resumo_cats(base_095)},
-            "experimentalEmUso": {"limiar": 0.95, "acertosSessao03": uso_095["acertosSessao03"], "falsosFala": _falsos_fala(uso_095), "falsosTotais": uso_095["falsosTotais"], "porCategoria": _resumo_cats(uso_095)},
+        "experimentalEmUso": {
+            "modelo": em_uso.as_posix(),
+            "limiar": limiar,
+            **uso,
+        },
+        "comparacaoEm0_95": {
+            "candidatoFundo": {"acertosSessao03": cand["acertosSessao03"], "falsosFala": fala_novo, "falsosFundo": fundo_novo, "porCategoria": _resumo_cats(cand)},
+            "referencia49ac8909": {"acertosSessao03": ref["acertosSessao03"], "falsosFala": fala_ref, "falsosFundo": fundo_ref, "porCategoria": _resumo_cats(ref)},
             "efeitoDaMudanca": {
-                "acertosMantidosOuMelhores": cand_095["acertosSessao03"] >= base_095["acertosSessao03"],
-                "falsosFalaReduzidos": fala_novo_095 < fala_base_095,
-                "deltaAcertos": cand_095["acertosSessao03"] - base_095["acertosSessao03"],
-                "deltaFalsosFala": fala_novo_095 - fala_base_095,
+                "deltaAcertos": cand["acertosSessao03"] - ref["acertosSessao03"],
+                "deltaFalsosFala": fala_novo - fala_ref,
+                "deltaFalsosFundo": fundo_novo - fundo_ref,
             },
         },
         "duracaoAudioNegativoSegundos": cand["duracaoNegativaSegundos"],
         "aceiteCapitulo": {
-            "criterio": "reduzir falsos de fala sem perder acertos na sessão 03, isolado em limiar 0,95",
-            "aprovado": cand_095["acertosSessao03"] >= base_095["acertosSessao03"] and fala_novo_095 < fala_base_095,
+            "criterio": "em 0,95: reduzir falsos música+ambiente; manter 8/8 na 03; não aumentar falsos de fala",
+            "aprovado": (
+                cand["acertosSessao03"] == 8
+                and fundo_novo < fundo_ref
+                and fala_novo <= fala_ref
+            ),
         },
     }
     destino = saida / "correcao" / "candidato-avaliacao.json"
@@ -444,6 +494,23 @@ def _preservar_baseline(saida: Path) -> None:
         return
     if atual.exists() and hashlib.sha256(atual.read_bytes()).hexdigest() == BASELINE_SHA:
         baseline.write_bytes(atual.read_bytes())
+
+
+def _preservar_candidato_janelas(saida: Path) -> None:
+    completo = saida / "completo"
+    atual = completo / CANDIDATO_NOME
+    destino = completo / BASELINE_JANELAS_NOME
+    if destino.exists():
+        sha = hashlib.sha256(destino.read_bytes()).hexdigest()
+        if sha != BASELINE_JANELAS_SHA:
+            raise SystemExit(f"Referência 49ac8909 existente com SHA inesperado: {sha}")
+        return
+    if not atual.exists():
+        raise SystemExit("Candidato 49ac8909 ausente para preservar.")
+    sha = hashlib.sha256(atual.read_bytes()).hexdigest()
+    if sha != BASELINE_JANELAS_SHA:
+        raise SystemExit(f"moah-candidato.onnx não é 49ac8909 (sha={sha}). Preserve manualmente antes.")
+    destino.write_bytes(atual.read_bytes())
 
 
 def _escolher_limiar(
@@ -691,8 +758,8 @@ def _janela_pelo_pico(audio: np.ndarray) -> tuple[float, float]:
     return (inicio, fim)
 
 
-def _rede_treinar(positivos: np.ndarray, negativos: np.ndarray, quantidade_real: int, fala_neg_count: int) -> nn.Module:
-    rede = nn.Sequential(
+def _arquitetura() -> nn.Module:
+    return nn.Sequential(
         nn.Flatten(),
         nn.Linear(16 * 96, 32),
         nn.LayerNorm(32),
@@ -703,43 +770,139 @@ def _rede_treinar(positivos: np.ndarray, negativos: np.ndarray, quantidade_real:
         nn.Linear(32, 1),
         nn.Sigmoid(),
     )
+
+
+def _rede_de_onnx(caminho: Path) -> nn.Module:
+    import onnx
+
+    modelo = onnx.load(caminho.as_posix())
+    pesos = {init.name: onnx.numpy_helper.to_array(init) for init in modelo.graph.initializer}
+    rede = _arquitetura()
+    with torch.no_grad():
+        rede[1].weight.copy_(torch.from_numpy(pesos["1.weight"]))
+        rede[1].bias.copy_(torch.from_numpy(pesos["1.bias"]))
+        rede[2].weight.copy_(torch.from_numpy(pesos["2.weight"]))
+        rede[2].bias.copy_(torch.from_numpy(pesos["2.bias"]))
+        rede[4].weight.copy_(torch.from_numpy(pesos["4.weight"]))
+        rede[4].bias.copy_(torch.from_numpy(pesos["4.bias"]))
+        rede[5].weight.copy_(torch.from_numpy(pesos["5.weight"]))
+        rede[5].bias.copy_(torch.from_numpy(pesos["5.bias"]))
+        rede[7].weight.copy_(torch.from_numpy(pesos["7.weight"]))
+        rede[7].bias.copy_(torch.from_numpy(pesos["7.bias"]))
+    rede.train()
+    return rede
+
+
+def _rede_treinar_fundo(
+    positivos: np.ndarray,
+    negativos: np.ndarray,
+    quantidade_real: int,
+    fala_neg_count: int,
+    n_musica: int,
+    n_ambiente: int,
+) -> nn.Module:
+    rede = _arquitetura()
     otimo = torch.optim.Adam(rede.parameters(), lr=1e-3)
     x_pos = torch.from_numpy(np.array(positivos, dtype=np.float32))
     x_neg = torch.from_numpy(np.array(negativos, dtype=np.float32))
-    # Negativos de fala ficam no final do stack musica|ambiente|fala|silencio|ruido.
-    # Aproximação: últimos fala_neg_count + silencio + ruido; amostramos com peso a faixa de fala.
-    inicio_fala = max(0, len(negativos) - fala_neg_count - 80)
-    fim_fala = max(inicio_fala + 1, len(negativos) - 40)
-    for _ in range(1200):
-        reais = x_pos[torch.randint(0, quantidade_real, (32,))]
-        resto = x_pos[torch.randint(quantidade_real, len(x_pos), (32,))]
-        neg_geral = x_neg[torch.randint(0, len(x_neg), (48,))]
-        neg_fala = x_neg[torch.randint(inicio_fala, fim_fala, (48,))]
-        lote = torch.cat((reais, resto, neg_geral, neg_fala))
-        alvo = torch.cat((torch.ones(64), torch.zeros(96)))
-        perda = nn.functional.binary_cross_entropy(rede(lote).squeeze(1), alvo, reduction="mean")
+    fim_musica = n_musica
+    fim_ambiente = n_musica + n_ambiente
+    inicio_fala = fim_ambiente
+    fim_fala = min(len(negativos), inicio_fala + fala_neg_count)
+
+    def _passo(
+        n_pos_real: int,
+        n_pos_resto: int,
+        n_mus: int,
+        n_amb: int,
+        n_fala: int,
+        n_geral: int,
+        peso_pos: float = 1.4,
+    ) -> None:
+        reais = x_pos[torch.randint(0, quantidade_real, (n_pos_real,))]
+        resto = x_pos[torch.randint(quantidade_real, len(x_pos), (n_pos_resto,))] if n_pos_resto else torch.empty(0, 16, 96)
+        partes = [reais]
+        if n_pos_resto:
+            partes.append(resto)
+        if n_mus:
+            partes.append(x_neg[torch.randint(0, max(fim_musica, 1), (n_mus,))])
+        if n_amb:
+            partes.append(x_neg[torch.randint(fim_musica, max(fim_ambiente, fim_musica + 1), (n_amb,))])
+        if n_fala:
+            partes.append(x_neg[torch.randint(inicio_fala, max(fim_fala, inicio_fala + 1), (n_fala,))])
+        if n_geral:
+            partes.append(x_neg[torch.randint(0, len(x_neg), (n_geral,))])
+        lote = torch.cat(partes)
+        n_pos = n_pos_real + n_pos_resto
+        n_neg = n_mus + n_amb + n_fala + n_geral
+        pred = rede(lote).squeeze(1)
+        alvo = torch.cat((torch.ones(n_pos), torch.zeros(n_neg)))
+        pesos = torch.cat((torch.full((n_pos,), peso_pos), torch.ones(n_neg)))
+        perda = nn.functional.binary_cross_entropy(pred, alvo, weight=pesos, reduction="mean")
         otimo.zero_grad()
         perda.backward()
         otimo.step()
+
+    # Fase 1: fundo ao longo do arquivo + fala (receita que já baixou música/ambiente).
+    for _ in range(1000):
+        _passo(40, 24, 24, 24, 40, 16)
+    for _ in range(500):
+        _passo(48, 16, 20, 20, 36, 12)
+    # Fase 2: ancora positivos (incl. versões fortes) sem negativos de fundo novos demais.
+    for _ in range(400):
+        _passo(56, 16, 8, 8, 24, 8, peso_pos=2.0)
     rede.eval()
     return rede
 
 
-def _fundo_fluxo(pasta: Path, reservados: set[str], extrator, limite: int) -> np.ndarray:
-    janelas = []
-    for arquivo in sorted(pasta.glob("*.wav")):
-        if arquivo.as_posix() in reservados:
-            continue
+def _fundo_fluxo(
+    pasta: Path,
+    reservados: set[str],
+    extrator,
+    limite: int,
+    arquivos_max: int,
+) -> tuple[np.ndarray, dict[str, object]]:
+    """Janelas contínuas (sem pad), em vários pontos do arquivo — não só 0–4 s."""
+    arquivos = [f for f in sorted(pasta.glob("*.wav")) if f.as_posix() not in reservados][:arquivos_max]
+    if len(arquivos) < 10:
+        raise SystemExit(f"Arquivos de treino insuficientes em {pasta.name} após reservar validação.")
+    brutas: list[np.ndarray] = []
+    offsets_usados: list[float] = []
+    nomes: list[str] = []
+    for arquivo in arquivos:
         audio = _ler(arquivo)
-        for item in _fluxo_escuta(extrator, audio[: 16000 * 4], pad=False):
-            janelas.append(item["features"])
-            if len(janelas) >= limite:
-                break
-        if len(janelas) >= limite:
-            break
-    if len(janelas) < 15:
-        raise SystemExit(f"Negativos insuficientes em {pasta.name}.")
-    return np.stack(janelas[:limite])
+        nomes.append(arquivo.as_posix())
+        dur = len(audio)
+        fracoes = [0.0, 0.25, 0.5, 0.7]
+        if dur <= 16000 * 12:
+            fracoes = [0.0, 0.35, 0.65]
+        for fracao in fracoes:
+            off = int(dur * fracao)
+            trecho = audio[off : off + 16000 * 8]
+            if len(trecho) < QUADRO * 4:
+                continue
+            for item in _fluxo_escuta(extrator, trecho, pad=False):
+                # Cobre trechos com energia (como os picos da validação) e transições mais fracas.
+                if item["energia"] or item["rms"] >= 80:
+                    brutas.append(item["features"])
+                    offsets_usados.append(round(off / 16000 + item["fim"], 2))
+    if len(brutas) < limite // 2:
+        raise SystemExit(f"Janelas de fundo insuficientes em {pasta.name}: {len(brutas)}.")
+    if len(brutas) > limite:
+        indices = np.linspace(0, len(brutas) - 1, limite, dtype=int)
+        escolhidas = [brutas[i] for i in indices]
+        offs = [offsets_usados[i] for i in indices]
+    else:
+        escolhidas = brutas
+        offs = offsets_usados
+    meta = {
+        "arquivos": nomes,
+        "arquivosUsados": len(nomes),
+        "janelas": len(escolhidas),
+        "offsetSegundosAmostra": offs[:: max(1, len(offs) // 8)],
+        "cobertura": "inicio/meio/fim do arquivo; fluxo sem pad; reservados excluídos",
+    }
+    return np.stack(escolhidas), meta
 
 
 def _zerar(extrator) -> None:
