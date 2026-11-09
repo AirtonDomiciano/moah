@@ -1,5 +1,7 @@
 # Instruções para trabalhar no MOAH
 
+Ao retomar o projeto em outra conversa, leia primeiro [Ponto de retomada](docs/retomada.md). Ao fechar um capítulo, atualize o resumo e vincule as evidências.
+
 ## Escopo atual
 
 Este repositório contém documentação, prompts e uma CLI inicial de memória de trabalho. Consultar o estado atual no README; não presumir que todos os módulos estão implementados. Consultar README.md, docs/produto/historico.md e cursror-dev/README.md antes de implementar.
