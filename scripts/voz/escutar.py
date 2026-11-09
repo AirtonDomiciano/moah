@@ -2,7 +2,7 @@
 """Escuta o microfone nomeado, responde à pronúncia e transcreve o pedido.
 
 Não grava o ambiente. Fecha a captura antes da saudação. Descarta o buffer do
-pedido após a transcrição. Encerra o processo de gravação ao sair.
+pedido após a transcrição. O STT roda no venv separado sob MOAH_VOICE_DIR/stt.
 """
 
 from __future__ import annotations
@@ -24,6 +24,35 @@ QUADRO = 1280
 PEDIDO_S = 8.0
 PICO_MUDO = 50.0
 
+_STT_WORKER = r"""
+import os
+import sys
+import numpy as np
+from faster_whisper import WhisperModel
+
+modelo = WhisperModel(
+    os.environ["MOAH_STT_MODEL"],
+    device="cpu",
+    compute_type="int8",
+    local_files_only=True,
+)
+sys.stdout.write("READY\n")
+sys.stdout.flush()
+while True:
+    cabeca = sys.stdin.buffer.read(8)
+    if len(cabeca) < 8:
+        break
+    n = int.from_bytes(cabeca, "little")
+    bruto = sys.stdin.buffer.read(n * 4)
+    if len(bruto) < n * 4:
+        break
+    audio = np.frombuffer(bruto, dtype=np.float32).copy()
+    segmentos, _ = modelo.transcribe(audio, language="pt")
+    del audio
+    sys.stdout.write("".join(s.text for s in segmentos).strip().replace("\n", " ") + "\n")
+    sys.stdout.flush()
+"""
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -43,16 +72,17 @@ def main() -> None:
     if not modelo.is_file():
         raise SystemExit(f"Modelo ausente: {modelo}")
     stt_dir = _voz_dir() / "stt" / "faster-whisper-small"
+    stt_python = _voz_dir() / "stt" / "venv" / "bin" / "python"
     if not (stt_dir / "model.bin").is_file():
         raise SystemExit(f"Modelo STT ausente: {stt_dir}")
+    if not stt_python.is_file():
+        raise SystemExit(f"Interpretador STT ausente: {stt_python}")
     sys.path.insert(0, str(Path(args.recursos) / "hey_pran_openwakeword_v060"))
     from openwakeword.model import Model
-    from faster_whisper import WhisperModel
 
-    os.environ.setdefault("HF_HUB_OFFLINE", "1")
     detector = Model(wakeword_models=[str(modelo)], inference_framework="onnx", vad_threshold=0)
     chave = next(iter(detector.models))
-    stt = WhisperModel(str(stt_dir), device="cpu", compute_type="int8", local_files_only=True)
+    stt = _Stt(stt_python, stt_dir)
     inicio = time.time()
     captura: subprocess.Popen[bytes] | None = None
     pico = 0.0
@@ -60,6 +90,7 @@ def main() -> None:
 
     def encerrar(_signum: int, _frame: object) -> None:
         _fechar(captura)
+        stt.close()
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
         raise SystemExit(0)
 
@@ -99,6 +130,53 @@ def main() -> None:
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
         _fechar(captura)
+        stt.close()
+
+
+class _Stt:
+    def __init__(self, python: Path, modelo: Path) -> None:
+        env = os.environ.copy()
+        env["HF_HUB_OFFLINE"] = "1"
+        env["MOAH_STT_MODEL"] = str(modelo)
+        self._proc = subprocess.Popen(
+            [str(python), "-u", "-c", _STT_WORKER],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        pronto = self._proc.stdout.readline() if self._proc.stdout else b""
+        if pronto.decode("utf-8", "replace").strip() != "READY":
+            erro = self._proc.stderr.read().decode("utf-8", "replace") if self._proc.stderr else ""
+            self.close()
+            raise SystemExit(f"Falha ao carregar STT: {erro.strip() or 'sem READY'}")
+
+    def transcribe(self, audio: np.ndarray) -> str:
+        if self._proc.stdin is None or self._proc.stdout is None:
+            raise SystemExit("STT encerrado.")
+        payload = len(audio).to_bytes(8, "little") + audio.astype(np.float32, copy=False).tobytes()
+        self._proc.stdin.write(payload)
+        self._proc.stdin.flush()
+        linha = self._proc.stdout.readline()
+        if not linha:
+            erro = self._proc.stderr.read().decode("utf-8", "replace") if self._proc.stderr else ""
+            raise SystemExit(f"STT encerrou durante a transcrição: {erro.strip()}")
+        return linha.decode("utf-8", "replace").rstrip("\n")
+
+    def close(self) -> None:
+        if self._proc.poll() is not None:
+            return
+        if self._proc.stdin is not None:
+            try:
+                self._proc.stdin.close()
+            except BrokenPipeError:
+                pass
+        self._proc.terminate()
+        try:
+            self._proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            self._proc.kill()
+            self._proc.wait(timeout=1)
 
 
 def _aguardar(detector, chave: str, captura: subprocess.Popen[bytes], limiar: float, inicio: float, duracao: float) -> tuple[bool, float]:
@@ -138,12 +216,14 @@ def _capturar_pedido(captura: subprocess.Popen[bytes], segundos: float) -> np.nd
     return np.concatenate(blocos)
 
 
-def _transcrever(stt, amostras: np.ndarray) -> str:
+def _transcrever(stt: _Stt, amostras: np.ndarray) -> str:
     if _muda(amostras):
         return ""
     audio = amostras.astype(np.float32) / 32768.0
-    segmentos, _ = stt.transcribe(audio, language="pt")
-    return "".join(segmento.text for segmento in segmentos).strip()
+    try:
+        return stt.transcribe(audio)
+    finally:
+        del audio
 
 
 def _muda(amostras: np.ndarray) -> bool:

@@ -33,7 +33,7 @@ moah voz validar
 | --- | --- | --- |
 | Detector do nome | ONNX local, contrato `WakeDetector` | Modelo fora do Git. A voz de Airton não foi confirmada |
 | Fim de fala | limite de silêncio e duração máxima no laço | Testado com relógio injetado |
-| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos em `$MOAH_VOICE_DIR/stt/faster-whisper-small`. `escutar` captura o pedido após a saudação, imprime o texto e volta a aguardar. Sem consulta à memória nem resposta falada |
+| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. `escutar` captura o pedido após a saudação, passa PCM ao worker STT, imprime o texto e volta a aguardar. Sem consulta à memória nem resposta falada |
 | Conversa | `rememberAsk` chama `converse` | Somente leitura. O roteiro simulado não usa essa consulta |
 | Fala | texto “Estou aqui.” e a resposta | A saudação foi tocada no headset. A resposta da memória ainda não |
 | Painel | `voicePanel` e `ui/src/voice-panel.ts` | Estado visível. React ainda não foi instalado nem aberto no navegador |
