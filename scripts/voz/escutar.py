@@ -31,6 +31,8 @@ PICO_MUDO = 50.0
 CONFIRMACAO_QUADROS = 20
 DIAGNOSTICO_MAX = 3
 ATIVACOES = frozenset({"MOAH", "MOA"})
+ATIVACOES_FLEXIVEIS = frozenset({"MUA", "MULA", "BOA"})
+FRASES_FLEXIVEIS = frozenset({"HEY MOA", "HEY MOAH"})
 
 _STT_WORKER = r"""
 import os
@@ -73,6 +75,7 @@ def main() -> None:
     parser.add_argument("--duracao", type=float, default=0)
     parser.add_argument("--pedido", type=float, default=PEDIDO_S)
     parser.add_argument("--confirmar-ativacao", default="nao")
+    parser.add_argument("--confirmacao-flexivel", default="nao")
     parser.add_argument("--diagnostico", default="nao")
     parser.add_argument("--provar-eco", action="store_true")
     args = parser.parse_args()
@@ -80,9 +83,12 @@ def main() -> None:
         raise SystemExit("A escuta exige --habilitar sim.")
     if args.confirmar_ativacao not in {"sim", "nao"}:
         raise SystemExit("Use --confirmar-ativacao sim ou nao.")
+    if args.confirmacao_flexivel not in {"sim", "nao"}:
+        raise SystemExit("Use --confirmacao-flexivel sim ou nao.")
     if args.diagnostico not in {"sim", "nao"}:
         raise SystemExit("Use --diagnostico sim ou nao.")
     confirmar = args.confirmar_ativacao == "sim"
+    flexivel = args.confirmacao_flexivel == "sim"
     diagnostico = args.diagnostico == "sim"
     diagnostico_dir = _voz_dir() / "diagnostico" / "confirmacao"
     diagnostico_salvos = 0
@@ -169,7 +175,7 @@ def main() -> None:
                     print(f"{reconhecido}\n{wav_diag}", flush=True)
                 else:
                     print(reconhecido, flush=True)
-                if not _ativacao_confirmada(reconhecido):
+                if not _ativacao_confirmada(reconhecido, flexivel=flexivel):
                     _estado(
                         "aguardando",
                         microfone="liberado",
@@ -357,9 +363,16 @@ def _normalizar_ativacao(texto: str) -> str:
     return " ".join(limpo.split())
 
 
-def _ativacao_confirmada(texto: str) -> bool:
-    palavras = _normalizar_ativacao(texto).split()
-    return 1 <= len(palavras) <= 2 and all(palavra in ATIVACOES for palavra in palavras)
+def _ativacao_confirmada(texto: str, flexivel: bool = False) -> bool:
+    normalizado = _normalizar_ativacao(texto)
+    palavras = normalizado.split()
+    if 1 <= len(palavras) <= 2 and all(palavra in ATIVACOES for palavra in palavras):
+        return True
+    if not flexivel:
+        return False
+    if len(palavras) == 1 and palavras[0] in ATIVACOES_FLEXIVEIS:
+        return True
+    return normalizado in FRASES_FLEXIVEIS
 
 
 _PADRAO_ONDE_PARAMOS = re.compile(r"ONDE PARAMOS NO (.+)$")

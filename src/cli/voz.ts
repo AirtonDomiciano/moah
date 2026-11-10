@@ -65,6 +65,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "modelo",
       "limiar",
       "confirmar-ativacao",
+      "confirmacao-flexivel",
       "diagnostico",
     ]);
     if (one(parsed.options, "habilitar") !== "sim") {
@@ -75,6 +76,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const model = resolveListenModel(dir, one(parsed.options, "modelo"));
     const limiar = resolveListenThreshold(one(parsed.options, "limiar"));
     const confirmar = resolveConfirmWake(one(parsed.options, "confirmar-ativacao"));
+    const flexivel = resolveConfirmFlexible(one(parsed.options, "confirmacao-flexivel"));
     const diagnostico = resolveDiagnostico(one(parsed.options, "diagnostico"));
     const devices = await deviceIds(choice);
     const duration = one(parsed.options, "duracao");
@@ -87,6 +89,8 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       limiar,
       "--confirmar-ativacao",
       confirmar,
+      "--confirmacao-flexivel",
+      flexivel,
       "--diagnostico",
       diagnostico,
       "--recursos",
@@ -267,6 +271,16 @@ function resolveConfirmWake(value: string | null): "sim" | "nao" {
     return "sim";
   }
   throw new AppError("Use --confirmar-ativacao sim ou nao.", "validation");
+}
+
+function resolveConfirmFlexible(value: string | null): "sim" | "nao" {
+  if (value === null || value === "nao") {
+    return "nao";
+  }
+  if (value === "sim") {
+    return "sim";
+  }
+  throw new AppError("Use --confirmacao-flexivel sim ou nao.", "validation");
 }
 
 function resolveDiagnostico(value: string | null): "sim" | "nao" {
