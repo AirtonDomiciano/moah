@@ -58,16 +58,24 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     return true;
   }
   if (action === "escutar") {
-    rejectUnknown(parsed.options, ["habilitar", "microfone", "duracao"]);
+    rejectUnknown(parsed.options, [
+      "habilitar",
+      "microfone",
+      "duracao",
+      "modelo",
+      "limiar",
+      "confirmar-ativacao",
+      "diagnostico",
+    ]);
     if (one(parsed.options, "habilitar") !== "sim") {
       throw new AppError("A escuta exige --habilitar sim.", "validation");
     }
     const choice = microphoneChoice(one(parsed.options, "microfone"));
     const dir = voiceDirectory(process.env);
-    const model = trainedModelPath(dir);
-    if (!fs.existsSync(model)) {
-      throw new AppError("O detector completo de MOAH ainda não foi treinado. A escuta permanece desligada.", "unavailable");
-    }
+    const model = resolveListenModel(dir, one(parsed.options, "modelo"));
+    const limiar = resolveListenThreshold(one(parsed.options, "limiar"));
+    const confirmar = resolveConfirmWake(one(parsed.options, "confirmar-ativacao"));
+    const diagnostico = resolveDiagnostico(one(parsed.options, "diagnostico"));
     const devices = await deviceIds(choice);
     const duration = one(parsed.options, "duracao");
     await runVoiceScript(process.env, "escutar.py", [
@@ -75,6 +83,12 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "sim",
       "--modelo",
       model,
+      "--limiar",
+      limiar,
+      "--confirmar-ativacao",
+      confirmar,
+      "--diagnostico",
+      diagnostico,
       "--recursos",
       resourcesOf(dir),
       "--origem",
@@ -208,6 +222,61 @@ function microphoneChoice(value: string | null | undefined): "jbl" | "camera" {
     throw new AppError("Use --microfone jbl ou --microfone camera.", "validation");
   }
   return choice;
+}
+
+function resolveListenModel(dir: string, override: string | null): string {
+  if (override === null) {
+    const model = trainedModelPath(dir);
+    if (!fs.existsSync(model)) {
+      throw new AppError(
+        "O detector completo de MOAH ainda não foi treinado. A escuta permanece desligada.",
+        "unavailable",
+      );
+    }
+    return model;
+  }
+  if (!override.startsWith("/")) {
+    throw new AppError("Informe --modelo com um caminho absoluto para o ONNX.", "validation");
+  }
+  const model = path.resolve(override);
+  if (!model.endsWith(".onnx")) {
+    throw new AppError("O --modelo precisa ser um arquivo .onnx.", "validation");
+  }
+  if (!fs.existsSync(model) || !fs.statSync(model).isFile()) {
+    throw new AppError(`Modelo ausente: ${model}`, "unavailable");
+  }
+  return model;
+}
+
+function resolveListenThreshold(value: string | null): string {
+  if (value === null) {
+    return "0.5";
+  }
+  const limiar = Number(value);
+  if (!Number.isFinite(limiar) || limiar <= 0 || limiar > 1) {
+    throw new AppError("Informe --limiar com um número maior que 0 e no máximo 1.", "validation");
+  }
+  return String(limiar);
+}
+
+function resolveConfirmWake(value: string | null): "sim" | "nao" {
+  if (value === null || value === "nao") {
+    return "nao";
+  }
+  if (value === "sim") {
+    return "sim";
+  }
+  throw new AppError("Use --confirmar-ativacao sim ou nao.", "validation");
+}
+
+function resolveDiagnostico(value: string | null): "sim" | "nao" {
+  if (value === null || value === "nao") {
+    return "nao";
+  }
+  if (value === "sim") {
+    return "sim";
+  }
+  throw new AppError("Use --diagnostico sim ou nao.", "validation");
 }
 
 function resourcesOf(dir: string): string {

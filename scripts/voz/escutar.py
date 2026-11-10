@@ -10,11 +10,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
+import wave
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +27,10 @@ TAXA = 16_000
 QUADRO = 1280
 PEDIDO_S = 8.0
 PICO_MUDO = 50.0
+# ~1,6 s imediatamente antes/incluindo o quadro do disparo (janela curta em memória).
+CONFIRMACAO_QUADROS = 20
+DIAGNOSTICO_MAX = 3
+ATIVACOES = frozenset({"MOAH", "MOA"})
 
 _STT_WORKER = r"""
 import os
@@ -64,10 +72,21 @@ def main() -> None:
     parser.add_argument("--limiar", type=float, default=0.5)
     parser.add_argument("--duracao", type=float, default=0)
     parser.add_argument("--pedido", type=float, default=PEDIDO_S)
+    parser.add_argument("--confirmar-ativacao", default="nao")
+    parser.add_argument("--diagnostico", default="nao")
     parser.add_argument("--provar-eco", action="store_true")
     args = parser.parse_args()
     if args.habilitar != "sim":
         raise SystemExit("A escuta exige --habilitar sim.")
+    if args.confirmar_ativacao not in {"sim", "nao"}:
+        raise SystemExit("Use --confirmar-ativacao sim ou nao.")
+    if args.diagnostico not in {"sim", "nao"}:
+        raise SystemExit("Use --diagnostico sim ou nao.")
+    confirmar = args.confirmar_ativacao == "sim"
+    diagnostico = args.diagnostico == "sim"
+    diagnostico_dir = _voz_dir() / "diagnostico" / "confirmacao"
+    diagnostico_salvos = 0
+
     modelo = Path(args.modelo)
     if not modelo.is_file():
         raise SystemExit(f"Modelo ausente: {modelo}")
@@ -98,7 +117,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, encerrar)
     try:
         if args.provar_eco:
-            _estado("aguardando", microfone="retido")
+            _estado("aguardando", microfone="retido", modelo=str(modelo), limiar=args.limiar)
             captura = _abrir(args.origem)
             _saudacao(args.destino)
             pico = _ler(detector, chave, captura, args.limiar, 4, False)
@@ -106,17 +125,72 @@ def main() -> None:
             captura = None
             _estado("desligado", microfone="liberado", pico=pico, eco=True)
             return
-        _estado("aguardando", microfone="retido")
+        _estado(
+            "aguardando",
+            microfone="retido",
+            modelo=str(modelo),
+            limiar=args.limiar,
+            confirmarAtivacao=confirmar,
+        )
         while args.duracao <= 0 or time.time() - inicio < args.duracao:
             captura = _abrir(args.origem)
-            detectou, parcial = _aguardar(detector, chave, captura, args.limiar, inicio, args.duracao)
+            detectou, score, parcial, trecho = _aguardar(
+                detector,
+                chave,
+                captura,
+                args.limiar,
+                inicio,
+                args.duracao,
+                guardar=confirmar,
+            )
             pico = max(pico, parcial)
             _fechar(captura)
             captura = None
             if not detectou:
                 break
+            if confirmar:
+                _estado(
+                    "confirmando",
+                    microfone="liberado",
+                    pico=pico,
+                    score=score,
+                    acertos=acertos,
+                    modelo=str(modelo),
+                    limiar=args.limiar,
+                )
+                wav_diag: Path | None = None
+                # Só grava o que de fato seguiria para o Whisper (não mudo).
+                if diagnostico and diagnostico_salvos < DIAGNOSTICO_MAX and not _muda(trecho):
+                    diagnostico_salvos += 1
+                    wav_diag = _salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                reconhecido = _transcrever_seguro(stt, trecho)
+                del trecho
+                if wav_diag is not None:
+                    print(f"{reconhecido}\n{wav_diag}", flush=True)
+                else:
+                    print(reconhecido, flush=True)
+                if not _ativacao_confirmada(reconhecido):
+                    _estado(
+                        "aguardando",
+                        microfone="liberado",
+                        pico=pico,
+                        acertos=acertos,
+                        texto=reconhecido,
+                        confirmarAtivacao=True,
+                    )
+                    continue
+            else:
+                del trecho
             acertos += 1
-            _estado("saudacao", microfone="liberado", pico=pico, acertos=acertos)
+            _estado(
+                "saudacao",
+                microfone="liberado",
+                pico=pico,
+                score=score,
+                acertos=acertos,
+                modelo=str(modelo),
+                limiar=args.limiar,
+            )
             _saudacao(args.destino)
             _estado("ouvindo", microfone="retido", pico=pico, acertos=acertos)
             captura = _abrir(args.origem)
@@ -126,6 +200,13 @@ def main() -> None:
             texto = _transcrever(stt, amostras)
             del amostras
             print(texto, flush=True)
+            consulta = _analisar_onde_paramos(texto)
+            if consulta is not None:
+                _estado("consultando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
+                if consulta[0] == "ambiguo":
+                    _pedir_confirmacao_projeto(consulta[1], consulta[2])
+                else:
+                    _consultar_checkpoint(consulta[1])
             _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
@@ -179,17 +260,40 @@ class _Stt:
             self._proc.wait(timeout=1)
 
 
-def _aguardar(detector, chave: str, captura: subprocess.Popen[bytes], limiar: float, inicio: float, duracao: float) -> tuple[bool, float]:
+def _aguardar(
+    detector,
+    chave: str,
+    captura: subprocess.Popen[bytes],
+    limiar: float,
+    inicio: float,
+    duracao: float,
+    guardar: bool = False,
+) -> tuple[bool, float, float, np.ndarray]:
+    """Retorna (detectou, score do disparo, pico local, trecho PCM curto).
+
+    Com guardar=True, só aceita disparo depois que a captura atual preencheu a
+    janela de confirmação (~1,6 s). Disparos anteriores são ignorados; exige-se
+    um novo score acima do limiar com o buffer já completo.
+    """
     pico = 0.0
+    recentes: deque[np.ndarray] = deque(maxlen=CONFIRMACAO_QUADROS if guardar else 0)
+    vazio = np.zeros(0, dtype=np.int16)
     while duracao <= 0 or time.time() - inicio < duracao:
         quadro = _quadro(captura)
         if quadro is None:
-            return False, pico
+            return False, 0.0, pico, vazio
+        if guardar:
+            recentes.append(quadro.copy())
         score = float(detector.predict(quadro).get(chave, 0.0))
         pico = max(pico, score)
-        if score >= limiar:
-            return True, pico
-    return False, pico
+        if score < limiar:
+            continue
+        if not guardar:
+            return True, score, pico, vazio
+        if len(recentes) < CONFIRMACAO_QUADROS:
+            continue
+        return True, score, pico, np.concatenate(list(recentes))
+    return False, 0.0, pico, vazio
 
 
 def _ler(detector, chave: str, captura: subprocess.Popen[bytes], limiar: float, segundos: float, _parar: bool) -> float:
@@ -216,6 +320,19 @@ def _capturar_pedido(captura: subprocess.Popen[bytes], segundos: float) -> np.nd
     return np.concatenate(blocos)
 
 
+def _salvar_wav_confirmacao(pasta: Path, indice: int, amostras: np.ndarray) -> Path:
+    """Grava o PCM int16 que, dividido por 32768, é o float enviado ao Whisper."""
+    pasta.mkdir(parents=True, exist_ok=True)
+    destino = pasta / f"confirmacao-{indice:02d}.wav"
+    pcm = np.ascontiguousarray(amostras, dtype=np.int16)
+    with wave.open(str(destino), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(TAXA)
+        wav.writeframes(pcm.tobytes())
+    return destino.resolve()
+
+
 def _transcrever(stt: _Stt, amostras: np.ndarray) -> str:
     if _muda(amostras):
         return ""
@@ -224,6 +341,128 @@ def _transcrever(stt: _Stt, amostras: np.ndarray) -> str:
         return stt.transcribe(audio)
     finally:
         del audio
+
+
+def _transcrever_seguro(stt: _Stt, amostras: np.ndarray) -> str:
+    try:
+        return _transcrever(stt, amostras)
+    except Exception:
+        return ""
+
+
+def _normalizar_ativacao(texto: str) -> str:
+    sem_acento = unicodedata.normalize("NFKD", texto)
+    sem_acento = "".join(c for c in sem_acento if not unicodedata.combining(c))
+    limpo = re.sub(r"[^A-Za-z0-9]+", " ", sem_acento.upper())
+    return " ".join(limpo.split())
+
+
+def _ativacao_confirmada(texto: str) -> bool:
+    palavras = _normalizar_ativacao(texto).split()
+    return 1 <= len(palavras) <= 2 and all(palavra in ATIVACOES for palavra in palavras)
+
+
+_PADRAO_ONDE_PARAMOS = re.compile(r"ONDE PARAMOS NO (.+)$")
+
+
+def _extrair_projeto_onde_paramos(texto: str) -> str | None:
+    """Extrai o projeto após «onde paramos no», ignorando prefixo (ex.: «Pão,»)."""
+    normalizado = _normalizar_ativacao(texto)
+    achado = _PADRAO_ONDE_PARAMOS.search(normalizado)
+    if not achado:
+        return None
+    projeto = achado.group(1).strip()
+    return projeto or None
+
+
+def _titulo_projeto(normalizado: str) -> str:
+    return " ".join(parte.capitalize() for parte in normalizado.split())
+
+
+def _data_dir() -> Path:
+    override = os.environ.get("MOAH_DATA_DIR", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    xdg = os.environ.get("XDG_DATA_HOME", "").strip()
+    if xdg:
+        return Path(xdg).expanduser().resolve() / "moah"
+    return Path.home() / ".local" / "share" / "moah"
+
+
+def _projetos_conhecidos() -> list[str]:
+    banco = _data_dir() / "moah.sqlite"
+    if not banco.is_file():
+        return []
+    try:
+        import sqlite3
+
+        with sqlite3.connect(f"file:{banco}?mode=ro", uri=True) as conn:
+            linhas = conn.execute(
+                "SELECT DISTINCT project FROM records WHERE project IS NOT NULL AND trim(project) != '' ORDER BY project"
+            ).fetchall()
+        return [str(linha[0]) for linha in linhas]
+    except Exception:
+        return []
+
+
+def _analisar_onde_paramos(texto: str) -> tuple[str, str] | tuple[str, str, list[str]] | None:
+    """None se não for o pedido; ('consultar', projeto); ('ambiguo', candidato, opções)."""
+    candidato = _extrair_projeto_onde_paramos(texto)
+    if candidato is None:
+        return None
+    conhecidos = _projetos_conhecidos()
+    cand_n = _normalizar_ativacao(candidato)
+    if not conhecidos:
+        return ("consultar", _titulo_projeto(cand_n))
+    exatos = [p for p in conhecidos if _normalizar_ativacao(p) == cand_n]
+    if len(exatos) == 1:
+        return ("consultar", exatos[0])
+    if len(exatos) > 1:
+        return ("ambiguo", candidato, exatos)
+    prefixos = [p for p in conhecidos if _normalizar_ativacao(p).startswith(cand_n)]
+    if len(prefixos) == 1:
+        return ("consultar", prefixos[0])
+    if len(prefixos) > 1:
+        return ("ambiguo", candidato, prefixos)
+    return ("consultar", _titulo_projeto(cand_n))
+
+
+def _pedir_confirmacao_projeto(candidato: str, opcoes: list[str]) -> None:
+    lista = ", ".join(opcoes)
+    print(
+        f"Projeto ambíguo para «{_titulo_projeto(_normalizar_ativacao(candidato))}». "
+        f"Confirme qual consultar: {lista}.",
+        flush=True,
+    )
+
+
+def _consultar_checkpoint(projeto: str) -> None:
+    """Consulta de leitura: mesmo caminho de `moah onde-paramos --projeto …`."""
+    repo = Path(__file__).resolve().parents[2]
+    cli = repo / "dist" / "src" / "cli" / "main.js"
+    if not cli.is_file():
+        print("Consulta indisponível: CLI não compilada.", flush=True)
+        return
+    resultado = subprocess.run(
+        [
+            "node",
+            "--disable-warning=ExperimentalWarning",
+            str(cli),
+            "onde-paramos",
+            "--dominio",
+            "pessoal",
+            "--projeto",
+            projeto,
+        ],
+        capture_output=True,
+        text=True,
+        env=os.environ.copy(),
+    )
+    saida = (resultado.stdout or "").strip()
+    if not saida:
+        erro = (resultado.stderr or "").strip()
+        saida = erro or f"Nenhum checkpoint para pessoal/{projeto}."
+    print(saida, flush=True)
 
 
 def _muda(amostras: np.ndarray) -> bool:
@@ -282,8 +521,12 @@ def _estado(
     acertos: int = 0,
     eco: bool = False,
     texto: str | None = None,
+    score: float | None = None,
+    modelo: str | None = None,
+    limiar: float | None = None,
+    confirmarAtivacao: bool | None = None,
 ) -> None:
-    payload = {
+    payload: dict[str, object] = {
         "fase": fase,
         "microfone": microfone,
         "pico": round(pico, 4),
@@ -291,6 +534,14 @@ def _estado(
         "eco": eco,
         "detectorConfirmado": False,
     }
+    if score is not None:
+        payload["score"] = round(score, 4)
+    if modelo is not None:
+        payload["modelo"] = modelo
+    if limiar is not None:
+        payload["limiar"] = limiar
+    if confirmarAtivacao is not None:
+        payload["confirmarAtivacao"] = confirmarAtivacao
     if texto is not None:
         payload["texto"] = texto
     json.dump(payload, sys.stdout, ensure_ascii=False)
