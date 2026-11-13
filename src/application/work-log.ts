@@ -43,6 +43,10 @@ export function findCheckpoint(context: WorkLogContext, query: CheckpointQuery):
   return withDatabase(context.dataDir, (db) => repo.latestCheckpoint(db, query));
 }
 
+export function listKnownProjects(context: WorkLogContext): string[] {
+  return withDatabase(context.dataDir, (db) => repo.listKnownProjects(db));
+}
+
 export function summarizeDay(context: WorkLogContext, query: DayQuery): DailySummary {
   const records = listDay(context, query);
   const decisions = records.flatMap((record) =>

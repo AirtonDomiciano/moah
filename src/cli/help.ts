@@ -23,6 +23,7 @@ Comandos:
   moah reuniao importar --arquivo <transcricao.txt>
   moah reuniao ver --id <reu_> --dominio <domínio>
   moah voz estado|simular --roteiro <json-simulacao>
+  moah voz pedido --texto <pedido> [--dominio pessoal|imex|aluai]
   moah voz hardware --habilitar sim [--microfone jbl|camera]
   moah voz escutar --habilitar sim [--microfone jbl|camera] [--modelo /caminho/modelo.onnx] [--limiar 0.5] [--confirmar-ativacao sim] [--confirmacao-flexivel sim] [--diagnostico sim]
   moah voz coletar --iniciar sim [--microfone jbl|camera] [--sessao 01] [--tomada 2] [--vezes 10] [--segundos 4] [--ouvir sim] [--frase MOAH] [--prefixo moah]

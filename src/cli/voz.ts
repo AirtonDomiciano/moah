@@ -1,9 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { handleVoiceRequest } from "../application/voice-request.js";
 import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
+import { isDomain } from "../domain/constants.js";
 import { AppError } from "../domain/errors.js";
 import { fixtureWakeDetector, unavailableWakeDetector, voicePanel, type VoiceSample } from "../domain/voice.js";
 import { deviceIds, probeHeadset } from "../infrastructure/audio-probe.js";
+import { loadConfig } from "../infrastructure/config.js";
+import { resolveDirs } from "../infrastructure/paths.js";
 import { validateSessions } from "../infrastructure/voice-validate.js";
 import { correctedModelPath, runVoiceScript, trainedModelPath, voiceDirectory } from "../infrastructure/wake-command.js";
 import { one, rejectUnknown, type ParsedArgs } from "./parse-args.js";
@@ -34,6 +38,26 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
         ? "A escuta usa o modelo experimental. Ele não está confirmado. A coleta nova ainda não substitui as oito tomadas, e os resultados já vistos não serão o teste final."
         : "O microfone só abre depois de uma habilitação explícita e de um detector de MOAH validado no hardware.",
     });
+    return true;
+  }
+  if (action === "pedido") {
+    rejectUnknown(parsed.options, ["texto", "dominio"]);
+    const texto = one(parsed.options, "texto");
+    if (texto === null || !texto.trim()) {
+      throw new AppError("Informe --texto com o pedido transcrito.", "validation");
+    }
+    const dominioRaw = one(parsed.options, "dominio") ?? "pessoal";
+    if (!isDomain(dominioRaw)) {
+      throw new AppError(`Domínio inválido: "${dominioRaw}". Use pessoal, imex ou aluai.`, "validation");
+    }
+    const dirs = resolveDirs();
+    const config = loadConfig(dirs.configDir);
+    const result = handleVoiceRequest(
+      { dataDir: dirs.dataDir, timeZone: config.timezone, now: () => new Date() },
+      dominioRaw,
+      texto,
+    );
+    printJson(result);
     return true;
   }
   if (action === "simular") {
@@ -159,7 +183,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "unavailable",
     );
   }
-  throw new AppError("Uso: moah voz estado|simular|hardware|escutar|coletar|validar.", "validation");
+  throw new AppError("Uso: moah voz estado|pedido|simular|hardware|escutar|coletar|validar.", "validation");
 }
 
 function normalizarSessao(valor: string): string {

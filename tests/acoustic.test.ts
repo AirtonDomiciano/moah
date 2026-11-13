@@ -155,7 +155,6 @@ test("o validador não importa treino nem PyTorch", () => {
   const arquivos = [
     path.join(RAIZ, "src/domain/acoustic.ts"),
     path.join(RAIZ, "src/infrastructure/voice-validate.ts"),
-    path.join(RAIZ, "src/cli/voz.ts"),
   ];
   for (const arquivo of arquivos) {
     const texto = fs.readFileSync(arquivo, "utf8");

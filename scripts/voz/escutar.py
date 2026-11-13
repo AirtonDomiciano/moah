@@ -3,8 +3,9 @@
 
 Não grava o ambiente. Fecha a captura antes da saudação e da resposta. Descarta
 o buffer do pedido após a transcrição. O STT roda no venv separado sob
-MOAH_VOICE_DIR/stt. Pedidos «onde paramos no …» consultam o checkpoint e falam
-só o resumo e o próximo passo no mesmo destino da saudação.
+MOAH_VOICE_DIR/stt. O pedido transcrito passa por `moah voz pedido`: só
+ferramentas cadastradas via política; capacidade ausente é falada e o laço
+volta a aguardar.
 """
 
 from __future__ import annotations
@@ -208,13 +209,9 @@ def main() -> None:
             texto = _transcrever(stt, amostras)
             del amostras
             print(texto, flush=True)
-            consulta = _analisar_onde_paramos(texto)
-            if consulta is not None:
+            if texto.strip():
                 _estado("consultando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
-                if consulta[0] == "ambiguo":
-                    _pedir_confirmacao_projeto(consulta[1], consulta[2])
-                else:
-                    _consultar_checkpoint(consulta[1], args.destino, pico=pico, acertos=acertos)
+                _atender_pedido(texto, args.destino, pico=pico, acertos=acertos)
             _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
@@ -377,93 +374,14 @@ def _ativacao_confirmada(texto: str, flexivel: bool = False) -> bool:
     return normalizado in FRASES_FLEXIVEIS
 
 
-_PADRAO_ONDE_PARAMOS = re.compile(r"ONDE PARAMOS NO (.+)$")
-
-
-def _extrair_projeto_onde_paramos(texto: str) -> str | None:
-    """Extrai o projeto após «onde paramos no», ignorando prefixo (ex.: «Pão,»)."""
-    normalizado = _normalizar_ativacao(texto)
-    achado = _PADRAO_ONDE_PARAMOS.search(normalizado)
-    if not achado:
-        return None
-    projeto = achado.group(1).strip()
-    return projeto or None
-
-
-def _titulo_projeto(normalizado: str) -> str:
-    return " ".join(parte.capitalize() for parte in normalizado.split())
-
-
-def _data_dir() -> Path:
-    override = os.environ.get("MOAH_DATA_DIR", "").strip()
-    if override:
-        return Path(override).expanduser().resolve()
-    xdg = os.environ.get("XDG_DATA_HOME", "").strip()
-    if xdg:
-        return Path(xdg).expanduser().resolve() / "moah"
-    return Path.home() / ".local" / "share" / "moah"
-
-
-def _projetos_conhecidos() -> list[str]:
-    banco = _data_dir() / "moah.sqlite"
-    if not banco.is_file():
-        return []
-    try:
-        import sqlite3
-
-        with sqlite3.connect(f"file:{banco}?mode=ro", uri=True) as conn:
-            linhas = conn.execute(
-                "SELECT DISTINCT project FROM records WHERE project IS NOT NULL AND trim(project) != '' ORDER BY project"
-            ).fetchall()
-        return [str(linha[0]) for linha in linhas]
-    except Exception:
-        return []
-
-
-def _analisar_onde_paramos(texto: str) -> tuple[str, str] | tuple[str, str, list[str]] | None:
-    """None se não for o pedido; ('consultar', projeto); ('ambiguo', candidato, opções)."""
-    candidato = _extrair_projeto_onde_paramos(texto)
-    if candidato is None:
-        return None
-    conhecidos = _projetos_conhecidos()
-    cand_n = _normalizar_ativacao(candidato)
-    if not conhecidos:
-        return ("consultar", _titulo_projeto(cand_n))
-    exatos = [p for p in conhecidos if _normalizar_ativacao(p) == cand_n]
-    if len(exatos) == 1:
-        return ("consultar", exatos[0])
-    if len(exatos) > 1:
-        return ("ambiguo", candidato, exatos)
-    prefixos = [p for p in conhecidos if _normalizar_ativacao(p).startswith(cand_n)]
-    if len(prefixos) == 1:
-        return ("consultar", prefixos[0])
-    if len(prefixos) > 1:
-        return ("ambiguo", candidato, prefixos)
-    return ("consultar", _titulo_projeto(cand_n))
-
-
-def _pedir_confirmacao_projeto(candidato: str, opcoes: list[str]) -> None:
-    lista = ", ".join(opcoes)
-    print(
-        f"Projeto ambíguo para «{_titulo_projeto(_normalizar_ativacao(candidato))}». "
-        f"Confirme qual consultar: {lista}.",
-        flush=True,
-    )
-
-
-def _consultar_checkpoint(
-    projeto: str,
+def _atender_pedido(
+    texto: str,
     destino: str,
     *,
     pico: float = 0.0,
     acertos: int = 0,
 ) -> None:
-    """Consulta de leitura: mesmo caminho de `moah onde-paramos --projeto …`.
-
-    Imprime a saída completa no terminal. Se houver checkpoint, fala só o
-    resumo (Texto) e o próximo passo no mesmo destino da saudação. Falha de
-    síntese é informada e o laço volta a aguardar.
-    """
+    """Encaminha o pedido ao catálogo/política via `moah voz pedido`."""
     repo = Path(__file__).resolve().parents[2]
     cli = repo / "dist" / "src" / "cli" / "main.js"
     if not cli.is_file():
@@ -474,42 +392,37 @@ def _consultar_checkpoint(
             "node",
             "--disable-warning=ExperimentalWarning",
             str(cli),
-            "onde-paramos",
+            "voz",
+            "pedido",
             "--dominio",
             "pessoal",
-            "--projeto",
-            projeto,
+            "--texto",
+            texto,
         ],
         capture_output=True,
         text=True,
         env=os.environ.copy(),
     )
-    saida = (resultado.stdout or "").strip()
-    if not saida:
-        erro = (resultado.stderr or "").strip()
-        saida = erro or f"Nenhum checkpoint para pessoal/{projeto}."
-    print(saida, flush=True)
-    fala = _fala_checkpoint(saida)
-    if fala is None:
+    bruto = (resultado.stdout or "").strip()
+    if resultado.returncode != 0 or not bruto:
+        erro = (resultado.stderr or "").strip() or bruto or "Falha ao consultar o catálogo."
+        print(erro, flush=True)
+        return
+    try:
+        payload = json.loads(bruto)
+    except json.JSONDecodeError:
+        print(bruto, flush=True)
+        return
+    terminal = str(payload.get("terminal") or "").strip()
+    if terminal:
+        print(terminal, flush=True)
+    falar = payload.get("speak")
+    if not isinstance(falar, str) or not falar.strip():
         return
     _estado("falando", microfone="liberado", pico=pico, acertos=acertos)
-    erro_fala = _falar_seguro(destino, fala)
+    erro_fala = _falar_seguro(destino, falar.strip())
     if erro_fala is not None:
         print(f"Falha na síntese: {erro_fala}", flush=True)
-
-
-def _fala_checkpoint(saida: str) -> str | None:
-    """Monta a fala com só Texto e Próximo passo; None se não for um registro."""
-    texto: str | None = None
-    proximo: str | None = None
-    for linha in saida.splitlines():
-        if linha.startswith("Texto: "):
-            texto = linha[len("Texto: ") :].strip()
-        elif linha.startswith("Próximo passo: "):
-            proximo = linha[len("Próximo passo: ") :].strip()
-    if texto is None or proximo is None:
-        return None
-    return f"{texto} Próximo passo: {proximo}"
 
 
 def _muda(amostras: np.ndarray) -> bool:

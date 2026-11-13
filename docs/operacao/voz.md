@@ -34,8 +34,8 @@ moah voz validar
 | Detector do nome | ONNX local, contrato `WakeDetector` | Modelo fora do Git. A voz de Airton não foi confirmada |
 | Fim de fala | limite de silêncio e duração máxima no laço | Testado com relógio injetado |
 | Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. `escutar` captura o pedido após a saudação, passa PCM ao worker STT, imprime o texto e volta a aguardar |
-| Conversa | `rememberAsk` chama `converse` | Somente leitura. O roteiro simulado não usa essa consulta. Pedido «onde paramos no …» chama `onde-paramos` no domínio pessoal |
-| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta do checkpoint (só Texto + Próximo passo) via espeak + pw-play no headset. Registro completo fica no terminal. Aceite da fala do checkpoint no JBL pendente |
+| Conversa | `moah voz pedido` → catálogo + política | Pedido transcrito resolve intenção e só executa `READ_TOOLS` via `governQuery`. Ferramenta ausente (lembrete/agenda/escrita) não executa. O roteiro `simular` ainda usa resposta sintética |
+| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta via espeak + pw-play. Checkpoint: só Texto + Próximo passo. Lembrete ausente: “Ainda não consigo criar lembretes.” Aceite no JBL dos dois caminhos pendente |
 | Painel | `voicePanel` e `ui/src/voice-panel.ts` | Estado visível. React ainda não foi instalado nem aberto no navegador |
 
 O buffer da solicitação tem tamanho limitado e é descartado ao fim do turno. Não há gravação de áudio ambiente. Durante a saudação e a resposta, amostras do microfone e do próprio assistente não reiniciam a ativação. “MOAH, pare”, quando é o pedido transcrito, encerra sem consultar o modelo. Enquanto o MOAH está falando, essa frase não interrompe: o controle visível “Parar resposta” faz isso. A interrupção por voz durante a fala fica pendente até um teste de eco com microfone e caixas reais.

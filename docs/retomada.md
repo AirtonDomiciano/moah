@@ -10,7 +10,7 @@ Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](..
 
 - CLI de memória, checkpoints e consultas de leitura já existem.
 - Escuta com confirmação STT da ativação: buffer de ~1,6 s obrigatório antes do disparo aceito; aceite `MOA`/`MOAH` (1 ou 2 palavras). ONNX em uso: `moah-experimental.onnx`, limiar 0,5.
-- STT offline (faster-whisper small, CPU int8, pt) transcreve o pedido após “Estou aqui.”.
+- STT offline (faster-whisper small, CPU int8, pt) transcreve o pedido após “Estou aqui.”; janela do pedido: 5 s.
 - Prova no JBL (09/11/2026) com `--confirmar-ativacao sim --diagnostico sim`: três ciclos completos de ativação + pedido.
 
 ### Três ciclos observados no JBL — 09/11/2026
@@ -21,20 +21,29 @@ Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](..
 
 WAVs de diagnóstico em `~/.local/share/moah/voz/diagnostico/confirmacao/` (fora do Git). Comando da prova: `npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim --diagnostico sim`.
 
-- Pedido com «onde paramos no &lt;projeto&gt;» (com ou sem prefixo, ex. «Pão, onde paramos no Ledger?») consulta `onde-paramos` no domínio pessoal. Projeto ambíguo pede confirmação no terminal. Transcrição original permanece impressa.
-- Consulta de checkpoint existente validada no JBL (12/11/2026): ativação `Moa!` → saudação → STT `onde paramos no ledger?` → registro completo no terminal (projeto Ledger, texto e próximo passo). Sem fala do checkpoint nessa prova.
-- Resposta falada do checkpoint: reutiliza espeak + pw-play da saudação; fala só Texto e Próximo passo; saída completa permanece no terminal; falha de síntese imprime o erro e volta a aguardar. Aceite no JBL pendente.
+- Consulta de checkpoint existente validada no JBL (12/11/2026): ativação → STT `onde paramos no ledger?` → registro completo no terminal.
+- Pedido transcrito passa por `moah voz pedido`: só ferramentas do catálogo (`READ_TOOLS`) via `governQuery`/política. Checkpoint fala Texto + Próximo passo. Lembrete sem ferramenta no catálogo: terminal explica a ausência e fala “Ainda não consigo criar lembretes.” (STT “Me lembre… daqui 5 minutos.” também casa). Aceite no JBL dos dois caminhos pendente.
 - Sessões 01/02 treino, 03 validação, 04 reservada. Candidatos ONNX não promovidos.
 - Base publicada anterior: [prova de transcrição](https://github.com/AirtonDomiciano/moah/commit/5148a1a65b9496b1d5bf8b6e5e1552551925fcb5).
 
 ## Próximo capítulo
 
-Validar no JBL a fala do checkpoint após “Onde paramos no Ledger?”: ouvir só resumo e próximo passo, conferir o registro completo no terminal e a retomada da escuta.
+Validar no JBL os dois caminhos do catálogo:
+
+1. “Onde paramos no Ledger?” → ferramenta disponível → fala do checkpoint.
+2. “Me lembre de tomar água daqui 5 minutos.” → ferramenta ausente → terminal + fala “Ainda não consigo criar lembretes.” → volta a aguardar.
 
 Comando:
 
 ```bash
 npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim
+```
+
+Checagem sem microfone:
+
+```bash
+npm run moah -- voz pedido --dominio pessoal --texto "Onde paramos no Ledger?"
+npm run moah -- voz pedido --dominio pessoal --texto "Me lembre de tomar água daqui 5 minutos."
 ```
 
 ## Como manter esta memória

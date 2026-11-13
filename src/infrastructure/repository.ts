@@ -168,6 +168,26 @@ export function latestCheckpoint(db: DatabaseSync, query: CheckpointQuery): Work
   return records[0] ?? null;
 }
 
+export function listKnownProjects(db: DatabaseSync): string[] {
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT project AS project
+       FROM records
+       WHERE project IS NOT NULL AND trim(project) != ''
+       ORDER BY project ASC`,
+    )
+    .all();
+  const projects: string[] = [];
+  for (const value of rows) {
+    const row = asRow(value);
+    const project = row ? nullableString(row, "project") : null;
+    if (project) {
+      projects.push(project);
+    }
+  }
+  return projects;
+}
+
 export function countRecords(db: DatabaseSync): number {
   const row = asRow(db.prepare("SELECT COUNT(*) AS total FROM records").get());
   return row ? requiredNumber(row, "total") : 0;
