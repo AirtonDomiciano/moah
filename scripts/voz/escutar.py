@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Escuta o microfone nomeado, responde à pronúncia e transcreve o pedido.
 
-Não grava o ambiente. Fecha a captura antes da saudação. Descarta o buffer do
-pedido após a transcrição. O STT roda no venv separado sob MOAH_VOICE_DIR/stt.
+Não grava o ambiente. Fecha a captura antes da saudação e da resposta. Descarta
+o buffer do pedido após a transcrição. O STT roda no venv separado sob
+MOAH_VOICE_DIR/stt. Pedidos «onde paramos no …» consultam o checkpoint e falam
+só o resumo e o próximo passo no mesmo destino da saudação.
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ import numpy as np
 
 TAXA = 16_000
 QUADRO = 1280
-PEDIDO_S = 8.0
+PEDIDO_S = 3.0
 PICO_MUDO = 50.0
 # ~1,6 s imediatamente antes/incluindo o quadro do disparo (janela curta em memória).
 CONFIRMACAO_QUADROS = 20
@@ -212,7 +214,7 @@ def main() -> None:
                 if consulta[0] == "ambiguo":
                     _pedir_confirmacao_projeto(consulta[1], consulta[2])
                 else:
-                    _consultar_checkpoint(consulta[1])
+                    _consultar_checkpoint(consulta[1], args.destino, pico=pico, acertos=acertos)
             _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
@@ -449,8 +451,19 @@ def _pedir_confirmacao_projeto(candidato: str, opcoes: list[str]) -> None:
     )
 
 
-def _consultar_checkpoint(projeto: str) -> None:
-    """Consulta de leitura: mesmo caminho de `moah onde-paramos --projeto …`."""
+def _consultar_checkpoint(
+    projeto: str,
+    destino: str,
+    *,
+    pico: float = 0.0,
+    acertos: int = 0,
+) -> None:
+    """Consulta de leitura: mesmo caminho de `moah onde-paramos --projeto …`.
+
+    Imprime a saída completa no terminal. Se houver checkpoint, fala só o
+    resumo (Texto) e o próximo passo no mesmo destino da saudação. Falha de
+    síntese é informada e o laço volta a aguardar.
+    """
     repo = Path(__file__).resolve().parents[2]
     cli = repo / "dist" / "src" / "cli" / "main.js"
     if not cli.is_file():
@@ -476,6 +489,27 @@ def _consultar_checkpoint(projeto: str) -> None:
         erro = (resultado.stderr or "").strip()
         saida = erro or f"Nenhum checkpoint para pessoal/{projeto}."
     print(saida, flush=True)
+    fala = _fala_checkpoint(saida)
+    if fala is None:
+        return
+    _estado("falando", microfone="liberado", pico=pico, acertos=acertos)
+    erro_fala = _falar_seguro(destino, fala)
+    if erro_fala is not None:
+        print(f"Falha na síntese: {erro_fala}", flush=True)
+
+
+def _fala_checkpoint(saida: str) -> str | None:
+    """Monta a fala com só Texto e Próximo passo; None se não for um registro."""
+    texto: str | None = None
+    proximo: str | None = None
+    for linha in saida.splitlines():
+        if linha.startswith("Texto: "):
+            texto = linha[len("Texto: ") :].strip()
+        elif linha.startswith("Próximo passo: "):
+            proximo = linha[len("Próximo passo: ") :].strip()
+    if texto is None or proximo is None:
+        return None
+    return f"{texto} Próximo passo: {proximo}"
 
 
 def _muda(amostras: np.ndarray) -> bool:
@@ -513,11 +547,29 @@ def _fechar(captura: subprocess.Popen[bytes] | None) -> None:
         captura.wait(timeout=1)
 
 
-def _saudacao(destino: str) -> None:
+def _falar(destino: str, texto: str) -> None:
+    """Síntese espeak + reprodução pw-play no destino da saudação."""
     with tempfile.TemporaryDirectory() as pasta:
-        arquivo = Path(pasta) / "ola.wav"
-        subprocess.run(["espeak", "-v", "pt-br", "-s", "140", "-w", str(arquivo), "Estou aqui."], check=True)
+        arquivo = Path(pasta) / "fala.wav"
+        subprocess.run(
+            ["espeak", "-v", "pt-br", "-s", "140", "-w", str(arquivo), texto],
+            check=True,
+        )
         subprocess.run(["pw-play", "--target", destino, str(arquivo)], check=True)
+
+
+def _falar_seguro(destino: str, texto: str) -> str | None:
+    """Reproduz texto; retorna mensagem de erro ou None se ok."""
+    try:
+        _falar(destino, texto)
+        return None
+    except Exception as exc:
+        detalhe = str(exc).strip()
+        return detalhe or type(exc).__name__
+
+
+def _saudacao(destino: str) -> None:
+    _falar(destino, "Estou aqui.")
 
 
 def _voz_dir() -> Path:

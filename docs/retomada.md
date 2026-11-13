@@ -1,6 +1,6 @@
 # Ponto de retomada do MOAH
 
-Atualizado em 09/11/2026, horário de São Paulo.
+Atualizado em 12/11/2026, horário de São Paulo.
 
 ## Leia primeiro
 
@@ -21,13 +21,21 @@ Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](..
 
 WAVs de diagnóstico em `~/.local/share/moah/voz/diagnostico/confirmacao/` (fora do Git). Comando da prova: `npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim --diagnostico sim`.
 
-- Pedido com «onde paramos no &lt;projeto&gt;» (com ou sem prefixo, ex. «Pão, onde paramos no Ledger?») consulta `onde-paramos` no domínio pessoal. Projeto ambíguo pede confirmação no terminal. Transcrição original permanece impressa. Sem resposta falada ainda.
+- Pedido com «onde paramos no &lt;projeto&gt;» (com ou sem prefixo, ex. «Pão, onde paramos no Ledger?») consulta `onde-paramos` no domínio pessoal. Projeto ambíguo pede confirmação no terminal. Transcrição original permanece impressa.
+- Consulta de checkpoint existente validada no JBL (12/11/2026): ativação `Moa!` → saudação → STT `onde paramos no ledger?` → registro completo no terminal (projeto Ledger, texto e próximo passo). Sem fala do checkpoint nessa prova.
+- Resposta falada do checkpoint: reutiliza espeak + pw-play da saudação; fala só Texto e Próximo passo; saída completa permanece no terminal; falha de síntese imprime o erro e volta a aguardar. Aceite no JBL pendente.
 - Sessões 01/02 treino, 03 validação, 04 reservada. Candidatos ONNX não promovidos.
 - Base publicada anterior: [prova de transcrição](https://github.com/AirtonDomiciano/moah/commit/5148a1a65b9496b1d5bf8b6e5e1552551925fcb5).
 
 ## Próximo capítulo
 
-Validar no JBL o pedido “Onde paramos no Ledger?” com a consulta no terminal. Depois: resposta falada do checkpoint.
+Validar no JBL a fala do checkpoint após “Onde paramos no Ledger?”: ouvir só resumo e próximo passo, conferir o registro completo no terminal e a retomada da escuta.
+
+Comando:
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim
+```
 
 ## Como manter esta memória
 
