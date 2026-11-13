@@ -22,16 +22,17 @@ Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](..
 WAVs de diagnóstico em `~/.local/share/moah/voz/diagnostico/confirmacao/` (fora do Git). Comando da prova: `npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim --diagnostico sim`.
 
 - Consulta de checkpoint existente validada no JBL (12/11/2026): ativação → STT `onde paramos no ledger?` → registro completo no terminal.
-- Pedido transcrito passa por `moah voz pedido`: só ferramentas do catálogo (`READ_TOOLS`) via `governQuery`/política. Checkpoint fala Texto + Próximo passo. Lembrete sem ferramenta no catálogo: terminal explica a ausência e fala “Ainda não consigo criar lembretes.” (STT “Me lembre… daqui 5 minutos.” também casa). Aceite no JBL dos dois caminhos pendente.
+- Pedido transcrito passa por `moah voz pedido`: só ferramentas do catálogo (`READ_TOOLS`) via `governQuery`/política. Checkpoint fala Texto + Próximo passo.
+- Reconhecimento de lembrete: `me lembre` / `me lembra` preservados; STT `me lembro de` só conta com prazo futuro explícito e válido em minutos (ex. “daqui a um minuto”). Sem prazo, não agenda. Sem ferramenta no catálogo: terminal + fala “Ainda não consigo criar lembretes.” Política e fila de agenda existentes reaproveitadas; criação por voz ainda não cadastrada. Aceite no JBL pendente.
 - Sessões 01/02 treino, 03 validação, 04 reservada. Candidatos ONNX não promovidos.
 - Base publicada anterior: [prova de transcrição](https://github.com/AirtonDomiciano/moah/commit/5148a1a65b9496b1d5bf8b6e5e1552551925fcb5).
 
 ## Próximo capítulo
 
-Validar no JBL os dois caminhos do catálogo:
+Validar no JBL o reconhecimento de lembrete com a STT real:
 
-1. “Onde paramos no Ledger?” → ferramenta disponível → fala do checkpoint.
-2. “Me lembre de tomar água daqui 5 minutos.” → ferramenta ausente → terminal + fala “Ainda não consigo criar lembretes.” → volta a aguardar.
+1. “Me lembro de tomar água daqui a um minuto.” → terminal + fala “Ainda não consigo criar lembretes.”
+2. Conferir que “Me lembro de tomar água” (sem prazo) não dispara lembrete.
 
 Comando:
 
@@ -42,8 +43,8 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao
 Checagem sem microfone:
 
 ```bash
-npm run moah -- voz pedido --dominio pessoal --texto "Onde paramos no Ledger?"
-npm run moah -- voz pedido --dominio pessoal --texto "Me lembre de tomar água daqui 5 minutos."
+npm run moah -- voz pedido --dominio pessoal --texto "Me lembro de tomar água daqui a um minuto."
+npm run moah -- voz pedido --dominio pessoal --texto "Me lembro de tomar água"
 ```
 
 ## Como manter esta memória

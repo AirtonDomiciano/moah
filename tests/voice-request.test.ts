@@ -65,6 +65,48 @@ test("lembrete exige ferramenta ausente e devolve fala de indisponível", () => 
   }
 });
 
+test("STT me lembro de com prazo em minutos trata como lembrete ausente", () => {
+  const workspace = cliWorkspace();
+  try {
+    const result = handleVoiceRequest(
+      {
+        dataDir: workspace.dataDir,
+        timeZone: "America/Sao_Paulo",
+        now: () => new Date("2026-11-12T15:00:00.000Z"),
+      },
+      "pessoal",
+      "Me lembro de tomar água daqui a um minuto.",
+    );
+    assert.equal(result.status, "unavailable");
+    assert.equal(result.tool, null);
+    assert.match(result.terminal, /Catálogo sem ferramenta de lembretes/);
+    assert.equal(result.speak, VOICE_REMINDER_UNAVAILABLE_SPEECH);
+  } finally {
+    workspace.cleanup();
+  }
+});
+
+test("me lembro de sem prazo futuro não agenda nem fala lembrete", () => {
+  const workspace = cliWorkspace();
+  try {
+    const result = handleVoiceRequest(
+      {
+        dataDir: workspace.dataDir,
+        timeZone: "America/Sao_Paulo",
+        now: () => new Date("2026-11-12T15:00:00.000Z"),
+      },
+      "pessoal",
+      "Me lembro de tomar água",
+    );
+    assert.equal(result.status, "none");
+    assert.equal(result.terminal, "");
+    assert.equal(result.speak, null);
+    assert.equal(result.tool, null);
+  } finally {
+    workspace.cleanup();
+  }
+});
+
 test("voz pedido na CLI devolve JSON dos dois caminhos", () => {
   const workspace = cliWorkspace();
   try {
