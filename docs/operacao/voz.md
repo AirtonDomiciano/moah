@@ -24,7 +24,19 @@ O diagnóstico não grava áudio. Uma linha por segundo, mais o evento de ativa�
 npm run moah -- voz escutar --habilitar sim --microfone jbl --limiar 0.5 --diagnostico sim
 ```
 
-O padrão `--arranque 1.7` mede o começo de cada espera e não deixa esse trecho ativar. Em 22/11/2026, com o microfone quieto, o score chegou a 0,9942 no primeiro segundo e caiu para 0,01 no seguinte. `--arranque 0` volta a aceitar esse começo. A escuta reinicia o fluxo interno do detector openWakeWord a cada volta para reduzir scores residuais.
+O padrão `--arranque 1.7` só atrasa candidatos no **primeiro** segundo de cada espera; com microfone quieto o detector ainda chegou a ~**0,994** nesse trecho (22/11). Isso **não** elimina falsos após saudação ou em outras janelas. `--arranque 0` volta a medir desde o início. A escuta reinicia o fluxo interno do openWakeWord a cada volta (mitigação parcial, não aceite).
+
+O fluxo **“que horas são?”** no **pedido** está comprovado (CLI e, no JBL de 09/11, com confirmação **STT** antes da saudação). O mesmo fluxo com confirmação **acústica** no headset **ainda não** foi fechado.
+
+## Camadas de validação (não confundir)
+
+| Camada | O que prova | Comando / artefato |
+| --- | --- | --- |
+| Automatizado | Turno escuta, buffer, cauda do pedido, mocks do verificador | `npm test`, `scripts/voz/test_turno_escuta.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py` |
+| Offline ONNX | Classificador 2º estágio nos WAV da sessão 03 | `scripts/voz/diagnosticar_verificador_03.py`, `correcao/diagnostico-verificador-sessao03.json` em `$MOAH_VOICE_DIR` |
+| Headset | Detector + verificador + STT do pedido no laço real | `moah voz escutar` no JBL; modo `manual` antes de `validado: true` |
+
+Em 23/11/2026 o offline ONNX mediu **6/8** tomadas ≥0,95 e **7/8** ≥0,80 na sessão 03 (não 8/8). O manifesto inicial `acertosSessao03: 0` significava **nenhum limiar com 8/8**, não pontuação zero. Detalhes: [2026-11-23-002](../../cursror-dev/execucoes/2026-11-23-002-verificador-diagnostico.md).
 
 ## Confirmação em dois estágios — 23/11/2026
 
@@ -37,11 +49,34 @@ As pronúncias válidas são acústicas (“moa”, “moá”); o verificador n
 | Modo `--confirmar-ativacao` | Comportamento |
 | --- | --- |
 | `nao` | Candidato do estágio 1 ativa direto (comportamento antigo sem confirmação). |
-| `stt` | Confirmação legada por faster-whisper no trecho curto. |
-| `acustico` | Segundo estágio acústico; em produção exige `correcao/verificador.json` com `validado: true`. |
-| `sim` | `acustico` se o manifesto estiver validado; senão cai em `stt`. |
+| `stt` | **Modo legado:** faster-whisper no trecho curto; aceite de grafia `Moa`/`MOAH` (comportamento da prova JBL de 09/11). |
+| `acustico` | Segundo estágio acústico; confirma só se `correcao/verificador.json` tiver `validado: true` e `limiarOperacional` definido. |
+| `sim` | `acustico` se o manifesto estiver validado; senão **reverte para STT** (compatibilidade). |
 
-`--modo-verificador manual` registra scores e motivos, mas **nunca** confirma chamada — use para medir falsos do detector sem saudar.
+Estado atual do manifesto (máquina local, fora do Git): `validado: false`, `limiarOperacional: null`, `limiarCalibrado: 0,8` (melhor **parcial** 7/8). **Não** usar 0,95 como limiar operacional até revisão humana e 8/8.
+
+`--modo-verificador manual` registra `diagnostico verificacao` (scores dos dois estágios) e **nunca** fala “Estou aqui.” — use para contar candidatos do detector no JBL.
+
+### Arquivos relevantes (repositório)
+
+| Caminho | Função |
+| --- | --- |
+| `scripts/voz/escutar.py` | Laço detector → verificador → pedido |
+| `scripts/voz/verificador_acustico.py` | ONNX do 2º estágio + manifesto |
+| `scripts/voz/oww_janela.py` | Embeddings e pontuação por janela |
+| `scripts/voz/buffer_circular.py` | Trecho de confirmação em memória |
+| `scripts/voz/calibrar_verificador.py` | Varredura de limiar na sessão 03 |
+| `scripts/voz/diagnosticar_verificador_03.py` | Relatório por tomada |
+| `scripts/voz/treinar_verificador.py` | Encadeia `candidato.py treinar` + calibrar |
+| `src/cli/voz.ts` | Flags `--confirmar-ativacao`, `--modo-verificador`, etc. |
+
+### Identidade do verificador (offline conferido)
+
+- `moah-verificador.onnx` = cópia de `moah-candidato-fundo.onnx` (SHA `749fb6fa…`), treinado por `scripts/voz/candidato.py` (sessões **01–02**).
+- Estágio 1 continua `moah-experimental.onnx` (SHA `04fcd7bb…`), outro arquivo e outro papel.
+- Equivalência treino/inferência: int16 16 kHz, pad 1 s, fluxo quadro 1280, janela 16×96, saída **sigmoid** (probabilidade). Inferência usa **máximo** no fluxo; alinhamento fixo [1 s, 3 s] diverge em algumas tomadas (não usar só esse alinhamento para calibrar).
+
+Pedido falado junto (“moá, que horas são?”): a cauda repassada ao capture começa no **fim da janela vencedora** do verificador (`test_pedido_preservado.py`). Comportamento no JBL com essa cauda **ainda não** medido.
 
 Treino e calibração (fora do Git, em `$MOAH_VOICE_DIR`):
 
@@ -69,9 +104,9 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao
 
 `--gravar-diagnostico sim` grava WAV só do trecho de confirmação (STT ou acústico), no máximo três por execução, fora do Git. Sem essa flag, nada é salvo.
 
-O manifesto `correcao/verificador.json` usa `limiarOperacional: null` até existir 8/8 na sessão 03 **e** `validado: true` após revisão. O campo `acertosSessao03: 0` antigo significava “nenhum limiar com 8/8”, não score zero. Diagnóstico detalhado: `correcao/diagnostico-verificador-sessao03.json` e `scripts/voz/diagnosticar_verificador_03.py`.
+Divisão de dados: treino **01–02**, calibração **03**, teste fechado **04**, expansão **05**. `coletar.py` **recusa** sobrescrever pasta de sessão cheia; para uma tomada só use `--tomada N`.
 
-Divisão de dados: treino 01–02, calibração 03, teste fechado 04, expansão opcional 05 (coleta recusa sobrescrever sessão existente). Coleta nova:
+Coleta nova (não mexe na sessão 01):
 
 ```bash
 npm run moah -- voz coletar --iniciar sim --microfone jbl --sessao 05 --vezes 10 --segundos 4 --frase MOAH --ouvir sim
@@ -84,16 +119,16 @@ npm run moah -- voz pedido --dominio pessoal --texto "Que horas são?"
 npm run moah -- voz pedido --dominio pessoal --texto "liga a luz"
 ```
 
-### Roteiro para medir a ativação
+### Roteiro para medir a ativação (headset)
 
-Vinte chamadas, sem gravar. Para cada uma, anote reconhecida, perdida ou indevida, o `score` da linha `diagnostico ativacao` e o objeto `temposMs`.
+Vinte chamadas, sem gravar. Anote por chamada: `diagnostico ativacao etapa=detector`, `diagnostico verificacao`, motivo de rejeição, se houve “Estou aqui.”.
 
-1. Reconhecida: apareceu `diagnostico ativacao` e saiu “Estou aqui.” depois de “MOAH”.
-2. Perdida: a palavra foi dita e o maior `score` do segundo ficou abaixo do `limiar`.
-3. Indevida: ativou sem a palavra.
-4. Tempo de resposta depois da ativação: some `saudacaoMs`, `escutaMs`, `transcricaoMs`, `execucaoMs` e `falaMs`.
+1. **Reconhecida (acústica):** fase `confirmada` e saudação após verificador aceitar.
+2. **Candidato rejeitado:** fase `verificando` e volta a `aguardando` com `motivoRejeicao`.
+3. **Perdida:** maior score do detector abaixo do `limiar` com a palavra dita.
+4. **Indevida:** candidato do detector sem chamada real (frequente hoje no estágio 1).
 
-O reconhecimento da palavra falada não está aceito enquanto essa tabela não for preenchida no headset.
+Aceite da palavra e do pipeline acústico no JBL **pendente**; investigação offline do “0/8” do manifesto está documentada no relatório 23/11, mas promoção do modelo e medição ao vivo seguem abertas.
 
 ```json
 {
