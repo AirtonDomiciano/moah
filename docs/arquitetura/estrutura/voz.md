@@ -15,3 +15,11 @@ O adaptador de captura fornece áudio. O detector emite uma ativação. A sessã
 | Promoção e retorno | Registrar hash, limiar, janela e versão. Permitir voltar ao modelo anterior |
 
 Referência operacional em [Voz](../../operacao/voz.md).
+
+## Evolução planejada: chamada e pedido contínuos
+
+Pedido explícito de Airton em 23/11/2026; estado: planejado, sem afirmar validação do fluxo completo. Registro: [MOAH-038](../../../ideias.md#moah-038--chamada-e-pedido-na-mesma-frase).
+
+Quando houver chamada e pedido na mesma frase, a sessão deverá preservar o áudio completo do pedido e responder diretamente, sem exigir repetição após a saudação. A chamada isolada mantém “Estou aqui” e a espera por um novo pedido. Preservar palavras nas transições de captura, evitar processamento duplicado e separar o nome do conteúdo sem substituições indiscriminadas.
+
+Exemplo futuro: “Moah, quais são nossas reuniões hoje?” → transcrição do pedido → consulta de calendário pelo catálogo e política → resposta falada com os eventos retornados. O adaptador de voz não consulta calendários diretamente: a consulta pertence ao conector autorizado, respeitando domínio e fuso. A integração real de agenda permanece pendente; este contrato não autoriza conexão de contas ou alteração de eventos.
