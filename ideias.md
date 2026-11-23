@@ -161,3 +161,14 @@ Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Respons
 - **Falas simultâneas:** separar a voz desejada de uma mistura é uma capacidade adicional, não garantida pela identificação de locutor. Se houver sobreposição ou incerteza, não executar pedido misturado; pedir repetição ou cancelar o turno conforme política definida.
 - **Próximos passos:** estabilizar ativação e captura; avaliar solução local compatível com Debian e latência medida; comparar locutor inicial, troca de pessoa e sobreposição antes de escolher modelo ou dependência. Manter amostras e perfis privados fora do Git e permitir excluir eventual cadastro.
 - **Critérios de aceite futuros:** Airton chama e continua; outra pessoa fala depois; pausa e retomada da mesma pessoa; duas vozes simultâneas; TV ou reprodução ao fundo; chamadas curtas e variação de distância/volume. Medir aceitação indevida, rejeição da voz desejada e latência. Identificação vocal não concede autorização para ações nem substitui a política existente.
+
+
+## MOAH-040 — Acompanhar relato de fala duplicada
+
+- **Data:** 23/11/2026.
+- **Origem:** relato explícito de Airton após teste no JBL: “deu boa, só que ele falou duas vezes”.
+- **Estado:** observação para acompanhamento; investigar se persistir. Sem correção nesta rodada.
+- **Responsabilidade:** módulo 08, sessão e reprodução de voz.
+- **Contexto:** teste do fluxo acústico em modo teste, limiar do verificador 0,95, após ajuste da captura do pedido e retirada de diagnóstico detalhado do console. Airton informou que o fluxo funcionou, mas houve duas falas.
+- **Evidência disponível:** relato do usuário. Ainda não foi identificado se repetiu a saudação, a resposta ou se foram falas diferentes; não há log ou WAV associado a esta ocorrência.
+- **Próximo passo se recorrer:** registrar o que foi dito nas duas falas e correlacionar os estados da mesma tentativa; verificar duplicação na síntese/reprodução, execução repetida ou nova ativação após a saída de áudio, sem assumir a causa.
