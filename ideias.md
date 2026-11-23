@@ -134,3 +134,16 @@ Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel te
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 
 Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: experimental permanece em uso; candidato com janelas da escuta (`49ac8909…` + `.pt`) em 08/11/2026: 8/8 na 03 e falsos de fala 7@0,95 (baseline `f5d9784…` tinha 48); saudação 0/9; música/ambiente ainda altos; sessão 04 fechada. Os resultados da 03 não são o teste final.
+
+
+## MOAH-038 — Chamada e pedido na mesma frase
+
+- **Data:** 23/11/2026.
+- **Origem:** pedido explícito de Airton nesta conversa.
+- **Estado:** planejado; comportamento completo e integração com agenda ainda dependem de implementação e validação.
+- **Responsabilidade:** módulo 08 (voz e sessão), módulo 03 (consulta de calendário) e módulo 04 (agenda). Contrato de voz: [voz e ciclo de modelos](docs/arquitetura/estrutura/voz.md).
+- **Exemplo desejado:** “Moah, quero que me fale quais são nossas reuniões hoje.” → consulta a agenda autorizada → “Airton, hoje nossas reuniões são…” com os compromissos reais retornados pela fonte.
+- **Comportamento:** reconhecer a chamada e preservar o pedido completo na mesma fala; transcrever e executar a consulta disponível sem exigir repetição após “Estou aqui”. Quando houver pedido junto, responder diretamente; quando houver apenas “Moah”, saudar e aguardar o pedido.
+- **Separação da chamada:** considerar variantes de transcrição como “Moa” e “Boa” no contexto da ativação, sem substituir palavras indiscriminadamente no pedido nem aceitar qualquer frase iniciada por “boa”. A política de ativação precisa continuar distinguindo chamadas de conversas comuns.
+- **Próximos passos:** estabilizar captura e confirmação atuais; validar preservação do começo e fim da fala e a separação entre nome e pedido; depois integrar consulta de agenda somente leitura pelo catálogo/política existentes, respeitando domínio, calendário e fuso configurados. Informar fonte indisponível ou ausência de reuniões sem inventar compromissos.
+- **Critérios de aceite futuros:** chamada isolada; chamada com pedido contínuo; pequena pausa entre nome e pedido; nenhuma perda ou duplicação de palavras; sem executar duas vezes; resposta de agenda baseada na fonte autorizada. Não considerar este registro uma autorização para conectar contas ou alterar compromissos.
