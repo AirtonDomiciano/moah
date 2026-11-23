@@ -147,3 +147,17 @@ Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Respons
 - **Separação da chamada:** considerar variantes de transcrição como “Moa” e “Boa” no contexto da ativação, sem substituir palavras indiscriminadamente no pedido nem aceitar qualquer frase iniciada por “boa”. A política de ativação precisa continuar distinguindo chamadas de conversas comuns.
 - **Próximos passos:** estabilizar captura e confirmação atuais; validar preservação do começo e fim da fala e a separação entre nome e pedido; depois integrar consulta de agenda somente leitura pelo catálogo/política existentes, respeitando domínio, calendário e fuso configurados. Informar fonte indisponível ou ausência de reuniões sem inventar compromissos.
 - **Critérios de aceite futuros:** chamada isolada; chamada com pedido contínuo; pequena pausa entre nome e pedido; nenhuma perda ou duplicação de palavras; sem executar duas vezes; resposta de agenda baseada na fonte autorizada. Não considerar este registro uma autorização para conectar contas ou alterar compromissos.
+
+
+## MOAH-039 — Manter a voz de quem iniciou o pedido
+
+- **Data:** 23/11/2026.
+- **Origem:** pedido explícito de Airton: ao iniciar a fala, acompanhar sua voz e não incorporar uma segunda pessoa que fale depois.
+- **Estado:** planejado; avaliação técnica e validação no ambiente real pendentes.
+- **Responsabilidade:** módulo 08, captura, identificação de locutor e sessão de voz. Contrato: [voz e ciclo de modelos](docs/arquitetura/estrutura/voz.md).
+- **Comportamento desejado:** após uma chamada aceita, vincular temporariamente o turno ao locutor que a iniciou; evitar incorporar falas de outra pessoa ao pedido ou trocar de interlocutor automaticamente. Encerrar o vínculo ao finalizar, cancelar ou expirar a sessão.
+- **Distinção:** VAD detecta presença de fala, não quem fala. Avaliar comparação de características de voz (embeddings de locutor) e segmentação por locutor. Uma chamada curta como “Moah” pode não conter áudio suficiente para uma referência confiável; não assumir que a primeira voz seja Airton.
+- **Escopo opcional futuro:** perfil de voz cadastrado explicitamente por Airton para aceitar chamadas da sua voz. Este perfil é diferente de acompanhar o locutor inicial de qualquer sessão e deve ser configurável.
+- **Falas simultâneas:** separar a voz desejada de uma mistura é uma capacidade adicional, não garantida pela identificação de locutor. Se houver sobreposição ou incerteza, não executar pedido misturado; pedir repetição ou cancelar o turno conforme política definida.
+- **Próximos passos:** estabilizar ativação e captura; avaliar solução local compatível com Debian e latência medida; comparar locutor inicial, troca de pessoa e sobreposição antes de escolher modelo ou dependência. Manter amostras e perfis privados fora do Git e permitir excluir eventual cadastro.
+- **Critérios de aceite futuros:** Airton chama e continua; outra pessoa fala depois; pausa e retomada da mesma pessoa; duas vozes simultâneas; TV ou reprodução ao fundo; chamadas curtas e variação de distância/volume. Medir aceitação indevida, rejeição da voz desejada e latência. Identificação vocal não concede autorização para ações nem substitui a política existente.
