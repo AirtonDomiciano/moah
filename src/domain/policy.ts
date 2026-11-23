@@ -12,6 +12,11 @@ export const READ_TOOLS = ["consultar_pendencias", "consultar_resumo", "consulta
 /** Ferramenta falsa da demonstração. Não entra na lista oferecida ao modelo. */
 export const DEMO_EFFECT_TOOL = "eco_sintetico";
 
+/** Efeito local da sessão: lembrete avulso via fila, sem conector externo. */
+export const LOCAL_REMINDER_TOOL = "criar_lembrete_local";
+
+export const SESSION_EFFECT_TOOLS = [LOCAL_REMINDER_TOOL] as const;
+
 export const BLOCKED_TOOLS = [
   "shell",
   "terminal",
@@ -70,6 +75,16 @@ export function conversationAuthority(sessionDomain: Domain): AuthorityContext {
   };
 }
 
+/** Autoridade da voz: leituras da sessão e lembrete local. */
+export function voiceAuthority(sessionDomain: Domain): AuthorityContext {
+  return {
+    sessionDomain,
+    agent: "voz",
+    grantedTools: [...READ_TOOLS, LOCAL_REMINDER_TOOL],
+    parentGrantedTools: null,
+  };
+}
+
 export function demoAuthority(sessionDomain: Domain): AuthorityContext {
   return {
     sessionDomain,
@@ -115,7 +130,9 @@ export function evaluatePolicy(proposal: ActionProposal, authority: AuthorityCon
   if ((BLOCKED_TOOLS as readonly string[]).includes(checked.tool)) {
     return { decision: "deny", reason: `A ferramenta ${checked.tool} está bloqueada.` };
   }
-  if (!(READ_TOOLS as readonly string[]).includes(checked.tool) && checked.tool !== DEMO_EFFECT_TOOL) {
+  const knownEffect =
+    checked.tool === DEMO_EFFECT_TOOL || (SESSION_EFFECT_TOOLS as readonly string[]).includes(checked.tool);
+  if (!(READ_TOOLS as readonly string[]).includes(checked.tool) && !knownEffect) {
     return { decision: "deny", reason: `Ferramenta desconhecida: ${checked.tool}.` };
   }
   if (checked.domain !== authority.sessionDomain) {
@@ -145,6 +162,9 @@ export function evaluatePolicy(proposal: ActionProposal, authority: AuthorityCon
   }
   if ((READ_TOOLS as readonly string[]).includes(checked.tool)) {
     return { decision: "allow", reason: "Consulta liberada para o domínio da sessão." };
+  }
+  if ((SESSION_EFFECT_TOOLS as readonly string[]).includes(checked.tool)) {
+    return { decision: "allow", reason: "Lembrete local da sessão liberado." };
   }
   return { decision: "ask", reason: "A ação tem efeito e exige aprovação específica." };
 }

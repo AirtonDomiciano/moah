@@ -88,9 +88,15 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "duracao",
       "modelo",
       "limiar",
+      "pedido",
+      "espera",
+      "silencio",
+      "pico-fala",
+      "arranque",
       "confirmar-ativacao",
       "confirmacao-flexivel",
       "diagnostico",
+      "gravar-diagnostico",
     ]);
     if (one(parsed.options, "habilitar") !== "sim") {
       throw new AppError("A escuta exige --habilitar sim.", "validation");
@@ -102,6 +108,12 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const confirmar = resolveConfirmWake(one(parsed.options, "confirmar-ativacao"));
     const flexivel = resolveConfirmFlexible(one(parsed.options, "confirmacao-flexivel"));
     const diagnostico = resolveDiagnostico(one(parsed.options, "diagnostico"));
+    const gravar = resolveGravarDiagnostico(one(parsed.options, "gravar-diagnostico"));
+    const pedido = resolvePositive(one(parsed.options, "pedido"), "pedido", "8");
+    const espera = resolvePositive(one(parsed.options, "espera"), "espera", "4");
+    const silencio = resolvePositive(one(parsed.options, "silencio"), "silencio", "0.7");
+    const picoFala = resolvePositive(one(parsed.options, "pico-fala"), "pico-fala", "200");
+    const arranque = resolveNonNegative(one(parsed.options, "arranque"), "arranque", "1.7");
     const devices = await deviceIds(choice);
     const duration = one(parsed.options, "duracao");
     await runVoiceScript(process.env, "escutar.py", [
@@ -117,6 +129,18 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       flexivel,
       "--diagnostico",
       diagnostico,
+      "--gravar-diagnostico",
+      gravar,
+      "--pedido",
+      pedido,
+      "--espera",
+      espera,
+      "--silencio",
+      silencio,
+      "--pico-fala",
+      picoFala,
+      "--arranque",
+      arranque,
       "--recursos",
       resourcesOf(dir),
       "--origem",
@@ -315,6 +339,35 @@ function resolveDiagnostico(value: string | null): "sim" | "nao" {
     return "sim";
   }
   throw new AppError("Use --diagnostico sim ou nao.", "validation");
+}
+
+function resolveGravarDiagnostico(value: string | null): "sim" | "nao" {
+  if (value === null || value === "nao") {
+    return "nao";
+  }
+  if (value === "sim") {
+    return "sim";
+  }
+  throw new AppError("Use --gravar-diagnostico sim ou nao.", "validation");
+}
+
+function resolvePositive(value: string | null, name: string, fallback: string): string {
+  return resolveBounded(value, name, fallback, false);
+}
+
+function resolveNonNegative(value: string | null, name: string, fallback: string): string {
+  return resolveBounded(value, name, fallback, true);
+}
+
+function resolveBounded(value: string | null, name: string, fallback: string, allowZero: boolean): string {
+  if (value === null) {
+    return fallback;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number) || number > 120 || (allowZero ? number < 0 : number <= 0)) {
+    throw new AppError(`Informe --${name} com um número ${allowZero ? "a partir de zero" : "maior que zero"} e no máximo 120.`, "validation");
+  }
+  return String(number);
 }
 
 function resourcesOf(dir: string): string {

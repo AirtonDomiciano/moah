@@ -1,6 +1,6 @@
 # Ponto de retomada do MOAH
 
-Atualizado em 12/11/2026, horário de São Paulo.
+Atualizado em 22/11/2026, horário de São Paulo.
 
 ## Leia primeiro
 
@@ -21,30 +21,43 @@ Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](..
 
 WAVs de diagnóstico em `~/.local/share/moah/voz/diagnostico/confirmacao/` (fora do Git). Comando da prova: `npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim --diagnostico sim`.
 
-- Consulta de checkpoint existente validada no JBL (12/11/2026): ativação → STT `onde paramos no ledger?` → registro completo no terminal.
-- Pedido transcrito passa por `moah voz pedido`: só ferramentas do catálogo (`READ_TOOLS`) via `governQuery`/política. Checkpoint fala Texto + Próximo passo.
-- Reconhecimento de lembrete: `me lembre` / `me lembra` preservados; STT `me lembro de` só conta com prazo futuro explícito e válido em minutos (ex. “daqui a um minuto”). Sem prazo, não agenda. Sem ferramenta no catálogo: terminal + fala “Ainda não consigo criar lembretes.” Política e fila de agenda existentes reaproveitadas; criação por voz ainda não cadastrada. Aceite no JBL pendente.
+- Consulta de checkpoint (Ledger) preservada: `consultar_checkpoint` via política; fala Texto + Próximo passo.
+- Módulo de lembretes em `src/application/reminders/`: validação e agendamento separados da voz. Ferramenta `criar_lembrete_local` no catálogo e na política (`voiceAuthority`). Fila `jobs` reaproveitada (`lembrete_local`); lembretes avulsos em memória da sessão. Voz interpreta, chama a ferramenta e fala confirmação + aviso (“vale só nesta sessão”).
+- STT real “Me lembro de tomar água daqui a um minuto.” agenda; “Me lembro de tomar água” sem prazo não agenda. Aceite no JBL pendente.
 - Sessões 01/02 treino, 03 validação, 04 reservada. Candidatos ONNX não promovidos.
 - Base publicada anterior: [prova de transcrição](https://github.com/AirtonDomiciano/moah/commit/5148a1a65b9496b1d5bf8b6e5e1552551925fcb5).
 
+## Diagnóstico da ativação — 22/11/2026
+
+Nesta máquina o JBL Quantum 360 é a origem padrão (fonte 44, destino 46). A escuta pede 16 kHz, 1 canal, `s16`, quadro de 1280. O detector carregado é `moah-experimental.onnx`, SHA-256 `04fcd7bb45fffa4a82fdcb266fd9e795691ee53228195334d1ef6fbc6b587bdf`, chave `moah-experimental`, VAD 0, limiar 0,5.
+
+Leituras curtas do microfone, sem gravar e sem palavra controlada: em 2 s o pico do score foi 0,9782; em 3,2 s seguintes, 0,1848. Pelo comando de escuta, com limiar 1 para não saudar, o primeiro segundo quieto (RMS 25) chegou a 0,9942 e o segundo caiu a 0,01. O áudio chega ao modelo. O formato não é o defeito observado. A escuta ignora os primeiros 1,7 s de cada espera para não tratar esse arranque como “MOAH”. Não houve retreino. A palavra falada ainda não foi medida.
+
 ## Próximo capítulo
 
-Validar no JBL o reconhecimento de lembrete com a STT real:
+Medir no JBL, com diagnóstico e sem gravar, vinte chamadas de “MOAH” e o pedido “que horas são?”. O aceite da palavra continua pendente.
 
-1. “Me lembro de tomar água daqui a um minuto.” → terminal + fala “Ainda não consigo criar lembretes.”
-2. Conferir que “Me lembro de tomar água” (sem prazo) não dispara lembrete.
+Validar também, se o fluxo de horas estiver estável:
 
-Comando:
+1. “Me lembro de tomar água daqui a um minuto.” → confirmação + aviso falados; registro no terminal.
+2. “Me lembro de tomar água” → não agenda.
+3. “Onde paramos no Ledger?” → checkpoint intacto.
+
+Comando no headset:
 
 ```bash
-npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim
+npm run moah -- voz escutar --habilitar sim --microfone jbl --limiar 0.5 --diagnostico sim
 ```
+
+Diga “MOAH”, espere “Estou aqui.” e peça “que horas são?”. `Ctrl+C` encerra. O roteiro das vinte chamadas está em [voz](operacao/voz.md). Relatório: [2026-11-22-001-voz-fluxo](../cursror-dev/execucoes/2026-11-22-001-voz-fluxo.md).
 
 Checagem sem microfone:
 
 ```bash
+npm run moah -- voz pedido --dominio pessoal --texto "Que horas são?"
 npm run moah -- voz pedido --dominio pessoal --texto "Me lembro de tomar água daqui a um minuto."
 npm run moah -- voz pedido --dominio pessoal --texto "Me lembro de tomar água"
+npm run moah -- voz pedido --dominio pessoal --texto "Onde paramos no Ledger?"
 ```
 
 ## Como manter esta memória

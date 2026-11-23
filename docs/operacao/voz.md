@@ -12,6 +12,38 @@ moah voz escutar --habilitar sim --microfone jbl
 moah voz validar
 ```
 
+## Primeiro fluxo falado — 22/11/2026
+
+A escuta continua no `moah-experimental.onnx`, 16 kHz, mono, PCM 16 bits (`s16`), quadros de 1280 amostras. O limiar padrão é 0,5 e o VAD permanece desligado. Cada execução imprime uma linha `configuracao` com modelo, SHA-256, limiar, dispositivo, taxa, canais, formato e limites do pedido. Não há treino automático.
+
+O microfone fecha antes de “Estou aqui.” e antes da resposta. O pedido só começa depois que a saudação termina. A captura encerra por silêncio de 0,7 s depois da fala, por 4 s sem fala, ou aos 8 s. O texto vai para `moah voz pedido`. “Que horas são?”, “que hora é” e “me diz as horas” respondem o relógio local, sem LLM. Pedido não reconhecido fala que o comando ainda não está disponível. “Me lembro de …” sem prazo continua sem agendar e sem essa frase. Silêncio fala “Não ouvi o pedido.” Falha de transcrição fala “Não consegui transcrever.” `Ctrl+C` fecha captura, síntese e STT.
+
+O diagnóstico não grava áudio. Uma linha por segundo, mais o evento de ativação:
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --limiar 0.5 --diagnostico sim
+```
+
+O padrão `--arranque 1.7` mede o começo de cada espera e não deixa esse trecho ativar. Em 22/11/2026, com o microfone quieto, o score chegou a 0,9942 no primeiro segundo e caiu para 0,01 no seguinte. `--arranque 0` volta a aceitar esse começo. `--gravar-diagnostico sim` só grava o trecho curto da confirmação STT, e só junto de `--confirmar-ativacao sim`. Sem esses dois, nada é salvo.
+
+Sem microfone, o relógio e a recusa:
+
+```bash
+npm run moah -- voz pedido --dominio pessoal --texto "Que horas são?"
+npm run moah -- voz pedido --dominio pessoal --texto "liga a luz"
+```
+
+### Roteiro para medir a ativação
+
+Vinte chamadas, sem gravar. Para cada uma, anote reconhecida, perdida ou indevida, o `score` da linha `diagnostico ativacao` e o objeto `temposMs`.
+
+1. Reconhecida: apareceu `diagnostico ativacao` e saiu “Estou aqui.” depois de “MOAH”.
+2. Perdida: a palavra foi dita e o maior `score` do segundo ficou abaixo do `limiar`.
+3. Indevida: ativou sem a palavra.
+4. Tempo de resposta depois da ativação: some `saudacaoMs`, `escutaMs`, `transcricaoMs`, `execucaoMs` e `falaMs`.
+
+O reconhecimento da palavra falada não está aceito enquanto essa tabela não for preenchida no headset.
+
 ```json
 {
   "simulacao": true,
@@ -33,9 +65,9 @@ moah voz validar
 | --- | --- | --- |
 | Detector do nome | ONNX local, contrato `WakeDetector` | Modelo fora do Git. A voz de Airton não foi confirmada |
 | Fim de fala | limite de silêncio e duração máxima no laço | Testado com relógio injetado |
-| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. `escutar` captura o pedido após a saudação, passa PCM ao worker STT, imprime o texto e volta a aguardar |
-| Conversa | `moah voz pedido` → catálogo + política | Pedido transcrito resolve intenção e só executa `READ_TOOLS` via `governQuery`. Ferramenta ausente (lembrete/agenda/escrita) não executa. O roteiro `simular` ainda usa resposta sintética |
-| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta via espeak + pw-play. Checkpoint: só Texto + Próximo passo. Lembrete ausente: “Ainda não consigo criar lembretes.” Aceite no JBL dos dois caminhos pendente |
+| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. O worker sobe no primeiro pedido. Se faltar modelo ou venv, a escuta avisa e volta a aguardar |
+| Conversa | `moah voz pedido` → catálogo + política | Pedido resolve intenção e chama `governVoiceTool`. Leituras + `criar_lembrete_local` (módulo `application/reminders`, fila `jobs`). Sem prazo válido, “me lembro de …” não agenda |
+| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta via espeak + pw-play. Checkpoint: Texto + Próximo passo. Lembrete: confirmação + aviso de sessão. Aceite no JBL pendente |
 | Painel | `voicePanel` e `ui/src/voice-panel.ts` | Estado visível. React ainda não foi instalado nem aberto no navegador |
 
 O buffer da solicitação tem tamanho limitado e é descartado ao fim do turno. Não há gravação de áudio ambiente. Durante a saudação e a resposta, amostras do microfone e do próprio assistente não reiniciam a ativação. “MOAH, pare”, quando é o pedido transcrito, encerra sem consultar o modelo. Enquanto o MOAH está falando, essa frase não interrompe: o controle visível “Parar resposta” faz isso. A interrupção por voz durante a fala fica pendente até um teste de eco com microfone e caixas reais.

@@ -1,16 +1,20 @@
 import { AppError } from "../domain/errors.js";
 import {
+  LOCAL_REMINDER_TOOL,
   POLICY_VERSION,
+  READ_TOOLS,
   actionFingerprint,
   applyGenericConsent,
   conversationAuthority,
   evaluatePolicy,
   validateProposal,
+  voiceAuthority,
   type ActionProposal,
   type AuthorityContext,
   type PolicyDecision,
 } from "../domain/policy.js";
 import type { Domain } from "../domain/types.js";
+import { executeCriarLembreteLocal } from "./reminders/tool.js";
 import { executeQueryTool, type ToolExecution } from "./query-tools.js";
 import type { WorkLogContext } from "./work-log.js";
 import { runInTransaction } from "../infrastructure/transaction.js";
@@ -190,16 +194,37 @@ export function governQuery(
   name: string,
   rawArguments: unknown,
 ): ToolExecution {
-  const authority = conversationAuthority(session.domain);
+  return governWithAuthority(context, session, name, rawArguments, conversationAuthority(session.domain), "consultar");
+}
+
+/** Catálogo da voz: leituras e criar_lembrete_local pela política. */
+export function governVoiceTool(
+  context: WorkLogContext,
+  session: { domain: Domain; project: string | null },
+  name: string,
+  rawArguments: unknown,
+): ToolExecution {
+  const action = name === LOCAL_REMINDER_TOOL ? "agendar" : "consultar";
+  return governWithAuthority(context, session, name, rawArguments, voiceAuthority(session.domain), action);
+}
+
+function governWithAuthority(
+  context: WorkLogContext,
+  session: { domain: Domain; project: string | null },
+  name: string,
+  rawArguments: unknown,
+  authority: AuthorityContext,
+  action: string,
+): ToolExecution {
   let proposal: ActionProposal;
   try {
     proposal = validateProposal({
-      action: "consultar",
+      action,
       tool: name,
       agent: authority.agent,
       domain: session.domain,
-      target: session.domain,
-      parameters: {},
+      target: name === LOCAL_REMINDER_TOOL ? "sessao-local" : session.domain,
+      parameters: proposalParameters(name, rawArguments),
     });
   } catch (error) {
     const question = error instanceof Error ? error.message : "Proposta inválida.";
@@ -214,7 +239,35 @@ export function governQuery(
   if (policy.decision !== "allow") {
     return deniedTool(name, rawArguments, policy.reason);
   }
-  return executeQueryTool(context, session, name, rawArguments);
+  if (name === LOCAL_REMINDER_TOOL) {
+    return executeCriarLembreteLocal(
+      { dataDir: context.dataDir, now: context.now },
+      session.domain,
+      rawArguments,
+    );
+  }
+  if ((READ_TOOLS as readonly string[]).includes(name)) {
+    return executeQueryTool(context, session, name, rawArguments);
+  }
+  return deniedTool(name, rawArguments, `Ferramenta sem executor: ${name}.`);
+}
+
+function proposalParameters(name: string, rawArguments: unknown): Record<string, string> {
+  if (name !== LOCAL_REMINDER_TOOL) {
+    return {};
+  }
+  if (rawArguments === null || typeof rawArguments !== "object" || Array.isArray(rawArguments)) {
+    return {};
+  }
+  const record = rawArguments as Record<string, unknown>;
+  const parameters: Record<string, string> = {};
+  if (typeof record.texto === "string") {
+    parameters.texto = record.texto.trim().slice(0, 200);
+  }
+  if (typeof record.minutos === "string" || typeof record.minutos === "number") {
+    parameters.minutos = String(record.minutos).trim().slice(0, 40);
+  }
+  return parameters;
 }
 
 export function genericConsentDoesNotAuthorize(decision: PolicyDecision, genericYes: boolean): PolicyDecision {

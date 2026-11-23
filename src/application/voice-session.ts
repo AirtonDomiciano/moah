@@ -67,7 +67,12 @@ export class VoiceSession {
       }
       return this.snapshot();
     }
-    if (this.phase === "saudacao" || this.phase === "consultando" || this.phase === "falando") {
+    if (
+      this.phase === "saudacao" ||
+      this.phase === "transcrevendo" ||
+      this.phase === "executando" ||
+      this.phase === "falando"
+    ) {
       this.discardedSamples += 1;
       return this.snapshot();
     }
@@ -117,7 +122,12 @@ export class VoiceSession {
   }
 
   interrupt(): VoiceSnapshot {
-    if (this.phase === "saudacao" || this.phase === "falando" || this.phase === "consultando") {
+    if (
+      this.phase === "saudacao" ||
+      this.phase === "falando" ||
+      this.phase === "transcrevendo" ||
+      this.phase === "executando"
+    ) {
       this.generation += 1;
       this.discardBuffer();
       this.phase = this.listening ? "aguardando" : "desligado";
@@ -176,22 +186,38 @@ export class VoiceSession {
     const samples = this.buffer;
     this.buffer = [];
     this.speechSeen = false;
-    const text = this.ports.transcribe(samples).trim();
+    this.phase = "transcrevendo";
+    let text = "";
+    try {
+      text = this.ports.transcribe(samples).trim();
+    } catch {
+      this.phase = "aguardando";
+      return;
+    }
     if (!text || isStopCommand(text)) {
       this.phase = "aguardando";
       return;
     }
     const generation = ++this.generation;
-    this.phase = "consultando";
+    this.phase = "executando";
     this.llmCalls += 1;
-    this.idle = this.ports.ask(text).then((answer) => {
-      if (generation !== this.generation || !this.listening) {
-        return;
-      }
-      this.lastAnswer = answer;
-      this.phase = "falando";
-      this.spoken.push(answer);
-    });
+    this.idle = this.ports
+      .ask(text)
+      .then((answer) => {
+        if (generation !== this.generation || !this.listening) {
+          return;
+        }
+        this.lastAnswer = answer;
+        this.phase = "falando";
+        this.spoken.push(answer);
+      })
+      .catch(() => {
+        if (generation !== this.generation || !this.listening) {
+          return;
+        }
+        this.lastAnswer = null;
+        this.phase = "aguardando";
+      });
   }
 
   private discardBuffer(): void {

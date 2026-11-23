@@ -1,7 +1,14 @@
 export const WAKE_NAME = "MOAH";
 export const WAKE_GREETING = "Estou aqui.";
 
-export type VoicePhase = "desligado" | "aguardando" | "saudacao" | "ouvindo" | "consultando" | "falando";
+export type VoicePhase =
+  | "desligado"
+  | "aguardando"
+  | "saudacao"
+  | "ouvindo"
+  | "transcrevendo"
+  | "executando"
+  | "falando";
 
 export type MicrophoneState = "liberado" | "retido" | "indisponivel";
 
@@ -104,8 +111,10 @@ function panelStatus(snapshot: VoiceSnapshot): string {
       return "Aguardando o nome";
     case "ouvindo":
       return "Ouvindo o pedido";
-    case "consultando":
-      return "Consultando a memória";
+    case "transcrevendo":
+      return "Transcrevendo";
+    case "executando":
+      return "Executando";
     case "saudacao":
     case "falando":
       return "Falando";
