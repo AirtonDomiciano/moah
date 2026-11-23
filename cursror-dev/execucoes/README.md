@@ -23,6 +23,7 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-11-08-002-voz-diagnostico-candidato](2026-11-08-002-voz-diagnostico-candidato.md) | continuação de 16 / MOAH-037 | Falsos do candidato: janela intermediária; Torch≈ONNX; sem promoção |
 | [2026-11-08-003-voz-candidato-janelas](2026-11-08-003-voz-candidato-janelas.md) | continuação de 16 / MOAH-037 | Janelas da escuta; falsos de fala 48→7 @0,95; experimental mantido |
 | [2026-11-22-001-voz-fluxo](2026-11-22-001-voz-fluxo.md) | continuação de 16 | Diagnóstico da ativação e pedido “que horas são?”; palavra falada pendente |
+| [2026-11-23-003-presenca-fala](2026-11-23-003-presenca-fala.md) | continuação de 16 | Presença de fala antes da confirmação; verificador segue não validado |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

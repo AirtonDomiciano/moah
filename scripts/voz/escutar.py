@@ -22,6 +22,7 @@ from decisao_atender import atender_por_acustico, atender_por_texto
 from debug_servidor import iniciar_debug
 from escutar_politica import resolver_limiar_verificador, resolver_modo_confirmacao
 from eventos_voz import (
+    definir_console,
     emitir_configuracao,
     emitir_estado,
     emitir_tempos,
@@ -32,6 +33,7 @@ from eventos_voz import (
 from janela_pedido import LimitesPedido
 from oww_janela import extrair_cauda_pedido, zerar_detector
 from pcm_pipewire import abrir_captura, amostras_mutas, fechar_captura, ler_quadro
+from presenca_fala import aplicar_presenca, avaliar_presenca
 from sintese_pipewire import parar_reproducao, saudacao
 from stt_remoto import SttRemoto, transcrever_pedido_seguro
 from turno_pedido import conduzir_pedido, falar_etapa
@@ -136,7 +138,8 @@ def main() -> None:
     gravar = args.gravar_diagnostico == "sim"
     salvar_wavs = args.salvar_wavs == "sim"
     depurar = args.depurar == "sim"
-    imprimir_pipeline = diagnostico or depurar or salvar_wavs
+    imprimir_pipeline = diagnostico or salvar_wavs
+    definir_console(not diagnostico)
     modo_verificador = args.modo_verificador
     diagnostico_dir = voz_dir() / "diagnostico" / "confirmacao"
     diagnostico_salvos = 0
@@ -395,13 +398,16 @@ def main() -> None:
                         },
                     )
                     print(f"diagnostico wav verificador={caminho_ver} meta={meta_ver.get('metricas')}", flush=True)
-                pipeline_ponto(
+                resumo = pipeline_ponto(
                     "verificador_entrada",
                     amostras=trecho,
                     imprimir=imprimir_pipeline,
                     limiar=limiar_verificador,
                     modoVerificador=modo_verificador,
                 )
+                # Pico e STT, se houver, leem este mesmo `trecho`. O score é o máximo
+                # das janelas de 1,28 s (com 1 s de silêncio na frente), não o pico.
+                presenca = avaliar_presenca(trecho)
                 t_confirma = time.perf_counter()
                 resultado = verificador.verificar(
                     trecho,
@@ -411,21 +417,43 @@ def main() -> None:
                 )
                 tempos["confirmacaoMs"] = ms_desde(t_confirma)
                 score_verificador = resultado.score
-                motivo_verificacao = resultado.motivo
+                aceito_verificador = atender_por_acustico(resultado)
+                confirmado_agora, motivo_verificacao = aplicar_presenca(
+                    presenca,
+                    aceito_verificador,
+                    resultado.motivo,
+                )
+                vad_txt = "ausente" if presenca.vad_max is None else f"{presenca.vad_max:.2f}"
                 pipeline_ponto(
                     "verificador_decisao",
                     imprimir=imprimir_pipeline,
                     score=round(resultado.score, 4),
                     limiar=resultado.limiar,
-                    motivo=resultado.motivo,
-                    aceito=resultado.aceito,
+                    motivo=motivo_verificacao,
+                    aceito=confirmado_agora,
+                    vad=None if presenca.vad_max is None else round(presenca.vad_max, 4),
+                    energiaMs=presenca.energia_ms,
                 )
+                if not diagnostico:
+                    audio = resumo.get("audio") or {}
+                    texto_campo = ""
+                    if presenca.fala:
+                        trabalhador = obter_stt()
+                        if trabalhador is not None:
+                            texto = transcrever_pedido_seguro(trabalhador, trecho)
+                            texto_campo = f" texto={texto!r}"
+                    print(
+                        f"candidato detector={score:.4f} verificador={resultado.score:.4f} "
+                        f"{motivo_verificacao} pico={audio.get('pico', 0)} vad={vad_txt}{texto_campo}",
+                        flush=True,
+                    )
                 if diagnostico:
                     print(
                         "diagnostico verificacao "
                         f"score={resultado.score:.4f} limiar={resultado.limiar:.4f} "
-                        f"motivo={resultado.motivo} latenciaMs={resultado.latencia_ms} "
-                        f"modoVerificador={modo_verificador} validado={manifesto.validado if manifesto else False}",
+                        f"motivo={motivo_verificacao} latenciaMs={resultado.latencia_ms} "
+                        f"modoVerificador={modo_verificador} validado={manifesto.validado if manifesto else False} "
+                        f"vad={vad_txt}",
                         flush=True,
                     )
                 if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
@@ -437,7 +465,7 @@ def main() -> None:
                     fim_janela_s=resultado.fim_janela_s,
                 )
                 del trecho
-                confirmado = atender_por_acustico(resultado)
+                confirmado = confirmado_agora
                 if not confirmado:
                     emitir_tempos(tempos)
                     emitir_estado(

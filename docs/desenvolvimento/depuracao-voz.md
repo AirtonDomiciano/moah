@@ -96,6 +96,7 @@ Use as configurações **MOAH voz: reproduzir WAV** no `launch.json` com breakpo
 | `stt_remoto.py` | Worker Whisper |
 | `sintese_pipewire.py` | `espeak` + `pw-play` |
 | `verificador_acustico.py` | 2º estágio ONNX |
+| `presenca_fala.py` | VAD e energia do clipe, antes de confirmar |
 
 ## Breakpoints recomendados
 
@@ -112,7 +113,7 @@ Use as configurações **MOAH voz: reproduzir WAV** no `launch.json` com breakpo
 
 **Depois de `_fechar(captura)`** é seguro pausar: o áudio do turno já está em `amostras` ou `trecho`.
 
-Linhas auxiliares: `scripts/voz/audio_metricas.py` (`resumo_audio`, `pipeline_ponto`); saída `pipeline {...}` só com `--diagnostico`, `--depurar` ou `--salvar-wavs sim`.
+Linhas auxiliares: `scripts/voz/audio_metricas.py` (`resumo_audio`, `pipeline_ponto`); saída `pipeline {...}` só com `--diagnostico` ou `--salvar-wavs sim`. `--depurar` só abre o debugpy.
 
 ## Investigar “Legendas pela comunidade Amara.org”
 
@@ -126,3 +127,5 @@ Sem concluir a causa:
 ## Comportamento padrão preservado
 
 Sem `--depurar`, `--salvar-wavs` e `--gravar-diagnostico`, o laço não grava WAV extra nem abre porta debugpy. Limiares inalterados.
+
+No modo acústico, sem `--diagnostico`, cada candidato imprime uma linha. Sem fala o motivo é `sem_fala` e a transcrição não roda. Com fala, o motivo segue o modo (`modo_manual`, limiar ou `modelo_nao_validado`) e o texto só entra na mesma linha se o worker STT responder.

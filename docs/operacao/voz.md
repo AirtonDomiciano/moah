@@ -32,7 +32,7 @@ O fluxo **“que horas são?”** no **pedido** está comprovado (CLI e, no JBL 
 
 | Camada | O que prova | Comando / artefato |
 | --- | --- | --- |
-| Automatizado | Turno escuta, buffer, cauda do pedido, mocks do verificador | `npm test`, `scripts/voz/test_turno_escuta.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py` |
+| Automatizado | Turno escuta, buffer, cauda do pedido, presença de fala, mocks do verificador | `npm test`, `scripts/voz/test_turno_escuta.py`, `test_presenca_fala.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py` |
 | Offline ONNX | Classificador 2º estágio nos WAV da sessão 03 | `scripts/voz/diagnosticar_verificador_03.py`, `correcao/diagnostico-verificador-sessao03.json` em `$MOAH_VOICE_DIR` |
 | Headset | Detector + verificador + STT do pedido no laço real | `manual` (só scores); `teste` (laço completo sem `validado`); `producao` após manifesto validado |
 
@@ -46,6 +46,10 @@ Em 23/11/2026 o offline ONNX mediu **6/8** tomadas ≥0,95 e **7/8** ≥0,80 na 
 
 As pronúncias válidas são acústicas (“moa”, “moá”); o verificador não usa transcrição nem substring.
 
+Antes de confirmar, o mesmo clipe passa por uma verificação de presença de fala (`scripts/voz/presenca_fala.py`). Sem fala o motivo é `sem_fala` e não há saudação, em qualquer modo. Com fala, `manual` continua em `modo_manual`, `teste` aplica o limiar sem marcar `validado`, e `producao` continua exigindo o manifesto validado. A transcrição não entra nessa decisão: no modo acústico ela só aparece na linha do candidato quando o worker já transcreveu um trecho com fala.
+
+O pico impresso é o máximo do clipe inteiro, depois do deslocamento DC. O score do verificador é o máximo das janelas de 1,28 s desse clipe, com 1 s de silêncio na frente do fluxo. Não são a mesma janela. A presença de fala também olha o clipe inteiro: VAD Silero já instalado no ambiente da escuta (o `silero_vad.onnx` do openWakeWord não está no disco; o detector segue com `vad_threshold` 0) e a duração em que o RMS de 80 ms fica acima de 4× o piso do próprio trecho (percentil 20). Ruído estacionário não se destaca desse piso. Não há redução de ruído nem ganho automático.
+
 | Modo `--confirmar-ativacao` | Comportamento |
 | --- | --- |
 | `nao` | Candidato do estágio 1 ativa direto (comportamento antigo sem confirmação). |
@@ -58,7 +62,7 @@ Estado atual do manifesto (máquina local, fora do Git): `validado: false`, `lim
 | Modo `--modo-verificador` | Comportamento |
 | --- | --- |
 | `producao` (padrão) | Confirma acústico só com `validado: true` e `limiarOperacional` no manifesto; sem validação, rejeita com `modelo_nao_validado` (ainda registra scores no diagnóstico). |
-| `manual` | Registra `diagnostico verificacao` e **nunca** fala “Estou aqui.” — contagem de candidatos do detector + scores do verificador no JBL (`motivoRejeicao=modo_manual`). |
+| `manual` | Registra o candidato e **nunca** fala “Estou aqui.” Sem fala o motivo é `sem_fala`; com fala, `modo_manual`. |
 | `teste` | Com `--confirmar-ativacao acustico` e manifesto **não** validado: aplica o limiar (`--limiar-verificador` ou `limiarCalibrado`) e executa o fluxo completo (saudação → pedido). **Não** altera `validado` no manifesto nem substitui produção. |
 
 Escuta com diagnóstico no headset (manual — sem saudação):
@@ -77,7 +81,8 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao
 
 | Caminho | Função |
 | --- | --- |
-| `scripts/voz/escutar.py` | Laço detector → verificador → pedido |
+| `scripts/voz/escutar.py` | Laço detector → presença de fala → verificador → pedido |
+| `scripts/voz/presenca_fala.py` | VAD e energia do clipe antes da confirmação |
 | `scripts/voz/verificador_acustico.py` | ONNX do 2º estágio + manifesto |
 | `scripts/voz/oww_janela.py` | Embeddings e pontuação por janela |
 | `scripts/voz/buffer_circular.py` | Trecho de confirmação em memória |

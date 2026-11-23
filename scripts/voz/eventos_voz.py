@@ -27,11 +27,21 @@ def ms_desde(inicio: float) -> int:
     return int((time.perf_counter() - inicio) * 1000)
 
 
+_enxuto = False
+
+
+def definir_console(enxuto: bool) -> None:
+    global _enxuto
+    _enxuto = enxuto
+
+
 def diag(mensagem: str) -> None:
     print(f"diagnostico {mensagem}", flush=True)
 
 
 def emitir_tempos(valores: dict[str, int]) -> None:
+    if _enxuto:
+        return
     json.dump({"temposMs": valores}, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     sys.stdout.flush()
@@ -118,6 +128,12 @@ def emitir_configuracao(
             "arranqueS": arranque,
         }
     }
+    if _enxuto:
+        print(
+            f"escuta limiar={limiar} verificador={modo_verificador} limiar_verificador={limiar_verificador}",
+            flush=True,
+        )
+        return
     json.dump(payload, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     sys.stdout.flush()
@@ -178,6 +194,10 @@ def emitir_estado(
         payload["etapaConfirmacao"] = etapa
     if texto is not None:
         payload["texto"] = texto
+    if _enxuto:
+        if fase != "verificando":
+            print(fase, flush=True)
+        return
     json.dump(payload, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     sys.stdout.flush()

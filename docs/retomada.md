@@ -11,7 +11,8 @@ Atualizado em 23/11/2026, horário de São Paulo.
 ## Estado atual (código)
 
 - CLI de memória, checkpoints, `moah voz pedido` (relógio, lembretes, Ledger) testados.
-- **Pipeline acústico em dois estágios** em `scripts/voz/escutar.py`: detector `moah-experimental.onnx` → buffer → verificador MLP 16×96 (`moah-verificador.onnx`, cópia de `moah-candidato-fundo.onnx`) → saudação → pedido.
+- **Pipeline acústico em dois estágios** em `scripts/voz/escutar.py`: detector `moah-experimental.onnx` → buffer → presença de fala no clipe → verificador MLP 16×96 (`moah-verificador.onnx`, cópia de `moah-candidato-fundo.onnx`) → saudação → pedido.
+- Sem fala no clipe de confirmação o motivo é `sem_fala` e não há saudação (`manual`, `teste` e `producao`). Com fala, os três modos seguem como antes. A transcrição não decide o aceite acústico. O verificador continua `validado: false`.
 - **STT legado** só com `--confirmar-ativacao stt` (confirmação por texto no trecho curto). `--confirmar-ativacao sim` usa acústico se `validado: true`, senão STT.
 - **`--arranque 1.7` não resolve falsos do detector** (score ~0,99 no 1º s quieto); a escuta zera o fluxo openWakeWord a cada volta.
 
@@ -41,7 +42,7 @@ Atualizado em 23/11/2026, horário de São Paulo.
 
 ## Próximo capítulo (ordem)
 
-1. **JBL, modo manual:** medir candidatos do detector + scores do verificador sem saudar (`motivoRejeicao=modo_manual`).
+1. **JBL, modo manual:** medir candidatos do detector + scores do verificador sem saudar. Sem fala a linha traz `sem_fala`; com fala, `modo_manual`.
    ```bash
    npm run moah -- voz escutar --habilitar sim --microfone jbl \
      --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
