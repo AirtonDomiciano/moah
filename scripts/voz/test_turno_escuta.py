@@ -14,6 +14,7 @@ from contextlib import redirect_stdout
 import numpy as np
 
 import escutar
+import sintese_pipewire
 from janela_pedido import LimitesPedido
 
 QUADRO = escutar.QUADRO
@@ -63,6 +64,9 @@ class _Stt:
         if self.erro is not None:
             raise RuntimeError(self.erro)
         return self.texto or ""
+
+    def transcrever_pcm(self, audio: np.ndarray) -> str:
+        return self.transcribe(audio)
 
 
 def _fala() -> np.ndarray:
@@ -123,6 +127,7 @@ def _rodar(transcricao: str | None, erro: str | None, com_fala: bool) -> tuple[s
     def gravar(_destino: str, fala: str) -> None:
         falas.append(fala)
 
+    sintese_pipewire.falar = gravar
     escutar._falar = gravar
     score = _ativar()
     buffer = io.StringIO()
