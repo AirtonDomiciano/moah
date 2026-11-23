@@ -40,6 +40,13 @@ def main() -> None:
     parser.add_argument("--limiar-verificador", type=float, default=0.95)
     parser.add_argument("--modo-verificador", default="teste", choices=("producao", "manual", "teste"))
     parser.add_argument("--verificador", default="")
+    parser.add_argument(
+        "--contexto",
+        default="pedido",
+        choices=("pedido", "confirmacao"),
+        help="confirmacao: também testa atender_por_texto no texto transcrito",
+    )
+    parser.add_argument("--confirmacao-flexivel", default="nao", choices=("sim", "nao"))
     args = parser.parse_args()
     caminho = Path(args.wav).expanduser().resolve()
     if not caminho.is_file():
@@ -112,7 +119,15 @@ def main() -> None:
         texto = transcrever_pedido(stt, amostras)
     finally:
         stt.close()
-    print(json.dumps({"texto": texto}, ensure_ascii=False), flush=True)
+    payload: dict[str, object] = {"etapaStt": args.contexto, "texto": texto}
+    if args.contexto == "confirmacao":
+        from decisao_atender import atender_por_texto
+
+        flexivel = args.confirmacao_flexivel == "sim"
+        aceito, normalizado = atender_por_texto(texto, flexivel=flexivel)
+        payload["normalizado"] = normalizado
+        payload["aceitoComoNome"] = aceito
+    print(json.dumps(payload, ensure_ascii=False), flush=True)
 
 
 def _voz_dir(override: str) -> Path:

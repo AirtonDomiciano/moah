@@ -164,6 +164,11 @@ def conduzir_pedido(
         pipeline_ponto("stt_entrada", amostras=amostras, imprimir=imprimir_pipeline)
         texto, erro_stt = ouvir_texto(obter_stt, amostras, tempos)
         pipeline_ponto("stt_saida", imprimir=imprimir_pipeline, texto=texto, erro=erro_stt)
+        print(
+            f"diagnostico stt etapa=pedido texto={texto!r} erro={erro_stt!r} "
+            f"encaminhaConsulta={'sim' if texto.strip() and erro_stt is None else 'nao'}",
+            flush=True,
+        )
         del amostras
         if texto:
             print(texto, flush=True)

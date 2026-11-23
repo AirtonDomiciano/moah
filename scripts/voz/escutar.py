@@ -306,15 +306,31 @@ def main() -> None:
                 if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
                     diagnostico_salvos += 1
                     wav_diag = salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                if salvar_wavs and trecho.size:
+                    caminho_conf, meta_conf = salvar_wav_com_metricas(
+                        pasta_voz,
+                        "confirmacao-stt",
+                        "chamada",
+                        trecho,
+                        extras={"etapaStt": "confirmacao", "quadrosConfirmacao": len(trecho) // QUADRO},
+                    )
+                    print(
+                        f"diagnostico stt etapa=confirmacao wav={caminho_conf} "
+                        f"metricas={meta_conf.get('metricas')}",
+                        flush=True,
+                    )
                 trabalhador = obter_stt()
                 t_confirma = time.perf_counter()
                 reconhecido = "" if trabalhador is None else transcrever_pedido_seguro(trabalhador, trecho)
                 tempos["confirmacaoMs"] = ms_desde(t_confirma)
-                if wav_diag is not None:
-                    print(f"{reconhecido}\n{wav_diag}", flush=True)
-                else:
-                    print(reconhecido, flush=True)
                 aceito_nome, _norm = atender_por_texto(reconhecido, flexivel=flexivel)
+                print(
+                    f"diagnostico stt etapa=confirmacao texto={reconhecido!r} "
+                    f"normalizado={_norm!r} aceito={aceito_nome} flexivel={flexivel}",
+                    flush=True,
+                )
+                if wav_diag is not None:
+                    print(f"diagnostico wav legado={wav_diag}", flush=True)
                 confirmado = trabalhador is not None and aceito_nome
                 motivo_verificacao = "stt_aceito" if confirmado else "stt_rejeitado"
                 if not confirmado:

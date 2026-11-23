@@ -56,7 +56,10 @@ Só com `--salvar-wavs sim`:
 | Pasta | Conteúdo |
 | --- | --- |
 | `~/.local/share/moah/voz/diagnostico/wavs/verificador/` | Trecho candidato enviado ao verificador ONNX (`candidato-*.wav` + `.json`) |
-| `~/.local/share/moah/voz/diagnostico/wavs/pedido-stt/` | PCM exatamente enviado ao Whisper (`pedido-*.wav` + `.json` com `motivoEncerramento`, RMS, `mudo`) |
+| `~/.local/share/moah/voz/diagnostico/wavs/confirmacao-stt/` | STT do nome (`--confirmar-ativacao stt`) |
+| `~/.local/share/moah/voz/diagnostico/wavs/pedido-stt/` | PCM do pedido após saudação (`.json` com métricas) |
+
+[stt-captura-diagnostico.md](stt-captura-diagnostico.md) — confirmação vs pedido, reprocessar WAV.
 
 Ouvir no Debian:
 

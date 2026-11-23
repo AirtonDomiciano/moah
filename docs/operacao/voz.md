@@ -114,7 +114,7 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao
 
 `--gravar-diagnostico sim` grava WAV só do trecho de confirmação (STT ou acústico), no máximo três por execução, fora do Git. Sem essa flag, nada é salvo.
 
-`--salvar-wavs sim` grava, a cada ativação confirmada, o candidato do verificador e o pedido enviado ao STT em `diagnostico/wavs/` (fora do Git). Depuração com breakpoints: [depuracao-voz.md](../desenvolvimento/depuracao-voz.md).
+`--salvar-wavs sim` grava em `diagnostico/wavs/` (fora do Git): `verificador/` (acústico), `confirmacao-stt/` (só modo `stt`), `pedido-stt/` (sempre após saudação). Reprocessar: [stt-captura-diagnostico.md](../desenvolvimento/stt-captura-diagnostico.md).
 
 Divisão de dados: treino **01–02**, calibração **03**, teste fechado **04**, expansão **05**. `coletar.py` **recusa** sobrescrever pasta de sessão cheia; para uma tomada só use `--tomada N`.
 
