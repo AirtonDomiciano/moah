@@ -27,7 +27,10 @@ from pathlib import Path
 
 import numpy as np
 
+from buffer_circular import BufferCircular
 from janela_pedido import JanelaPedido, LimitesPedido, decidir
+from oww_janela import extrair_cauda_pedido, zerar_detector
+from verificador_acustico import resolver_verificador
 
 TAXA = 16_000
 QUADRO = 1280
@@ -40,9 +43,13 @@ PICO_FALA = 200.0
 PICO_MUDO = 50.0
 ARRANQUE_S = 1.7
 DIAGNOSTICO_S = 1.0
-# ~1,6 s imediatamente antes/incluindo o quadro do disparo (janela curta em memória).
+# ~1,6 s imediatamente antes/incluindo o quadro do disparo (confirmação STT legada).
 CONFIRMACAO_QUADROS = 20
 DIAGNOSTICO_MAX = 3
+PRE_CONFIRMACAO_S = 2.0
+POS_CONFIRMACAO_S = 1.2
+PRE_CONFIRMACAO_QUADROS = int(PRE_CONFIRMACAO_S * TAXA / QUADRO) + 1
+POS_CONFIRMACAO_QUADROS = int(POS_CONFIRMACAO_S * TAXA / QUADRO) + 1
 ATIVACOES = frozenset({"MOAH", "MOA"})
 ATIVACOES_FLEXIVEIS = frozenset({"MUA", "MULA", "BOA"})
 FRASES_FLEXIVEIS = frozenset({"HEY MOA", "HEY MOAH"})
@@ -93,14 +100,17 @@ def main() -> None:
     parser.add_argument("--arranque", type=float, default=ARRANQUE_S)
     parser.add_argument("--confirmar-ativacao", default="nao")
     parser.add_argument("--confirmacao-flexivel", default="nao")
+    parser.add_argument("--modo-verificador", default="producao", choices=("producao", "manual"))
+    parser.add_argument("--verificador", default="")
+    parser.add_argument("--limiar-verificador", type=float, default=0)
     parser.add_argument("--diagnostico", default="nao")
     parser.add_argument("--gravar-diagnostico", default="nao")
     parser.add_argument("--provar-eco", action="store_true")
     args = parser.parse_args()
     if args.habilitar != "sim":
         raise SystemExit("A escuta exige --habilitar sim.")
-    if args.confirmar_ativacao not in {"sim", "nao"}:
-        raise SystemExit("Use --confirmar-ativacao sim ou nao.")
+    if args.confirmar_ativacao not in {"sim", "nao", "stt", "acustico"}:
+        raise SystemExit("Use --confirmar-ativacao nao|sim|stt|acustico.")
     if args.confirmacao_flexivel not in {"sim", "nao"}:
         raise SystemExit("Use --confirmacao-flexivel sim ou nao.")
     if args.diagnostico not in {"sim", "nao"}:
@@ -111,12 +121,18 @@ def main() -> None:
         raise SystemExit("O limiar precisa ser maior que 0 e no máximo 1.")
     if min(args.pedido, args.espera, args.silencio, args.pico_fala) <= 0 or args.arranque < 0:
         raise SystemExit("Informe espera, silêncio, pedido e pico de fala maiores que zero.")
-    confirmar = args.confirmar_ativacao == "sim"
     flexivel = args.confirmacao_flexivel == "sim"
     diagnostico = args.diagnostico == "sim"
     gravar = args.gravar_diagnostico == "sim"
+    modo_manual = args.modo_verificador == "manual"
     diagnostico_dir = _voz_dir() / "diagnostico" / "confirmacao"
     diagnostico_salvos = 0
+    voz_dir = _voz_dir()
+    recursos_path = Path(args.recursos)
+    override_verificador = Path(args.verificador).resolve() if args.verificador.strip() else None
+    verificador, manifesto, status_verificador = resolver_verificador(voz_dir, recursos_path, override_verificador)
+    modo_confirmacao = _resolver_modo_confirmacao(args.confirmar_ativacao, manifesto, verificador)
+    limiar_verificador = _resolver_limiar_verificador(args.limiar_verificador, manifesto)
 
     modelo = Path(args.modelo)
     if not modelo.is_file():
@@ -141,12 +157,17 @@ def main() -> None:
         limiar=args.limiar,
         origem=args.origem,
         destino=args.destino,
-        confirmar=confirmar,
+        modo_confirmacao=modo_confirmacao,
         diagnostico=diagnostico,
         gravar=gravar,
         limites=limites,
         pico_fala=args.pico_fala,
         arranque=args.arranque,
+        verificador=verificador,
+        manifesto=manifesto,
+        status_verificador=status_verificador,
+        limiar_verificador=limiar_verificador,
+        modo_manual=modo_manual,
     )
     if diagnostico:
         print(f"diagnostico modelo={modelo} chave={chave} carregado=sim vad=0", flush=True)
@@ -194,40 +215,63 @@ def main() -> None:
             microfone="retido",
             modelo=str(modelo),
             limiar=args.limiar,
-            confirmarAtivacao=confirmar,
+            confirmarAtivacao=modo_confirmacao != "nao",
+            modoConfirmacao=modo_confirmacao,
         )
         while args.duracao <= 0 or time.time() - inicio < args.duracao:
             captura = _abrir(args.origem)
+            zerar_detector(detector)
             t_espera = time.perf_counter()
-            detectou, score, parcial, trecho = _aguardar(
+            usar_buffer = modo_confirmacao == "acustico"
+            buffer = BufferCircular(PRE_CONFIRMACAO_QUADROS) if usar_buffer else None
+            detectou, score, parcial, trecho, _pos = _aguardar(
                 detector,
                 chave,
                 captura,
                 args.limiar,
                 inicio,
                 args.duracao,
-                guardar=confirmar,
+                guardar=modo_confirmacao == "stt",
                 diagnostico=diagnostico,
                 arranque_s=args.arranque,
+                buffer=buffer,
             )
+            cauda_pedido = np.zeros(0, dtype=np.int16)
             espera_ms = _ms(t_espera)
             pico = max(pico, parcial)
+            if not detectou:
+                _fechar(captura)
+                captura = None
+                if buffer is not None:
+                    buffer.descartar()
+                break
+            if usar_buffer and buffer is not None:
+                buffer.iniciar_candidato()
+                for _ in range(POS_CONFIRMACAO_QUADROS):
+                    quadro = _quadro(captura)
+                    if quadro is None:
+                        break
+                    buffer.anexar_pos(quadro)
+                trecho = buffer.concluir()
             _fechar(captura)
             captura = None
-            if not detectou:
-                break
             if diagnostico:
-                print(f"diagnostico ativacao score={score:.4f} limiar={args.limiar:.4f}", flush=True)
+                print(
+                    f"diagnostico ativacao etapa=detector score={score:.4f} limiar={args.limiar:.4f}",
+                    flush=True,
+                )
             tempos = {"esperaAtivacaoMs": espera_ms}
-            if confirmar:
+            score_verificador: float | None = None
+            confirmado = modo_confirmacao == "nao"
+            motivo_verificacao = ""
+            if modo_confirmacao == "stt":
                 _estado(
-                    "transcrevendo",
+                    "verificando",
                     microfone="liberado",
                     pico=pico,
                     score=score,
                     acertos=acertos,
-                    modelo=str(modelo),
-                    limiar=args.limiar,
+                    etapa="stt",
                 )
                 wav_diag: Path | None = None
                 if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not _muda(trecho):
@@ -237,12 +281,13 @@ def main() -> None:
                 t_confirma = time.perf_counter()
                 reconhecido = "" if trabalhador is None else _transcrever_seguro(trabalhador, trecho)
                 tempos["confirmacaoMs"] = _ms(t_confirma)
-                del trecho
                 if wav_diag is not None:
                     print(f"{reconhecido}\n{wav_diag}", flush=True)
                 else:
                     print(reconhecido, flush=True)
-                if trabalhador is None or not _ativacao_confirmada(reconhecido, flexivel=flexivel):
+                confirmado = trabalhador is not None and _ativacao_confirmada(reconhecido, flexivel=flexivel)
+                motivo_verificacao = "stt_aceito" if confirmado else "stt_rejeitado"
+                if not confirmado:
                     _tempos(tempos)
                     _estado(
                         "aguardando",
@@ -251,11 +296,79 @@ def main() -> None:
                         acertos=acertos,
                         texto=reconhecido,
                         confirmarAtivacao=True,
+                        motivoRejeicao=motivo_verificacao,
+                    )
+                    del trecho
+                    continue
+                del trecho
+            elif modo_confirmacao == "acustico":
+                if verificador is None:
+                    print(
+                        "Verificador acústico ausente ou inválido; candidato descartado. "
+                        f"status={status_verificador}",
+                        flush=True,
+                    )
+                    if buffer is not None:
+                        buffer.descartar()
+                    _tempos(tempos)
+                    _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, motivoRejeicao="verificador_ausente")
+                    continue
+                _estado(
+                    "verificando",
+                    microfone="liberado",
+                    pico=pico,
+                    score=score,
+                    acertos=acertos,
+                    etapa="acustico",
+                )
+                permitir = (manifesto.validado if manifesto else False) and not modo_manual
+                if modo_manual:
+                    permitir = False
+                t_confirma = time.perf_counter()
+                resultado = verificador.verificar(trecho, limiar_verificador, permitir=permitir)
+                tempos["confirmacaoMs"] = _ms(t_confirma)
+                score_verificador = resultado.score
+                motivo_verificacao = resultado.motivo
+                if diagnostico:
+                    print(
+                        "diagnostico verificacao "
+                        f"score={resultado.score:.4f} limiar={resultado.limiar:.4f} "
+                        f"motivo={resultado.motivo} latenciaMs={resultado.latencia_ms} "
+                        f"manual={modo_manual} validado={manifesto.validado if manifesto else False}",
+                        flush=True,
+                    )
+                if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not _muda(trecho):
+                    diagnostico_salvos += 1
+                    _salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                cauda_pedido = extrair_cauda_pedido(
+                    trecho,
+                    resultado.indice_janela,
+                    fim_janela_s=resultado.fim_janela_s,
+                )
+                del trecho
+                confirmado = resultado.aceito
+                if not confirmado:
+                    _tempos(tempos)
+                    _estado(
+                        "aguardando",
+                        microfone="liberado",
+                        pico=pico,
+                        acertos=acertos,
+                        score=score,
+                        scoreVerificador=score_verificador,
+                        motivoRejeicao=motivo_verificacao,
                     )
                     continue
-            else:
-                del trecho
             acertos += 1
+            _estado(
+                "confirmada",
+                microfone="liberado",
+                pico=pico,
+                acertos=acertos,
+                score=score,
+                scoreVerificador=score_verificador,
+                detectorConfirmado=True,
+            )
             _conduzir_pedido(
                 destino=args.destino,
                 abrir=lambda: _abrir(args.origem),
@@ -268,6 +381,7 @@ def main() -> None:
                 tempos=tempos,
                 modelo=str(modelo),
                 limiar=args.limiar,
+                pre_cauda=cauda_pedido,
             )
         _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
@@ -323,6 +437,28 @@ class _Stt:
             self._proc.wait(timeout=1)
 
 
+def _resolver_modo_confirmacao(modo: str, manifesto, verificador) -> str:
+    if modo == "nao":
+        return "nao"
+    if modo == "stt":
+        return "stt"
+    if modo == "acustico":
+        return "acustico"
+    if modo == "sim":
+        if verificador is not None and manifesto is not None and manifesto.validado:
+            return "acustico"
+        return "stt"
+    return "nao"
+
+
+def _resolver_limiar_verificador(override: float, manifesto) -> float:
+    if override > 0 and override <= 1:
+        return override
+    if manifesto is not None and manifesto.validado and manifesto.limiar > 0:
+        return manifesto.limiar
+    return 1.0
+
+
 def _aguardar(
     detector,
     chave: str,
@@ -333,7 +469,8 @@ def _aguardar(
     guardar: bool = False,
     diagnostico: bool = False,
     arranque_s: float = 0.0,
-) -> tuple[bool, float, float, np.ndarray]:
+    buffer: BufferCircular | None = None,
+) -> tuple[bool, float, float, np.ndarray, bool]:
     """Retorna (detectou, score do disparo, pico local, trecho PCM curto).
 
     Com guardar=True, só aceita disparo depois que a captura atual preencheu a
@@ -360,7 +497,9 @@ def _aguardar(
                     f"audio=interrompido rms={rms_max:.0f} pico={pico_audio} "
                     f"score={score_max:.4f} limiar={limiar:.4f} quadros={quadros}"
                 )
-            return False, 0.0, pico, vazio
+            return False, 0.0, pico, vazio, False
+        if buffer is not None:
+            buffer.registrar(quadro)
         if guardar:
             recentes.append(quadro.copy())
         nivel = _medir(quadro)
@@ -386,12 +525,14 @@ def _aguardar(
             ultimo_relato = agora
         if score < limiar or agora - aberto < arranque_s:
             continue
+        if buffer is not None:
+            return True, score, pico, vazio, False
         if not guardar:
-            return True, score, pico, vazio
+            return True, score, pico, vazio, False
         if len(recentes) < CONFIRMACAO_QUADROS:
             continue
-        return True, score, pico, np.concatenate(list(recentes))
-    return False, 0.0, pico, vazio
+        return True, score, pico, np.concatenate(list(recentes)), False
+    return False, 0.0, pico, vazio, False
 
 
 def _ler(detector, chave: str, captura: subprocess.Popen[bytes], limiar: float, segundos: float, _parar: bool) -> float:
@@ -409,10 +550,17 @@ def _capturar_pedido(
     captura: subprocess.Popen[bytes],
     limites: LimitesPedido,
     pico_fala: float,
+    *,
+    pre_cauda: np.ndarray | None = None,
 ) -> tuple[np.ndarray, str]:
     inicio = time.monotonic()
     janela = JanelaPedido(inicio=inicio)
     blocos: list[np.ndarray] = []
+    if pre_cauda is not None and pre_cauda.size:
+        blocos.append(pre_cauda.copy())
+        if _tem_fala(pre_cauda, pico_fala):
+            janela.viu_fala = True
+            janela.ultimo_fala = inicio
     motivo = "interrupcao"
     while True:
         quadro = _quadro(captura)
@@ -640,6 +788,7 @@ def _conduzir_pedido(
     tempos: dict[str, int],
     modelo: str | None = None,
     limiar: float | None = None,
+    pre_cauda: np.ndarray | None = None,
 ) -> None:
     """Saudação, captura, transcrição, resposta e volta à espera. Uma captura por vez."""
     captura: subprocess.Popen[bytes] | None = None
@@ -665,7 +814,7 @@ def _conduzir_pedido(
         _estado("ouvindo", microfone="retido", pico=pico, acertos=acertos, score=score)
         captura = abrir()
         t_pedido = time.perf_counter()
-        amostras, motivo = _capturar_pedido(captura, limites, pico_fala)
+        amostras, motivo = _capturar_pedido(captura, limites, pico_fala, pre_cauda=pre_cauda)
         tempos["escutaMs"] = _ms(t_pedido)
         _fechar(captura)
         captura = None
@@ -759,12 +908,17 @@ def _configuracao(
     limiar: float,
     origem: str,
     destino: str,
-    confirmar: bool,
+    modo_confirmacao: str,
     diagnostico: bool,
     gravar: bool,
     limites: LimitesPedido,
     pico_fala: float,
     arranque: float,
+    verificador,
+    manifesto,
+    status_verificador: str,
+    limiar_verificador: float,
+    modo_manual: bool,
 ) -> None:
     digest = hashlib.sha256(modelo.read_bytes()).hexdigest()
     payload = {
@@ -780,9 +934,22 @@ def _configuracao(
             "vad": 0,
             "origem": origem,
             "destino": destino,
-            "confirmarAtivacao": confirmar,
+            "confirmarAtivacao": modo_confirmacao != "nao",
+            "modoConfirmacao": modo_confirmacao,
             "diagnostico": diagnostico,
             "gravarDiagnostico": gravar,
+            "modoVerificador": "manual" if modo_manual else "producao",
+            "verificador": {
+                "status": status_verificador,
+                "caminho": verificador.caminho if verificador else None,
+                "sha256": verificador.sha256 if verificador else None,
+                "limiar": limiar_verificador,
+                "validado": manifesto.validado if manifesto else False,
+            },
+            "janelaConfirmacaoSegundos": {
+                "antes": PRE_CONFIRMACAO_S,
+                "depois": POS_CONFIRMACAO_S,
+            },
             "esperaS": limites.espera_s,
             "silencioS": limites.silencio_s,
             "pedidoMaxS": limites.maximo_s,
@@ -813,9 +980,15 @@ def _estado(
     modelo: str | None = None,
     limiar: float | None = None,
     confirmarAtivacao: bool | None = None,
+    modoConfirmacao: str | None = None,
+    scoreVerificador: float | None = None,
+    motivoRejeicao: str | None = None,
+    etapa: str | None = None,
 ) -> None:
     etapas = {
         "aguardando": "aguardando ativação",
+        "verificando": "verificando candidato",
+        "confirmada": "chamada confirmada",
         "saudacao": "respondendo à ativação",
         "ouvindo": "ouvindo",
         "transcrevendo": "transcrevendo",
@@ -840,6 +1013,14 @@ def _estado(
         payload["limiar"] = limiar
     if confirmarAtivacao is not None:
         payload["confirmarAtivacao"] = confirmarAtivacao
+    if modoConfirmacao is not None:
+        payload["modoConfirmacao"] = modoConfirmacao
+    if scoreVerificador is not None:
+        payload["scoreVerificador"] = round(scoreVerificador, 4)
+    if motivoRejeicao is not None:
+        payload["motivoRejeicao"] = motivoRejeicao
+    if etapa is not None:
+        payload["etapaConfirmacao"] = etapa
     if texto is not None:
         payload["texto"] = texto
     json.dump(payload, sys.stdout, ensure_ascii=False)

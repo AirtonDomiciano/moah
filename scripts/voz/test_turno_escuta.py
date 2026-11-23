@@ -78,7 +78,7 @@ def _mudo() -> np.ndarray:
 
 def _ativar() -> float:
     captura = _Captura([_fala()], pausa_s=0)
-    detectou, score, _pico, _trecho = escutar._aguardar(
+    detectou, score, _pico, _trecho, _pos = escutar._aguardar(
         _Detector(),
         "nome",
         captura,

@@ -9,7 +9,7 @@ Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](..
 ## Estado atual
 
 - CLI de memória, checkpoints e consultas de leitura já existem.
-- Escuta com confirmação STT da ativação: buffer de ~1,6 s obrigatório antes do disparo aceito; aceite `MOA`/`MOAH` (1 ou 2 palavras). ONNX em uso: `moah-experimental.onnx`, limiar 0,5.
+- Escuta com confirmação em dois estágios: detector `moah-experimental.onnx` (limiar 0,5) + verificador acústico ONNX separado (embeddings 16×96). Modo legado STT com `--confirmar-ativacao stt`. Produção acústica exige `correcao/verificador.json` validado; até lá use `--modo-verificador manual`.
 - STT offline (faster-whisper small, CPU int8, pt) transcreve o pedido após “Estou aqui.”; janela do pedido: 5 s.
 - Prova no JBL (09/11/2026) com `--confirmar-ativacao sim --diagnostico sim`: três ciclos completos de ativação + pedido.
 
@@ -35,7 +35,7 @@ Leituras curtas do microfone, sem gravar e sem palavra controlada: em 2 s o pico
 
 ## Próximo capítulo
 
-Medir no JBL, com diagnóstico e sem gravar, vinte chamadas de “MOAH” e o pedido “que horas são?”. O aceite da palavra continua pendente.
+Calibrar o verificador (`treinar_verificador.py` + `calibrar_verificador.py`), marcar `validado: true` só após métricas na sessão 03 e negativos. Medir no JBL vinte chamadas “moa”/“moá” e “que horas são?” com `--confirmar-ativacao acustico --diagnostico sim`. O aceite da palavra continua pendente sem áudio real.
 
 Validar também, se o fluxo de horas estiver estável:
 
@@ -46,7 +46,7 @@ Validar também, se o fluxo de horas estiver estável:
 Comando no headset:
 
 ```bash
-npm run moah -- voz escutar --habilitar sim --microfone jbl --limiar 0.5 --diagnostico sim
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
 ```
 
 Diga “MOAH”, espere “Estou aqui.” e peça “que horas são?”. `Ctrl+C` encerra. O roteiro das vinte chamadas está em [voz](operacao/voz.md). Relatório: [2026-11-22-001-voz-fluxo](../cursror-dev/execucoes/2026-11-22-001-voz-fluxo.md).

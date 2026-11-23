@@ -95,6 +95,9 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "arranque",
       "confirmar-ativacao",
       "confirmacao-flexivel",
+      "modo-verificador",
+      "verificador",
+      "limiar-verificador",
       "diagnostico",
       "gravar-diagnostico",
     ]);
@@ -107,6 +110,9 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const limiar = resolveListenThreshold(one(parsed.options, "limiar"));
     const confirmar = resolveConfirmWake(one(parsed.options, "confirmar-ativacao"));
     const flexivel = resolveConfirmFlexible(one(parsed.options, "confirmacao-flexivel"));
+    const modoVerificador = resolveModoVerificador(one(parsed.options, "modo-verificador"));
+    const verificador = resolveVerificadorPath(one(parsed.options, "verificador"));
+    const limiarVerificador = resolveLimiarVerificador(one(parsed.options, "limiar-verificador"));
     const diagnostico = resolveDiagnostico(one(parsed.options, "diagnostico"));
     const gravar = resolveGravarDiagnostico(one(parsed.options, "gravar-diagnostico"));
     const pedido = resolvePositive(one(parsed.options, "pedido"), "pedido", "8");
@@ -127,6 +133,10 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       confirmar,
       "--confirmacao-flexivel",
       flexivel,
+      "--modo-verificador",
+      modoVerificador,
+      ...(verificador ? ["--verificador", verificador] : []),
+      ...(limiarVerificador ? ["--limiar-verificador", limiarVerificador] : []),
       "--diagnostico",
       diagnostico,
       "--gravar-diagnostico",
@@ -311,14 +321,52 @@ function resolveListenThreshold(value: string | null): string {
   return String(limiar);
 }
 
-function resolveConfirmWake(value: string | null): "sim" | "nao" {
+function resolveConfirmWake(value: string | null): "sim" | "nao" | "stt" | "acustico" {
   if (value === null || value === "nao") {
     return "nao";
   }
-  if (value === "sim") {
-    return "sim";
+  if (value === "sim" || value === "stt" || value === "acustico") {
+    return value;
   }
-  throw new AppError("Use --confirmar-ativacao sim ou nao.", "validation");
+  throw new AppError("Use --confirmar-ativacao nao|sim|stt|acustico.", "validation");
+}
+
+function resolveModoVerificador(value: string | null): "producao" | "manual" {
+  if (value === null || value === "producao") {
+    return "producao";
+  }
+  if (value === "manual") {
+    return "manual";
+  }
+  throw new AppError("Use --modo-verificador producao ou manual.", "validation");
+}
+
+function resolveVerificadorPath(value: string | null): string | null {
+  if (value === null || !value.trim()) {
+    return null;
+  }
+  if (!value.startsWith("/")) {
+    throw new AppError("Informe --verificador com um caminho absoluto para o ONNX.", "validation");
+  }
+  const resolved = path.resolve(value);
+  if (!resolved.endsWith(".onnx")) {
+    throw new AppError("O --verificador precisa ser um arquivo .onnx.", "validation");
+  }
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    throw new AppError(`Verificador ausente: ${resolved}`, "unavailable");
+  }
+  return resolved;
+}
+
+function resolveLimiarVerificador(value: string | null): string | null {
+  if (value === null || !value.trim()) {
+    return null;
+  }
+  const limiar = Number(value);
+  if (!Number.isFinite(limiar) || limiar <= 0 || limiar > 1) {
+    throw new AppError("Informe --limiar-verificador com um número maior que 0 e no máximo 1.", "validation");
+  }
+  return String(limiar);
 }
 
 function resolveConfirmFlexible(value: string | null): "sim" | "nao" {

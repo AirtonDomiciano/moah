@@ -24,7 +24,58 @@ O diagnóstico não grava áudio. Uma linha por segundo, mais o evento de ativa�
 npm run moah -- voz escutar --habilitar sim --microfone jbl --limiar 0.5 --diagnostico sim
 ```
 
-O padrão `--arranque 1.7` mede o começo de cada espera e não deixa esse trecho ativar. Em 22/11/2026, com o microfone quieto, o score chegou a 0,9942 no primeiro segundo e caiu para 0,01 no seguinte. `--arranque 0` volta a aceitar esse começo. `--gravar-diagnostico sim` só grava o trecho curto da confirmação STT, e só junto de `--confirmar-ativacao sim`. Sem esses dois, nada é salvo.
+O padrão `--arranque 1.7` mede o começo de cada espera e não deixa esse trecho ativar. Em 22/11/2026, com o microfone quieto, o score chegou a 0,9942 no primeiro segundo e caiu para 0,01 no seguinte. `--arranque 0` volta a aceitar esse começo. A escuta reinicia o fluxo interno do detector openWakeWord a cada volta para reduzir scores residuais.
+
+## Confirmação em dois estágios — 23/11/2026
+
+1. **Detector** (`moah-experimental.onnx`, openWakeWord): candidato quando o score passa do `--limiar` (padrão 0,5).
+2. **Verificador acústico** (classificador ONNX 16×96 sobre embeddings `AudioFeatures`, **não** é o mesmo ONNX do estágio 1): pontua o trecho montado em memória (~2,0 s antes + ~1,2 s depois do disparo) e confirma ou descarta sem falar.
+3. Só após confirmação: “Estou aqui.”, captura do pedido, STT e `moah voz pedido`.
+
+As pronúncias válidas são acústicas (“moa”, “moá”); o verificador não usa transcrição nem substring.
+
+| Modo `--confirmar-ativacao` | Comportamento |
+| --- | --- |
+| `nao` | Candidato do estágio 1 ativa direto (comportamento antigo sem confirmação). |
+| `stt` | Confirmação legada por faster-whisper no trecho curto. |
+| `acustico` | Segundo estágio acústico; em produção exige `correcao/verificador.json` com `validado: true`. |
+| `sim` | `acustico` se o manifesto estiver validado; senão cai em `stt`. |
+
+`--modo-verificador manual` registra scores e motivos, mas **nunca** confirma chamada — use para medir falsos do detector sem saudar.
+
+Treino e calibração (fora do Git, em `$MOAH_VOICE_DIR`):
+
+```bash
+# Treina classificador (reusa candidato.py) e orienta os próximos passos
+python scripts/voz/treinar_verificador.py treinar --saida ~/.local/share/moah/voz --recursos /home/airtondev/hey_pran_work
+
+cp ~/.local/share/moah/voz/completo/moah-candidato-fundo.onnx ~/.local/share/moah/voz/completo/moah-verificador.onnx
+python scripts/voz/calibrar_verificador.py --saida ~/.local/share/moah/voz --recursos /home/airtondev/hey_pran_work
+# Só depois de medir no headset e revisar métricas:
+python scripts/voz/treinar_verificador.py calibrar --marcar-validado sim --saida ~/.local/share/moah/voz --recursos /home/airtondev/hey_pran_work
+```
+
+Escuta com diagnóstico (manual até existir manifesto validado):
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
+```
+
+Escuta em produção acústica (após `validado: true` no manifesto):
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --diagnostico sim
+```
+
+`--gravar-diagnostico sim` grava WAV só do trecho de confirmação (STT ou acústico), no máximo três por execução, fora do Git. Sem essa flag, nada é salvo.
+
+O manifesto `correcao/verificador.json` usa `limiarOperacional: null` até existir 8/8 na sessão 03 **e** `validado: true` após revisão. O campo `acertosSessao03: 0` antigo significava “nenhum limiar com 8/8”, não score zero. Diagnóstico detalhado: `correcao/diagnostico-verificador-sessao03.json` e `scripts/voz/diagnosticar_verificador_03.py`.
+
+Divisão de dados: treino 01–02, calibração 03, teste fechado 04, expansão opcional 05 (coleta recusa sobrescrever sessão existente). Coleta nova:
+
+```bash
+npm run moah -- voz coletar --iniciar sim --microfone jbl --sessao 05 --vezes 10 --segundos 4 --frase MOAH --ouvir sim
+```
 
 Sem microfone, o relógio e a recusa:
 
