@@ -100,6 +100,10 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       "limiar-verificador",
       "diagnostico",
       "gravar-diagnostico",
+      "salvar-wavs",
+      "depurar",
+      "depurar-porta",
+      "depurar-aguardar",
     ]);
     if (one(parsed.options, "habilitar") !== "sim") {
       throw new AppError("A escuta exige --habilitar sim.", "validation");
@@ -115,6 +119,10 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     const limiarVerificador = resolveLimiarVerificador(one(parsed.options, "limiar-verificador"));
     const diagnostico = resolveDiagnostico(one(parsed.options, "diagnostico"));
     const gravar = resolveGravarDiagnostico(one(parsed.options, "gravar-diagnostico"));
+    const salvarWavs = resolveSimNao(one(parsed.options, "salvar-wavs"), "salvar-wavs");
+    const depurar = resolveSimNao(one(parsed.options, "depurar"), "depurar");
+    const depurarPorta = resolveDepurarPorta(one(parsed.options, "depurar-porta"));
+    const depurarAguardar = resolveSimNao(one(parsed.options, "depurar-aguardar"), "depurar-aguardar", "sim");
     const pedido = resolvePositive(one(parsed.options, "pedido"), "pedido", "8");
     const espera = resolvePositive(one(parsed.options, "espera"), "espera", "4");
     const silencio = resolvePositive(one(parsed.options, "silencio"), "silencio", "0.7");
@@ -141,6 +149,14 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
       diagnostico,
       "--gravar-diagnostico",
       gravar,
+      "--salvar-wavs",
+      salvarWavs,
+      "--depurar",
+      depurar,
+      "--depurar-porta",
+      depurarPorta,
+      "--depurar-aguardar",
+      depurarAguardar,
       "--pedido",
       pedido,
       "--espera",
@@ -331,14 +347,14 @@ function resolveConfirmWake(value: string | null): "sim" | "nao" | "stt" | "acus
   throw new AppError("Use --confirmar-ativacao nao|sim|stt|acustico.", "validation");
 }
 
-function resolveModoVerificador(value: string | null): "producao" | "manual" {
+function resolveModoVerificador(value: string | null): "producao" | "manual" | "teste" {
   if (value === null || value === "producao") {
     return "producao";
   }
-  if (value === "manual") {
-    return "manual";
+  if (value === "manual" || value === "teste") {
+    return value;
   }
-  throw new AppError("Use --modo-verificador producao ou manual.", "validation");
+  throw new AppError("Use --modo-verificador producao|manual|teste.", "validation");
 }
 
 function resolveVerificadorPath(value: string | null): string | null {
@@ -390,13 +406,31 @@ function resolveDiagnostico(value: string | null): "sim" | "nao" {
 }
 
 function resolveGravarDiagnostico(value: string | null): "sim" | "nao" {
-  if (value === null || value === "nao") {
+  return resolveSimNao(value, "gravar-diagnostico");
+}
+
+function resolveSimNao(value: string | null, flag: string, fallback: "sim" | "nao" = "nao"): "sim" | "nao" {
+  if (value === null) {
+    return fallback;
+  }
+  if (value === "nao") {
     return "nao";
   }
   if (value === "sim") {
     return "sim";
   }
-  throw new AppError("Use --gravar-diagnostico sim ou nao.", "validation");
+  throw new AppError(`Use --${flag} sim ou nao.`, "validation");
+}
+
+function resolveDepurarPorta(value: string | null): string {
+  if (value === null) {
+    return "5678";
+  }
+  const porta = Number(value);
+  if (!Number.isInteger(porta) || porta < 1024 || porta > 65535) {
+    throw new AppError("Informe --depurar-porta entre 1024 e 65535.", "validation");
+  }
+  return String(porta);
 }
 
 function resolvePositive(value: string | null, name: string, fallback: string): string {

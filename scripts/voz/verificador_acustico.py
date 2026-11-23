@@ -21,6 +21,7 @@ class ManifestoVerificador:
     modelo: str
     sha256: str
     limiar: float
+    limiar_calibrado: float | None
     validado: bool
     papel: str
     treino: str | None = None
@@ -42,10 +43,15 @@ class ManifestoVerificador:
         limiar = float(limiar_raw) if limiar_raw is not None else 0.0
         if limiar_raw is not None and (limiar <= 0 or limiar > 1):
             return None
+        calibrado_raw = payload.get("limiarCalibrado")
+        limiar_calibrado = float(calibrado_raw) if calibrado_raw is not None else None
+        if limiar_calibrado is not None and (limiar_calibrado <= 0 or limiar_calibrado > 1):
+            limiar_calibrado = None
         return ManifestoVerificador(
             modelo=modelo,
             sha256=str(payload.get("sha256") or ""),
             limiar=limiar,
+            limiar_calibrado=limiar_calibrado,
             validado=bool(payload.get("validado")),
             papel=str(payload.get("papel")),
             treino=payload.get("treino"),
@@ -99,6 +105,7 @@ class VerificadorAcustico:
         limiar: float,
         *,
         permitir: bool,
+        motivo_bloqueio: str = "bloqueado",
     ) -> ResultadoVerificacao:
         import time
 
@@ -108,7 +115,7 @@ class VerificadorAcustico:
         if audio.size < 1280:
             return ResultadoVerificacao(False, score, limiar, "trecho_curto", indice, fim_s, latencia)
         if not permitir:
-            return ResultadoVerificacao(False, score, limiar, "modo_manual", indice, fim_s, latencia)
+            return ResultadoVerificacao(False, score, limiar, motivo_bloqueio, indice, fim_s, latencia)
         if score >= limiar:
             return ResultadoVerificacao(True, score, limiar, "acima_limiar", indice, fim_s, latencia)
         if score >= limiar * 0.85:

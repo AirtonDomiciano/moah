@@ -41,11 +41,12 @@ Atualizado em 23/11/2026, horário de São Paulo.
 
 ## Próximo capítulo (ordem)
 
-1. **JBL, modo manual:** medir candidatos do detector + scores do verificador sem saudar.
+1. **JBL, modo manual:** medir candidatos do detector + scores do verificador sem saudar (`motivoRejeicao=modo_manual`).
    ```bash
    npm run moah -- voz escutar --habilitar sim --microfone jbl \
      --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
    ```
+   **Laço acústico completo** com modelo ainda não validado: `--modo-verificador teste --limiar-verificador 0.95` (não marca `validado`).
 2. Corrigir **tomada-08** (e se necessário **07**) na sessão 03 ou expandir **sessão 05**; retreinar e recalibrar.
 3. Só após **8/8 na 03**, falsos negativos aceitáveis e prova no headset: considerar `validado: true` e `limiarOperacional` no manifesto (não promover só editando JSON).
 4. Repetir roteiro “que horas são?” com confirmação acústica quando o manifesto estiver apto.

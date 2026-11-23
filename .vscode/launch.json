@@ -1,0 +1,59 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MOAH voz: anexar debugpy (escutar.py)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "127.0.0.1",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "${workspaceFolder}"
+        }
+      ],
+      "justMyCode": false
+    },
+    {
+      "name": "MOAH voz: reproduzir WAV (verificador)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/voz/reproduzir_wav.py",
+      "python": "/home/airtondev/hey_pran_work/hey_pran_env/bin/python",
+      "cwd": "${workspaceFolder}/scripts/voz",
+      "args": [
+        "--etapa",
+        "verificador",
+        "--wav",
+        "${input:moahWavPath}",
+        "--limiar-verificador",
+        "0.95",
+        "--modo-verificador",
+        "teste"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "MOAH voz: reproduzir WAV (STT)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/voz/reproduzir_wav.py",
+      "python": "/home/airtondev/hey_pran_work/hey_pran_env/bin/python",
+      "cwd": "${workspaceFolder}/scripts/voz",
+      "args": ["--etapa", "stt", "--wav", "${input:moahWavPath}"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ],
+  "inputs": [
+    {
+      "id": "moahWavPath",
+      "type": "promptString",
+      "description": "Caminho absoluto do WAV em ~/.local/share/moah/voz/diagnostico/wavs/"
+    }
+  ]
+}

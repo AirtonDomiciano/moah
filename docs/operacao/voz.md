@@ -34,7 +34,7 @@ O fluxo **“que horas são?”** no **pedido** está comprovado (CLI e, no JBL 
 | --- | --- | --- |
 | Automatizado | Turno escuta, buffer, cauda do pedido, mocks do verificador | `npm test`, `scripts/voz/test_turno_escuta.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py` |
 | Offline ONNX | Classificador 2º estágio nos WAV da sessão 03 | `scripts/voz/diagnosticar_verificador_03.py`, `correcao/diagnostico-verificador-sessao03.json` em `$MOAH_VOICE_DIR` |
-| Headset | Detector + verificador + STT do pedido no laço real | `moah voz escutar` no JBL; modo `manual` antes de `validado: true` |
+| Headset | Detector + verificador + STT do pedido no laço real | `manual` (só scores); `teste` (laço completo sem `validado`); `producao` após manifesto validado |
 
 Em 23/11/2026 o offline ONNX mediu **6/8** tomadas ≥0,95 e **7/8** ≥0,80 na sessão 03 (não 8/8). O manifesto inicial `acertosSessao03: 0` significava **nenhum limiar com 8/8**, não pontuação zero. Detalhes: [2026-11-23-002](../../cursror-dev/execucoes/2026-11-23-002-verificador-diagnostico.md).
 
@@ -55,7 +55,23 @@ As pronúncias válidas são acústicas (“moa”, “moá”); o verificador n
 
 Estado atual do manifesto (máquina local, fora do Git): `validado: false`, `limiarOperacional: null`, `limiarCalibrado: 0,8` (melhor **parcial** 7/8). **Não** usar 0,95 como limiar operacional até revisão humana e 8/8.
 
-`--modo-verificador manual` registra `diagnostico verificacao` (scores dos dois estágios) e **nunca** fala “Estou aqui.” — use para contar candidatos do detector no JBL.
+| Modo `--modo-verificador` | Comportamento |
+| --- | --- |
+| `producao` (padrão) | Confirma acústico só com `validado: true` e `limiarOperacional` no manifesto; sem validação, rejeita com `modelo_nao_validado` (ainda registra scores no diagnóstico). |
+| `manual` | Registra `diagnostico verificacao` e **nunca** fala “Estou aqui.” — contagem de candidatos do detector + scores do verificador no JBL (`motivoRejeicao=modo_manual`). |
+| `teste` | Com `--confirmar-ativacao acustico` e manifesto **não** validado: aplica o limiar (`--limiar-verificador` ou `limiarCalibrado`) e executa o fluxo completo (saudação → pedido). **Não** altera `validado` no manifesto nem substitui produção. |
+
+Escuta com diagnóstico no headset (manual — sem saudação):
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
+```
+
+Prova do laço acústico no headset com modelo ainda não validado (ex.: “moá, que horas são?”):
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador teste --limiar-verificador 0.95 --diagnostico sim
+```
 
 ### Arquivos relevantes (repositório)
 
@@ -90,12 +106,6 @@ python scripts/voz/calibrar_verificador.py --saida ~/.local/share/moah/voz --rec
 python scripts/voz/treinar_verificador.py calibrar --marcar-validado sim --saida ~/.local/share/moah/voz --recursos /home/airtondev/hey_pran_work
 ```
 
-Escuta com diagnóstico (manual até existir manifesto validado):
-
-```bash
-npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
-```
-
 Escuta em produção acústica (após `validado: true` no manifesto):
 
 ```bash
@@ -103,6 +113,8 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao
 ```
 
 `--gravar-diagnostico sim` grava WAV só do trecho de confirmação (STT ou acústico), no máximo três por execução, fora do Git. Sem essa flag, nada é salvo.
+
+`--salvar-wavs sim` grava, a cada ativação confirmada, o candidato do verificador e o pedido enviado ao STT em `diagnostico/wavs/` (fora do Git). Depuração com breakpoints: [depuracao-voz.md](../desenvolvimento/depuracao-voz.md).
 
 Divisão de dados: treino **01–02**, calibração **03**, teste fechado **04**, expansão **05**. `coletar.py` **recusa** sobrescrever pasta de sessão cheia; para uma tomada só use `--tomada N`.
 
