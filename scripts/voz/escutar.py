@@ -18,7 +18,7 @@ import numpy as np
 from ativacao_detector import aguardar_ativacao, medir_pico_detector
 from audio_metricas import pipeline_ponto, salvar_wav_com_metricas
 from buffer_circular import BufferCircular
-from confirmacao_texto import ativacao_confirmada
+from decisao_atender import atender_por_acustico, atender_por_texto
 from debug_servidor import iniciar_debug
 from escutar_politica import resolver_limiar_verificador, resolver_modo_confirmacao
 from eventos_voz import (
@@ -63,7 +63,7 @@ _aguardar = aguardar_ativacao
 _ler = medir_pico_detector
 _Stt = SttRemoto
 _transcrever_seguro = transcrever_pedido_seguro
-_ativacao_confirmada = ativacao_confirmada
+_ativacao_confirmada = lambda t, flexivel=False: atender_por_texto(t, flexivel=flexivel)[0]
 _resolver_modo_confirmacao = resolver_modo_confirmacao
 _resolver_limiar_verificador = resolver_limiar_verificador
 _voz_dir = voz_dir
@@ -314,7 +314,8 @@ def main() -> None:
                     print(f"{reconhecido}\n{wav_diag}", flush=True)
                 else:
                     print(reconhecido, flush=True)
-                confirmado = trabalhador is not None and ativacao_confirmada(reconhecido, flexivel=flexivel)
+                aceito_nome, _norm = atender_por_texto(reconhecido, flexivel=flexivel)
+                confirmado = trabalhador is not None and aceito_nome
                 motivo_verificacao = "stt_aceito" if confirmado else "stt_rejeitado"
                 if not confirmado:
                     emitir_tempos(tempos)
@@ -420,7 +421,7 @@ def main() -> None:
                     fim_janela_s=resultado.fim_janela_s,
                 )
                 del trecho
-                confirmado = resultado.aceito
+                confirmado = atender_por_acustico(resultado)
                 if not confirmado:
                     emitir_tempos(tempos)
                     emitir_estado(

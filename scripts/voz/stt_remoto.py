@@ -91,7 +91,9 @@ def transcrever_pedido(stt: SttRemoto, amostras: np.ndarray) -> str:
         return ""
     audio = amostras.astype(np.float32) / 32768.0
     try:
-        return stt.transcrever_pcm(audio)
+        conteudo = stt.transcrever_pcm(audio)
+        print(f"Transcricao: {conteudo}")
+        return conteudo
     finally:
         del audio
 
