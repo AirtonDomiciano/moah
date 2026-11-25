@@ -23,6 +23,7 @@ SESSOES = {
     "02": ("treino", "Afaste cerca de um braço. Alterne voz mais forte e mais baixa."),
     "03": ("validacao", "Fique mais longe. Use a entonação do dia a dia. Esta sessão não treina."),
     "04": ("teste", "Misture distância e entonação. Esta sessão fica fechada para treino e ajuste."),
+    "05": ("treino", "Novas tomadas moa/moá. Não reutiliza 01–04. Entra só após revisão dos rótulos."),
 }
 
 
@@ -50,7 +51,7 @@ def main() -> None:
         raise SystemExit("A reprodução precisa do destino de áudio.")
     if args.sessao:
         if args.sessao not in SESSOES:
-            raise SystemExit("A sessão precisa ser 01, 02, 03 ou 04.")
+            raise SystemExit("A sessão precisa ser 01, 02, 03, 04 ou 05.")
         if args.segundos < 4:
             raise SystemExit("A sessão pede pelo menos 4 segundos, com silêncio antes e depois.")
         papel, instrucao = SESSOES[args.sessao]

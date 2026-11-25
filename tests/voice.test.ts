@@ -164,6 +164,66 @@ test("a pergunta fala com a memória de leitura e não cria tarefa", async () =>
   }
 });
 
+test("silêncio, falha de transcrição e falha de execução voltam a aguardar", async () => {
+  const vazio = new VoiceSession(
+    {
+      detector: fixtureWakeDetector(),
+      transcribe: () => "   ",
+      ask: async () => {
+        throw new Error("não deveria consultar");
+      },
+    },
+    { now: () => 0 },
+  );
+  vazio.enable("disponivel");
+  vazio.push(mic("nome"));
+  vazio.playbackEnded();
+  vazio.push(mic("fala"));
+  vazio.push(mic("fim"));
+  await vazio.settled;
+  assert.equal(vazio.snapshot().phase, "aguardando");
+  assert.equal(vazio.snapshot().llmCalls, 0);
+
+  const falhaTexto = new VoiceSession(
+    {
+      detector: fixtureWakeDetector(),
+      transcribe: () => {
+        throw new Error("stt");
+      },
+      ask: async () => "não",
+    },
+    { now: () => 0 },
+  );
+  falhaTexto.enable("disponivel");
+  falhaTexto.push(mic("nome"));
+  falhaTexto.playbackEnded();
+  falhaTexto.push(mic("fala"));
+  falhaTexto.push(mic("fim"));
+  await falhaTexto.settled;
+  assert.equal(falhaTexto.snapshot().phase, "aguardando");
+  assert.equal(falhaTexto.snapshot().llmCalls, 0);
+
+  const falhaExecucao = new VoiceSession(
+    {
+      detector: fixtureWakeDetector(),
+      transcribe: () => "que horas são",
+      ask: async () => {
+        throw new Error("consulta");
+      },
+    },
+    { now: () => 0 },
+  );
+  falhaExecucao.enable("disponivel");
+  falhaExecucao.push(mic("nome"));
+  falhaExecucao.playbackEnded();
+  falhaExecucao.push(mic("fala"));
+  falhaExecucao.push(mic("fim"));
+  await falhaExecucao.settled;
+  assert.equal(falhaExecucao.snapshot().phase, "aguardando");
+  assert.equal(falhaExecucao.snapshot().llmCalls, 1);
+  assert.equal(falhaExecucao.snapshot().lastAnswer, null);
+});
+
 test("roteiro simulado não abre o microfone", async () => {
   const workspace = cliWorkspace();
   const files = tempDir("moah-voz-");

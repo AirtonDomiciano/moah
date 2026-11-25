@@ -123,6 +123,13 @@ async function handleService(
     }
     const job = await processOnce(jobContext, {
       eco: async () => ({ done: true, checkpoint: { passo: 1 } }),
+      lembrete_local: async (current) => {
+        const fireAt = Date.parse(String(current.payload.fireAt ?? ""));
+        if (Number.isFinite(fireAt) && context.now().getTime() < fireAt) {
+          return { done: false };
+        }
+        return { done: true, checkpoint: { entregue: true, fireAt: current.payload.fireAt ?? null } };
+      },
     });
     printJson(job ?? { processada: false });
     return;

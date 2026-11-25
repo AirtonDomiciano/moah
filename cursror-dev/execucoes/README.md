@@ -22,6 +22,10 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-11-08-001-voz-candidato](2026-11-08-001-voz-candidato.md) | continuação de 16 / MOAH-037 | Candidato ONNX nas sessões 01–03; experimental mantido; 04 fechada |
 | [2026-11-08-002-voz-diagnostico-candidato](2026-11-08-002-voz-diagnostico-candidato.md) | continuação de 16 / MOAH-037 | Falsos do candidato: janela intermediária; Torch≈ONNX; sem promoção |
 | [2026-11-08-003-voz-candidato-janelas](2026-11-08-003-voz-candidato-janelas.md) | continuação de 16 / MOAH-037 | Janelas da escuta; falsos de fala 48→7 @0,95; experimental mantido |
+| [2026-11-22-001-voz-fluxo](2026-11-22-001-voz-fluxo.md) | continuação de 16 | Diagnóstico da ativação e pedido “que horas são?”; palavra falada pendente |
+| [2026-11-23-003-presenca-fala](2026-11-23-003-presenca-fala.md) | continuação de 16 | Presença de fala antes da confirmação; verificador segue não validado |
+| [2026-11-23-004-turno-pedido](2026-11-23-004-turno-pedido.md) | continuação de 16 | Cauda não arma silêncio por pico; sem fala não há STT |
+| [2026-11-23-005-fechamento-jbl](2026-11-23-005-fechamento-jbl.md) | continuação de 16 | Relato JBL em modo teste; MOAH-040 em aberto; sem promover o verificador |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

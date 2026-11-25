@@ -1,0 +1,2 @@
+# Instalar no interpretador de runtime.json (hey_pran_env), não no venv do STT.
+debugpy>=1.8.0,<2

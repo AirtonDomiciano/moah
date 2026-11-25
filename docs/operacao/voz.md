@@ -12,6 +12,181 @@ moah voz escutar --habilitar sim --microfone jbl
 moah voz validar
 ```
 
+## Primeiro fluxo falado — 22/11/2026
+
+A escuta continua no `moah-experimental.onnx`, 16 kHz, mono, PCM 16 bits (`s16`), quadros de 1280 amostras. O limiar padrão é 0,5 e o VAD permanece desligado. Cada execução imprime uma linha `configuracao` com modelo, SHA-256, limiar, dispositivo, taxa, canais, formato e limites do pedido. Não há treino automático.
+
+O microfone fecha antes de “Estou aqui.” e antes da resposta. O pedido só começa depois que a saudação termina. A captura encerra por silêncio de 0,7 s depois da fala, por 4 s sem fala, ou aos 8 s. A cauda anterior à saudação entra nesse áudio, mas pico alto sozinho não inicia o pedido: a contagem do silêncio só começa quando há presença de fala, o mesmo critério do clipe de confirmação. Sem fala até a espera, a escuta volta a aguardar e não transcreve nem consulta. O texto vai para `moah voz pedido`. “Que horas são?”, “que hora é” e “me diz as horas” respondem o relógio local, sem LLM. Pedido não reconhecido fala que o comando ainda não está disponível. “Me lembro de …” sem prazo continua sem agendar e sem essa frase. Silêncio fala “Não ouvi o pedido.” Falha de transcrição fala “Não consegui transcrever.” `Ctrl+C` fecha captura, síntese e STT.
+
+O diagnóstico não grava áudio. Uma linha por segundo, mais o evento de ativação:
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --limiar 0.5 --diagnostico sim
+```
+
+O padrão `--arranque 1.7` só atrasa candidatos no **primeiro** segundo de cada espera; com microfone quieto o detector ainda chegou a ~**0,994** nesse trecho (22/11). Isso **não** elimina falsos após saudação ou em outras janelas. `--arranque 0` volta a medir desde o início. A escuta reinicia o fluxo interno do openWakeWord a cada volta (mitigação parcial, não aceite).
+
+O fluxo **“que horas são?”** no **pedido** está comprovado na CLI e, no JBL de 09/11, com confirmação **STT**. Em 23/11 Airton rodou o laço **acústico em modo teste** no JBL e relatou que funcionou, depois dos ajustes de presença de fala e de captura do pedido. Isso não valida o verificador, não fecha a tabela de chamadas e não é o modo produção.
+
+## Camadas de validação (não confundir)
+
+| Camada | O que prova | Comando / artefato |
+| --- | --- | --- |
+| Automatizado | Turno escuta, buffer, cauda do pedido, presença de fala, mocks do verificador | `npm test`, `scripts/voz/test_turno_escuta.py`, `test_presenca_fala.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py` |
+| Offline ONNX | Classificador 2º estágio nos WAV da sessão 03 | `scripts/voz/diagnosticar_verificador_03.py`, `correcao/diagnostico-verificador-sessao03.json` em `$MOAH_VOICE_DIR` |
+| Headset | Detector + verificador + STT do pedido no laço real | 23/11: modo `teste` relatado como funcional por Airton; uma fala duplicada em aberto (MOAH-040). `producao` continua bloqueada com `validado: false` |
+
+Em 23/11/2026 o offline ONNX mediu **6/8** tomadas ≥0,95 e **7/8** ≥0,80 na sessão 03 (não 8/8). O manifesto inicial `acertosSessao03: 0` significava **nenhum limiar com 8/8**, não pontuação zero. Detalhes: [2026-11-23-002](../../cursror-dev/execucoes/2026-11-23-002-verificador-diagnostico.md).
+
+## Confirmação em dois estágios — 23/11/2026
+
+1. **Detector** (`moah-experimental.onnx`, openWakeWord): candidato quando o score passa do `--limiar` (padrão 0,5).
+2. **Verificador acústico** (classificador ONNX 16×96 sobre embeddings `AudioFeatures`, **não** é o mesmo ONNX do estágio 1): pontua o trecho montado em memória (~2,0 s antes + ~1,2 s depois do disparo) e confirma ou descarta sem falar.
+3. Só após confirmação: “Estou aqui.”, captura do pedido, STT e `moah voz pedido`.
+
+As pronúncias válidas são acústicas (“moa”, “moá”); o verificador não usa transcrição nem substring.
+
+Antes de confirmar, o mesmo clipe passa por uma verificação de presença de fala (`scripts/voz/presenca_fala.py`). Sem fala o motivo é `sem_fala` e não há saudação, em qualquer modo. Com fala, `manual` continua em `modo_manual`, `teste` aplica o limiar sem marcar `validado`, e `producao` continua exigindo o manifesto validado. A transcrição não entra nessa decisão: no modo acústico ela só aparece na linha do candidato quando o worker já transcreveu um trecho com fala.
+
+O pico impresso é o máximo do clipe inteiro, depois do deslocamento DC. O score do verificador é o máximo das janelas de 1,28 s desse clipe, com 1 s de silêncio na frente do fluxo. Não são a mesma janela. A presença de fala também olha o clipe inteiro: VAD Silero já instalado no ambiente da escuta (o `silero_vad.onnx` do openWakeWord não está no disco; o detector segue com `vad_threshold` 0) e a duração em que o RMS de 80 ms fica acima de 4× o piso do próprio trecho (percentil 20). Ruído estacionário não se destaca desse piso. Não há redução de ruído nem ganho automático.
+
+| Modo `--confirmar-ativacao` | Comportamento |
+| --- | --- |
+| `nao` | Candidato do estágio 1 ativa direto (comportamento antigo sem confirmação). |
+| `stt` | **Modo legado:** faster-whisper no trecho curto; aceite de grafia `Moa`/`MOAH` (comportamento da prova JBL de 09/11). |
+| `acustico` | Segundo estágio acústico; confirma só se `correcao/verificador.json` tiver `validado: true` e `limiarOperacional` definido. |
+| `sim` | `acustico` se o manifesto estiver validado; senão **reverte para STT** (compatibilidade). |
+
+Estado atual do manifesto (máquina local, fora do Git): `validado: false`, `limiarOperacional: null`, `limiarCalibrado: 0,8` (melhor **parcial** 7/8). **Não** usar 0,95 como limiar operacional até revisão humana e 8/8.
+
+| Modo `--modo-verificador` | Comportamento |
+| --- | --- |
+| `producao` (padrão) | Confirma acústico só com `validado: true` e `limiarOperacional` no manifesto; sem validação, rejeita com `modelo_nao_validado` (ainda registra scores no diagnóstico). |
+| `manual` | Registra o candidato e **nunca** fala “Estou aqui.” Sem fala o motivo é `sem_fala`; com fala, `modo_manual`. |
+| `teste` | Com `--confirmar-ativacao acustico` e manifesto **não** validado: aplica o limiar (`--limiar-verificador` ou `limiarCalibrado`) e executa o fluxo completo (saudação → pedido). **Não** altera `validado` no manifesto nem substitui produção. |
+
+Escuta com diagnóstico no headset (manual — sem saudação):
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
+```
+
+Laço acústico no headset com modelo ainda não validado. Foi o comando do relato de 23/11:
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --modo-verificador teste --limiar-verificador 0.95 --diagnostico sim
+```
+
+Airton informou que esse teste funcionou após a presença de fala e a captura do pedido. Houve uma fala duplicada, registrada como MOAH-040 para ver se volta a ocorrer. O capítulo não investiga nem corrige essa duplicação. O manifesto não foi editado: `validado` continua `false`. O limiar 0,95 desse comando é só do modo teste.
+
+Pedido falado junto (“moá, que horas são?”): a cauda começa no fim da janela vencedora do verificador. O laço que a utiliza foi o do relato acima; as variantes (cauda sem pedido, chamada e pedido no mesmo fôlego) não foram tabuladas uma a uma no headset.
+
+### Arquivos relevantes (repositório)
+
+| Caminho | Função |
+| --- | --- |
+| `scripts/voz/escutar.py` | Laço detector → presença de fala → verificador → pedido |
+| `scripts/voz/presenca_fala.py` | VAD e energia do clipe antes da confirmação |
+| `scripts/voz/verificador_acustico.py` | ONNX do 2º estágio + manifesto |
+| `scripts/voz/oww_janela.py` | Embeddings e pontuação por janela |
+| `scripts/voz/buffer_circular.py` | Trecho de confirmação em memória |
+| `scripts/voz/calibrar_verificador.py` | Varredura de limiar na sessão 03 |
+| `scripts/voz/diagnosticar_verificador_03.py` | Relatório por tomada |
+| `scripts/voz/treinar_verificador.py` | Encadeia `candidato.py treinar` + calibrar |
+| `src/cli/voz.ts` | Flags `--confirmar-ativacao`, `--modo-verificador`, etc. |
+
+### Identidade do verificador (offline conferido)
+
+- `moah-verificador.onnx` = cópia de `moah-candidato-fundo.onnx` (SHA `749fb6fa…`), treinado por `scripts/voz/candidato.py` (sessões **01–02**).
+- Estágio 1 continua `moah-experimental.onnx` (SHA `04fcd7bb…`), outro arquivo e outro papel.
+- Equivalência treino/inferência: int16 16 kHz, pad 1 s, fluxo quadro 1280, janela 16×96, saída **sigmoid** (probabilidade). Inferência usa **máximo** no fluxo; alinhamento fixo [1 s, 3 s] diverge em algumas tomadas (não usar só esse alinhamento para calibrar).
+
+Treino e calibração (fora do Git, em `$MOAH_VOICE_DIR`). O Python é o do `runtime.json`. Nenhum destes comandos lê a sessão 04. `--marcar-validado sim` só grava `validado: true` se a varredura achar um limiar com 8/8 na sessão 03; sem isso o manifesto permanece não validado. Não editar `verificador.json` à mão.
+
+```bash
+PY=$(jq -r .python ~/.local/share/moah/voz/runtime.json)
+
+# Calibração atual. Lê só a sessão 03 aprovada e os negativos já usados no ajuste.
+# Não promove. Hoje não há 8/8, então limiarOperacional continua null.
+$PY scripts/voz/calibrar_verificador.py --saida ~/.local/share/moah/voz --recursos /home/airtondev/hey_pran_work
+
+# Só depois de 8/8 na 03 e da revisão dos falsos desse mesmo conjunto:
+$PY scripts/voz/treinar_verificador.py calibrar --marcar-validado sim --saida ~/.local/share/moah/voz --recursos /home/airtondev/hey_pran_work
+```
+
+O que a calibração lê, e só isso, para escolher o limiar:
+
+| Papel | Onde | Uso |
+| --- | --- | --- |
+| Positivos do limiar | `coleta/sessoes/sessao-03/`, tomadas com `aprovadaAcusticamente` | Ajuste. Já tem 8 WAV. Não regravar e não tratar como prova final |
+| Negativos do limiar | `avaliacao/gerado/{saudacao,parecidas,conversa}` e `avaliacao/reservados.txt` | Ajuste. Já pontuados. Não acrescentar aqui os clipes da prova final |
+| Treino dos pesos | Sessões 01 e 02. A 05, se for gravada, só entra depois da revisão dos rótulos | Não escolhe limiar e não é a prova final |
+| Prova final | Sessão 04 e os prefixos `prova-*` abaixo | O calibrador, o `validar` e o treino do candidato não leem esses arquivos |
+
+`candidato.py` recusa treinar se a sessão 04 já tiver WAV. Por isso a 04 só é gravada depois que o limiar estiver congelado e não houver outro treino planejado. Um erro na 04 não autoriza baixar o limiar nem retreinar com esses mesmos arquivos.
+
+Aceite para sair do modo teste: algum limiar da varredura (0,35 a 0,95, passo 0,05) acerta todas as tomadas aprovadas da sessão 03; entre esses, vale o de menos falsos nos negativos de ajuste; Airton revisa esses falsos; só então o comando com `--marcar-validado sim`. Sem 8/8, esse comando não liga `validado`.
+
+Aceite da prova final, com o limiar já congelado e sem novo treino: na sessão 04, anotar quantas chamadas passam; nos `prova-*`, nenhuma chamada confirmada. O resultado não volta para `calibrar_verificador.py`.
+
+Coleta da prova final, quando o limiar estiver congelado:
+
+```bash
+npm run moah -- voz coletar --iniciar sim --microfone jbl --sessao 04 --vezes 8 --segundos 4 --frase "moá" --ouvir sim
+npm run moah -- voz coletar --iniciar sim --microfone jbl --prefixo prova-silencio --vezes 4 --segundos 4 --frase "silêncio, sem falar"
+npm run moah -- voz coletar --iniciar sim --microfone jbl --prefixo prova-ruido --vezes 4 --segundos 4 --frase "ruído da sala, sem dizer o nome"
+npm run moah -- voz coletar --iniciar sim --microfone jbl --prefixo prova-frase --vezes 4 --segundos 4 --frase "frase comum, sem o nome"
+npm run moah -- voz coletar --iniciar sim --microfone jbl --prefixo prova-boa --vezes 4 --segundos 4 --frase "dizer boa em conversa, sem chamar o MOAH"
+npm run moah -- voz coletar --iniciar sim --microfone jbl --prefixo prova-voz-moah --vezes 4 --segundos 4 --frase "tocar a voz do MOAH no alto-falante"
+```
+
+Na última, durante os 4 s, tocar no alto-falante do JBL uma fala que o MOAH já tenha produzido. Os WAV de `avaliacao/gerado/saudacao` não servem como essa prova: eles já entram no ajuste do limiar. Os `prova-*` ficam em `coleta/` e não são copiados para `avaliacao/gerado`, `reservados.txt` nem para a sessão 03.
+
+Medir esses mesmos casos antes de gravar a 04, sem criar arquivo de ajuste, no modo manual:
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl \
+  --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
+```
+
+Condições, uma de cada vez: chamada real; silêncio; ruído; frase comum; “boa” no meio da conversa; saída de voz do MOAH. Sem fala a linha traz `sem_fala`. Com fala, `modo_manual` e o score. Não há saudação. Isso não escolhe limiar e não marca `validado`.
+
+Escuta em produção acústica (após `validado: true` no manifesto):
+
+```bash
+npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao acustico --diagnostico sim
+```
+
+`--gravar-diagnostico sim` grava WAV só do trecho de confirmação (STT ou acústico), no máximo três por execução, fora do Git. Sem essa flag, nada é salvo.
+
+`--salvar-wavs sim` grava em `diagnostico/wavs/` (fora do Git): `verificador/` (acústico), `confirmacao-stt/` (só modo `stt`), `pedido-stt/` (sempre após saudação). Reprocessar: [stt-captura-diagnostico.md](../desenvolvimento/stt-captura-diagnostico.md).
+
+Divisão de dados: treino **01–02**, calibração **03**, teste fechado **04**, expansão **05**. `coletar.py` **recusa** sobrescrever pasta de sessão cheia; para uma tomada só use `--tomada N`.
+
+Coleta nova (não mexe na sessão 01):
+
+```bash
+npm run moah -- voz coletar --iniciar sim --microfone jbl --sessao 05 --vezes 10 --segundos 4 --frase MOAH --ouvir sim
+```
+
+Sem microfone, o relógio e a recusa:
+
+```bash
+npm run moah -- voz pedido --dominio pessoal --texto "Que horas são?"
+npm run moah -- voz pedido --dominio pessoal --texto "liga a luz"
+```
+
+### Roteiro para medir a ativação (headset)
+
+Vinte chamadas, sem gravar. Anote por chamada: `diagnostico ativacao etapa=detector`, `diagnostico verificacao`, motivo de rejeição, se houve “Estou aqui.”.
+
+1. **Reconhecida (acústica):** fase `confirmada` e saudação após verificador aceitar.
+2. **Candidato rejeitado:** fase `verificando` e volta a `aguardando` com `motivoRejeicao`.
+3. **Perdida:** maior score do detector abaixo do `limiar` com a palavra dita.
+4. **Indevida:** candidato do detector sem chamada real (frequente hoje no estágio 1).
+
+O laço em modo teste foi relatado como funcional no JBL em 23/11, com a ressalva MOAH-040. A tabela de vinte chamadas, o 8/8 da sessão 03 e a prova final da sessão 04 continuam abertos. O manifesto segue não validado.
+
 ```json
 {
   "simulacao": true,
@@ -33,9 +208,9 @@ moah voz validar
 | --- | --- | --- |
 | Detector do nome | ONNX local, contrato `WakeDetector` | Modelo fora do Git. A voz de Airton não foi confirmada |
 | Fim de fala | limite de silêncio e duração máxima no laço | Testado com relógio injetado |
-| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. `escutar` captura o pedido após a saudação, passa PCM ao worker STT, imprime o texto e volta a aguardar |
-| Conversa | `moah voz pedido` → catálogo + política | Pedido transcrito resolve intenção e só executa `READ_TOOLS` via `governQuery`. Ferramenta ausente (lembrete/agenda/escrita) não executa. O roteiro `simular` ainda usa resposta sintética |
-| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta via espeak + pw-play. Checkpoint: só Texto + Próximo passo. Lembrete ausente: “Ainda não consigo criar lembretes.” Aceite no JBL dos dois caminhos pendente |
+| Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. O worker sobe no primeiro pedido. Se faltar modelo ou venv, a escuta avisa e volta a aguardar |
+| Conversa | `moah voz pedido` → catálogo + política | Pedido resolve intenção e chama `governVoiceTool`. Leituras + `criar_lembrete_local` (módulo `application/reminders`, fila `jobs`). Sem prazo válido, “me lembro de …” não agenda |
+| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta via espeak + pw-play. Checkpoint: Texto + Próximo passo. Lembrete: confirmação + aviso de sessão. Aceite no JBL pendente |
 | Painel | `voicePanel` e `ui/src/voice-panel.ts` | Estado visível. React ainda não foi instalado nem aberto no navegador |
 
 O buffer da solicitação tem tamanho limitado e é descartado ao fim do turno. Não há gravação de áudio ambiente. Durante a saudação e a resposta, amostras do microfone e do próprio assistente não reiniciam a ativação. “MOAH, pare”, quando é o pedido transcrito, encerra sem consultar o modelo. Enquanto o MOAH está falando, essa frase não interrompe: o controle visível “Parar resposta” faz isso. A interrupção por voz durante a fala fica pendente até um teste de eco com microfone e caixas reais.

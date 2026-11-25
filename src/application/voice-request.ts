@@ -1,10 +1,16 @@
 import { isDomain, type Domain } from "../domain/constants.js";
-import { READ_TOOLS } from "../domain/policy.js";
+import { LOCAL_REMINDER_TOOL, READ_TOOLS } from "../domain/policy.js";
 import { formatRecordLines } from "./format-record.js";
-import { governQuery } from "./governance.js";
+import { governVoiceTool } from "./governance.js";
+import {
+  extractMinutesDelay,
+  isReminderRequest,
+  parseLocalReminder,
+} from "./reminders/index.js";
 import { findCheckpoint, listKnownProjects, type WorkLogContext } from "./work-log.js";
 
 export const VOICE_UNAVAILABLE_SPEECH = "Essa capacidade ainda está indisponível.";
+export const VOICE_COMMAND_UNAVAILABLE_SPEECH = "Esse comando ainda não está disponível.";
 export const VOICE_REMINDER_UNAVAILABLE_SPEECH = "Ainda não consigo criar lembretes.";
 
 export type VoiceRequestStatus = "ok" | "unavailable" | "ambiguous" | "none" | "denied";
@@ -18,9 +24,13 @@ export interface VoiceRequestResult {
 
 type VoiceIntent =
   | { kind: "tool"; tool: string; args: Record<string, unknown> }
+  | { kind: "local"; terminal: string; speak: string }
   | { kind: "unavailable"; detail: string; speak?: string }
   | { kind: "ambiguous"; candidate: string; options: string[] }
   | { kind: "none" };
+
+const CLOCK_REQUEST =
+  /^(QUE HORA E|QUE HORA SAO|QUE HORAS|QUE HORAS SAO|QUE HORAS E|QUAL A HORA|QUAL E A HORA|ME DIZ A HORA|ME DIZ AS HORAS|ME DIGA A HORA|ME DIGA AS HORAS|ME FALA A HORA|ME FALA AS HORAS|ME FALA QUE HORAS SAO|ME DIZ QUE HORAS SAO)( AGORA)?$/;
 
 const WRITE_INTENT = /\b(registr[ae]|registre|conclu[ií]|apague|delete|insira|grave)\b/i;
 const PENDING_INTENT = /pend[eê]n/i;
@@ -29,14 +39,8 @@ const CHECKPOINT_INTENT = /checkpoint|onde paramos|paramos|retomar/i;
 const ONDE_PARAMOS_NO = /ONDE PARAMOS NO (.+)$/;
 const DATE_INTENT = /\b(\d{4}-\d{2}-\d{2})\b/;
 const MEETING_INTENT = /reuni[aã]o\s+(reu_[0-9a-f-]{8,})/i;
-/** Aceita “me lembra/lembre”, “lembre-me”, “lembrar de”, lembrete/agenda/alarme. */
-const REMINDER_INTENT =
-  /\b(me\s+lembr[ae]|lembre[- ]?me|lembrar(?:\s+de)?|lembrete|agend[ae]r?|alarme)\b/i;
-/** Aceita “daqui a 5 minutos” e a forma STT “daqui 5 minutos”. */
-const DELAY_REMINDER =
-  /\bdaqui(?:\s+a)?\s+\d+\s*(minuto|minutos|hora|horas|segundo|segundos)\b/i;
 
-const REGISTERED = new Set<string>(READ_TOOLS);
+const CATALOG = new Set<string>([...READ_TOOLS, LOCAL_REMINDER_TOOL]);
 
 export function handleVoiceRequest(
   context: WorkLogContext,
@@ -50,6 +54,9 @@ export function handleVoiceRequest(
   const intent = resolveVoiceIntent(context, domain, trimmed);
   if (intent.kind === "none") {
     return { status: "none", terminal: "", speak: null, tool: null };
+  }
+  if (intent.kind === "local") {
+    return { status: "ok", terminal: intent.terminal, speak: intent.speak, tool: null };
   }
   if (intent.kind === "ambiguous") {
     const titulo = titleProject(normalizeWords(intent.candidate));
@@ -65,7 +72,7 @@ export function handleVoiceRequest(
       tool: null,
     };
   }
-  if (!REGISTERED.has(intent.tool)) {
+  if (!CATALOG.has(intent.tool)) {
     return {
       status: "unavailable",
       terminal: `Ferramenta ausente do catálogo: ${intent.tool}.`,
@@ -73,7 +80,7 @@ export function handleVoiceRequest(
       tool: intent.tool,
     };
   }
-  const execution = governQuery(context, { domain, project: null }, intent.tool, intent.args);
+  const execution = governVoiceTool(context, { domain, project: null }, intent.tool, intent.args);
   if (!execution.ok) {
     return {
       status: "denied",
@@ -84,6 +91,9 @@ export function handleVoiceRequest(
   }
   if (intent.tool === "consultar_checkpoint") {
     return presentCheckpoint(context, domain, intent.args, execution.lines);
+  }
+  if (intent.tool === LOCAL_REMINDER_TOOL) {
+    return presentReminder(execution);
   }
   return {
     status: "ok",
@@ -101,10 +111,22 @@ export function resolveVoiceIntent(context: WorkLogContext, domain: Domain, text
       detail: `A sessão de voz está em ${domain}. Consulta a ${other} exige outra sessão.`,
     };
   }
-  if (REMINDER_INTENT.test(text) || DELAY_REMINDER.test(text)) {
+  const clock = clockSpeech(text, context.now(), context.timeZone);
+  if (clock) {
+    return { kind: "local", terminal: `${clock} (${context.timeZone})`, speak: clock };
+  }
+  const reminder = parseLocalReminder(text);
+  if (reminder) {
+    return {
+      kind: "tool",
+      tool: LOCAL_REMINDER_TOOL,
+      args: { texto: reminder.texto, minutos: String(reminder.minutos) },
+    };
+  }
+  if (isReminderRequest(text)) {
     return {
       kind: "unavailable",
-      detail: "Catálogo sem ferramenta de lembretes. Agenda/lembrete ainda não cadastrados para a voz.",
+      detail: "Lembrete sem prazo válido em minutos. Informe daqui a quantos minutos.",
       speak: VOICE_REMINDER_UNAVAILABLE_SPEECH,
     };
   }
@@ -143,7 +165,36 @@ export function resolveVoiceIntent(context: WorkLogContext, domain: Domain, text
     }
     return { kind: "tool", tool: "consultar_resumo", args: { data: date } };
   }
-  return { kind: "none" };
+  if (/\bme\s+lembro\s+de\b/i.test(text) && extractMinutesDelay(text) === null) {
+    return { kind: "none" };
+  }
+  return {
+    kind: "unavailable",
+    detail: "Comando não disponível.",
+    speak: VOICE_COMMAND_UNAVAILABLE_SPEECH,
+  };
+}
+
+export function formatLocalTimeSpeech(now: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    hour: "numeric",
+    minute: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  const horas = hour === 1 ? "1 hora" : `${hour} horas`;
+  const minutos = minute === 1 ? "1 minuto" : `${minute} minutos`;
+  const verbo = hour === 1 ? "É" : "São";
+  return `${verbo} ${horas} e ${minutos}.`;
+}
+
+function clockSpeech(text: string, now: Date, timeZone: string): string | null {
+  if (!CLOCK_REQUEST.test(normalizeWords(text))) {
+    return null;
+  }
+  return formatLocalTimeSpeech(now, timeZone);
 }
 
 function resolveCheckpointIntent(context: WorkLogContext, text: string): VoiceIntent {
@@ -207,6 +258,24 @@ function presentCheckpoint(
     tool: "consultar_checkpoint",
   };
 }
+
+function presentReminder(execution: { lines: string[]; modelPayload: unknown }): VoiceRequestResult {
+  const payload =
+    typeof execution.modelPayload === "object" && execution.modelPayload !== null
+      ? (execution.modelPayload as Record<string, unknown>)
+      : {};
+  const confirmation =
+    typeof payload.confirmation === "string" ? payload.confirmation : execution.lines[0] ?? "Lembrete criado.";
+  const warning = typeof payload.warning === "string" ? payload.warning : "Aviso: vale só nesta sessão.";
+  return {
+    status: "ok",
+    terminal: execution.lines.join("\n"),
+    speak: `${confirmation} ${warning}`,
+    tool: LOCAL_REMINDER_TOOL,
+  };
+}
+
+export { extractMinutesDelay, isReminderRequest, parseLocalReminder } from "./reminders/index.js";
 
 function extractProjectAfterOndeParamos(text: string): string | null {
   const normalized = normalizeWords(text);

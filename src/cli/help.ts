@@ -25,7 +25,8 @@ Comandos:
   moah voz estado|simular --roteiro <json-simulacao>
   moah voz pedido --texto <pedido> [--dominio pessoal|imex|aluai]
   moah voz hardware --habilitar sim [--microfone jbl|camera]
-  moah voz escutar --habilitar sim [--microfone jbl|camera] [--modelo /caminho/modelo.onnx] [--limiar 0.5] [--confirmar-ativacao sim] [--confirmacao-flexivel sim] [--diagnostico sim]
+  moah voz escutar --habilitar sim [--microfone jbl|camera] [--modelo /caminho/modelo.onnx] [--limiar 0.5] [--diagnostico sim] [--salvar-wavs sim] [--depurar sim] [--depurar-porta 5678] [--pedido 8] [--espera 4] [--silencio 0.7] [--pico-fala 200] [--arranque 1.7] [--confirmar-ativacao acustico|stt|sim|nao] [--modo-verificador producao|manual|teste] [--verificador /caminho/verificador.onnx] [--limiar-verificador 0.95] [--gravar-diagnostico sim]
+  Python (fora da CLI): scripts/voz/treinar_verificador.py treinar|calibrar
   moah voz coletar --iniciar sim [--microfone jbl|camera] [--sessao 01] [--tomada 2] [--vezes 10] [--segundos 4] [--ouvir sim] [--frase MOAH] [--prefixo moah]
   moah voz validar [--sessao 01]
   moah ajuda

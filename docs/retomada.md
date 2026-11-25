@@ -1,59 +1,90 @@
 # Ponto de retomada do MOAH
 
-Atualizado em 12/11/2026, horário de São Paulo.
+Atualizado em 25/11/2026, horário de São Paulo.
 
 ## Leia primeiro
 
-Este arquivo resume o estado atual. Os relatórios em [cursror-dev/execucoes](../cursror-dev/execucoes/README.md) guardam evidências por capítulo. A [arquitetura alvo](arquitetura/estrutura/README.md) descreve a divisão de responsabilidades. As [issues](https://github.com/AirtonDomiciano/moah/issues) guardam o backlog.
+1. Este resumo e [voz em operação](operacao/voz.md).
+2. Evidências: [2026-11-23-005 fechamento JBL](../cursror-dev/execucoes/2026-11-23-005-fechamento-jbl.md), [2026-11-23-004 turno](../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md), [2026-11-23-002 verificador](../cursror-dev/execucoes/2026-11-23-002-verificador-diagnostico.md).
+3. Dados e ONNX ficam em `~/.local/share/moah/voz` (fora do Git): `correcao/verificador.json`, `correcao/diagnostico-verificador-sessao03.json`.
 
-## Estado atual
+## Estado atual (código)
 
-- CLI de memória, checkpoints e consultas de leitura já existem.
-- Escuta com confirmação STT da ativação: buffer de ~1,6 s obrigatório antes do disparo aceito; aceite `MOA`/`MOAH` (1 ou 2 palavras). ONNX em uso: `moah-experimental.onnx`, limiar 0,5.
-- STT offline (faster-whisper small, CPU int8, pt) transcreve o pedido após “Estou aqui.”; janela do pedido: 5 s.
-- Prova no JBL (09/11/2026) com `--confirmar-ativacao sim --diagnostico sim`: três ciclos completos de ativação + pedido.
+- CLI de memória, checkpoints, `moah voz pedido` (relógio, lembretes, Ledger) testados.
+- **Pipeline acústico em dois estágios** em `scripts/voz/escutar.py`: detector `moah-experimental.onnx` → buffer → presença de fala no clipe → verificador MLP 16×96 (`moah-verificador.onnx`, cópia de `moah-candidato-fundo.onnx`) → saudação → pedido.
+- Sem fala no clipe de confirmação o motivo é `sem_fala` e não há saudação (`manual`, `teste` e `producao`). Com fala, os três modos seguem como antes. A transcrição não decide o aceite acústico. O verificador continua `validado: false`.
+- **Turno do pedido:** a cauda anterior à saudação continua no áudio, mas o pico não arma o silêncio. Só a presença de fala inicia essa contagem. Sem fala a linha é `presenca=sem_fala` e não há STT nem consulta. Evidência automática: [2026-11-23-004](../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md).
+- **JBL, 23/11, modo teste:** Airton relatou que o laço funcionou depois desses ajustes. Comando abaixo. Uma fala duplicada ficou em aberto como MOAH-040; não foi investigada nem corrigida. Isso não valida o verificador nem a tabela de chamadas.
+- **STT legado** só com `--confirmar-ativacao stt` (confirmação por texto no trecho curto). `--confirmar-ativacao sim` usa acústico se `validado: true`, senão STT.
+- **`--arranque 1.7` não resolve falsos do detector** (score ~0,99 no 1º s quieto); a escuta zera o fluxo openWakeWord a cada volta.
 
-### Três ciclos observados no JBL — 09/11/2026
+## O que já foi comprovado
 
-1. Confirmação `Moa.` (score 0,9787) → saudação → pedido STT: `Beleza, funcionou. Isso aí.`
-2. Um disparo rejeitado (texto vazio no WAV 02) → confirmação `Moa` (score 0,9694) → saudação → pedido STT: `Funciona a nossa segunda vez.`
-3. Um falso (`Um, dois, três…`) rejeitado → confirmação `Moa` (score 0,9782) → saudação → pedido STT: `funcionou a terceira vez.`
+| Camada | O quê | Evidência |
+| --- | --- | --- |
+| Sem microfone | `moah voz pedido --texto "Que horas são?"` | `npm test` / uso local |
+| Headset (STT) | “moa/moá” + pedido após confirmação **STT** | JBL 09/11/2026, três ciclos; [retomada antiga] confirmação `Moa` |
+| Automatizado | Turno, buffer, cauda, presença de fala | `scripts/voz/test_*`; não promove o ONNX |
+| Offline ONNX | Verificador na sessão 03 | 6/8 ≥0,95, 7/8 ≥0,80; sem 8/8 |
+| Headset, modo teste | Laço presença + pedido, relato de Airton em 23/11 | Uma fala duplicada (MOAH-040). Sem tabela de chamadas e sem `validado` |
 
-WAVs de diagnóstico em `~/.local/share/moah/voz/diagnostico/confirmacao/` (fora do Git). Comando da prova: `npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim --diagnostico sim`.
+**Ainda aberto:** 8/8 na sessão 03, `limiarOperacional`, modo produção, sessão 04 e os negativos `prova-*`. MOAH-040 só se a duplicação voltar.
 
-- Consulta de checkpoint existente validada no JBL (12/11/2026): ativação → STT `onde paramos no ledger?` → registro completo no terminal.
-- Pedido transcrito passa por `moah voz pedido`: só ferramentas do catálogo (`READ_TOOLS`) via `governQuery`/política. Checkpoint fala Texto + Próximo passo. Lembrete sem ferramenta no catálogo: terminal explica a ausência e fala “Ainda não consigo criar lembretes.” (STT “Me lembre… daqui 5 minutos.” também casa). Aceite no JBL dos dois caminhos pendente.
-- Sessões 01/02 treino, 03 validação, 04 reservada. Candidatos ONNX não promovidos.
-- Base publicada anterior: [prova de transcrição](https://github.com/AirtonDomiciano/moah/commit/5148a1a65b9496b1d5bf8b6e5e1552551925fcb5).
+## Falsas ativações (estágio 1)
+
+- Microfone quieto: pico ~**0,994** no 1º s; cai a ~0,01 no seguinte (22/11).
+- Após saudação/resposta do MOAH o detector ainda pontua alto sem chamada real.
+- Aceite do nome falado continua **pendente** (vinte chamadas no headset sem tabela fechada).
+
+## Verificador (estágio 2)
+
+- Manifesto: `validado: false`, **`limiarOperacional: null`** (não usar 0,95 em produção).
+- Primeira calibração registrou **`acertosSessao03: 0`** no sentido “nenhum limiar com 8/8” — **não** “score zero em todas as tomadas”.
+- Reavaliação offline (23/11): **tomada-07** ~0,81; **tomada-08** ~0,12; demais ~0,99. Melhor parcial `limiarCalibrado: 0,8` com 7/8.
+- Treino verificador: sessões **01–02**; calibração **03**; **04** fechada; coleta nova **05** (`coletar.py` não sobrescreve sessão existente).
 
 ## Próximo capítulo
 
-Validar no JBL os dois caminhos do catálogo:
+Sair do modo teste só pelo calibrador, no conjunto que ele já lê. A prova final é outro conjunto e não redefine o limiar. Detalhe e comandos: [voz em operação](operacao/voz.md).
 
-1. “Onde paramos no Ledger?” → ferramenta disponível → fala do checkpoint.
-2. “Me lembre de tomar água daqui 5 minutos.” → ferramenta ausente → terminal + fala “Ainda não consigo criar lembretes.” → volta a aguardar.
+1. Medir no JBL, sem saudar e sem gravar em 03, `gerado` ou `reservados.txt`: chamada real, silêncio, ruído, frase comum, “boa” em conversa, voz do MOAH no alto-falante.
+   ```bash
+   npm run moah -- voz escutar --habilitar sim --microfone jbl \
+     --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
+   ```
+2. Se ainda faltar tomada para o treino, gravar na **sessão 05** e revisar o rótulo antes de retreinar. Não usar a 05 como prova final.
+3. Recalibrar **sem** `--marcar-validado sim`. Aceite do limiar operacional: 8/8 na sessão 03 e, entre esses limiares, o de menos falsos nos negativos de ajuste. Sem 8/8, `limiarOperacional` continua `null`.
+4. Só então, depois da revisão humana desses falsos: `treinar_verificador.py calibrar --marcar-validado sim`. Sem 8/8 o comando não liga `validado`. Não editar o JSON.
+5. Com o limiar congelado e sem outro treino planejado, gravar a **sessão 04** (8×4 s, “moá”) e os prefixos `prova-silencio`, `prova-ruido`, `prova-frase`, `prova-boa`, `prova-voz-moah`. `candidato.py` passa a recusar treino quando a 04 tiver WAV. Um erro nessa prova não volta para o calibrador.
 
-Comando:
+Comando do capítulo que Airton relatou como funcional:
 
 ```bash
-npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao sim
+npm run moah -- voz escutar --habilitar sim --microfone jbl \
+  --confirmar-ativacao acustico --modo-verificador teste --limiar-verificador 0.95 \
+  --diagnostico sim
 ```
 
-Checagem sem microfone:
+## Entrega preparada para `main`
 
-```bash
-npm run moah -- voz pedido --dominio pessoal --texto "Onde paramos no Ledger?"
-npm run moah -- voz pedido --dominio pessoal --texto "Me lembre de tomar água daqui 5 minutos."
-```
+A branch `teste/lembretes-moah` incorpora `origin/main` até `d8894ae`. Os registros exclusivos da `main` permanecem: [MOAH-038](../ideias.md#moah-038--chamada-e-pedido-na-mesma-frase), [MOAH-039](../ideias.md#moah-039--manter-a-voz-de-quem-iniciou-o-pedido) e [MOAH-040](../ideias.md#moah-040--acompanhar-relato-de-fala-duplicada). MOAH-038 e MOAH-039 continuam planejados. MOAH-040 continua observação, sem correção.
 
-## Como manter esta memória
+O que esta branch acrescenta, sem promover o verificador:
 
-Ao fechar cada capítulo, atualizar este resumo com o resultado, próximo passo e link para o relatório ou commit. Registrar o comando de validação, o que foi simulado e o que foi comprovado no hardware. Manter WAVs, pesos e dados pessoais fora do Git.
+- Lembretes locais por voz (`me lembro de` / `me lembre`) e aviso falado quando a ferramenta está indisponível ou o prazo não serve.
+- Pipeline acústico em dois estágios, presença de fala e turno do pedido. Evidências: [2026-11-23-003](../cursror-dev/execucoes/2026-11-23-003-presenca-fala.md), [2026-11-23-004](../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md), [2026-11-23-005](../cursror-dev/execucoes/2026-11-23-005-fechamento-jbl.md).
 
-Uma issue, um capítulo e uma validação por rodada. Codex prepara o recorte, Cursor implementa, Airton valida no terminal e publica, Codex revisa o diff. Veja a [governança de IA](desenvolvimento/governanca-ia.md).
+`validado` permanece `false`. O modo produção continua recusando confirmação acústica sem `validado: true` e `limiarOperacional` (`modelo_nao_validado`). O modo teste não grava o manifesto.
 
-## Depois da primeira versão
+Verificação desta rodada, em 25/11/2026, Node 22.23.3 e Python 3.10.21 do ambiente de voz: `npm run typecheck`, `npm test` (84 testes, 0 falhas) e os scripts `test_turno_escuta.py`, `test_presenca_fala.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py`, `test_confirmacao_texto.py`. Isso não fecha 8/8 na sessão 03, a tabela de chamadas nem a sessão 04.
 
-- [Mapa mental e Obsidian](https://github.com/AirtonDomiciano/moah/issues/5).
-- [Consumo de tokens do Cursor](https://github.com/AirtonDomiciano/moah/issues/4).
-- Piloto de memória externa para agentes permanece adiado.
+## Git
+
+- Branch: `teste/lembretes-moah`, com merge de `origin/main` (`d8894ae`).
+- `main` local segue em `3efb008`; o remoto `origin/main` está em `d8894ae`.
+- Remoto: `origin` → `github.com/AirtonDomiciano/moah.git`.
+- Áudio, ONNX, credenciais e memória real ficam fora do Git. Bytecode `__pycache__` não entra neste merge.
+
+## Manutenção
+
+Ao fechar capítulo: atualize este arquivo, link o relatório em `cursror-dev/execucoes/`, não versionar áudio, pesos nem credenciais.

@@ -1,70 +1,85 @@
 #!/usr/bin/env python3
-"""Escuta o microfone nomeado, responde à pronúncia e transcreve o pedido.
+"""Orquestra o laço: ativação → confirmação → turno do pedido.
 
-Não grava o ambiente. Fecha a captura antes da saudação e da resposta. Descarta
-o buffer do pedido após a transcrição. O STT roda no venv separado sob
-MOAH_VOICE_DIR/stt. O pedido transcrito passa por `moah voz pedido`: só
-ferramentas cadastradas via política; capacidade ausente é falada e o laço
-volta a aguardar.
+Responsabilidades ficam em módulos por etapa; este arquivo só monta o laço.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import re
 import signal
 import subprocess
 import sys
-import tempfile
 import time
-import unicodedata
-import wave
-from collections import deque
 from pathlib import Path
 
 import numpy as np
 
-TAXA = 16_000
-QUADRO = 1280
-PEDIDO_S = 3.0
-PICO_MUDO = 50.0
-# ~1,6 s imediatamente antes/incluindo o quadro do disparo (janela curta em memória).
-CONFIRMACAO_QUADROS = 20
-DIAGNOSTICO_MAX = 3
-ATIVACOES = frozenset({"MOAH", "MOA"})
-ATIVACOES_FLEXIVEIS = frozenset({"MUA", "MULA", "BOA"})
-FRASES_FLEXIVEIS = frozenset({"HEY MOA", "HEY MOAH"})
-
-_STT_WORKER = r"""
-import os
-import sys
-import numpy as np
-from faster_whisper import WhisperModel
-
-modelo = WhisperModel(
-    os.environ["MOAH_STT_MODEL"],
-    device="cpu",
-    compute_type="int8",
-    local_files_only=True,
+from ativacao_detector import aguardar_ativacao, medir_pico_detector
+from audio_metricas import pipeline_ponto, salvar_wav_com_metricas
+from buffer_circular import BufferCircular
+from decisao_atender import atender_por_acustico, atender_por_texto
+from debug_servidor import iniciar_debug
+from escutar_politica import resolver_limiar_verificador, resolver_modo_confirmacao
+from eventos_voz import (
+    definir_console,
+    emitir_configuracao,
+    emitir_estado,
+    emitir_tempos,
+    ms_desde,
+    salvar_wav_confirmacao,
+    voz_dir,
 )
-sys.stdout.write("READY\n")
-sys.stdout.flush()
-while True:
-    cabeca = sys.stdin.buffer.read(8)
-    if len(cabeca) < 8:
-        break
-    n = int.from_bytes(cabeca, "little")
-    bruto = sys.stdin.buffer.read(n * 4)
-    if len(bruto) < n * 4:
-        break
-    audio = np.frombuffer(bruto, dtype=np.float32).copy()
-    segmentos, _ = modelo.transcribe(audio, language="pt")
-    del audio
-    sys.stdout.write("".join(s.text for s in segmentos).strip().replace("\n", " ") + "\n")
-    sys.stdout.flush()
-"""
+from janela_pedido import LimitesPedido
+from oww_janela import extrair_cauda_pedido, zerar_detector
+from pcm_pipewire import abrir_captura, amostras_mutas, fechar_captura, ler_quadro
+from presenca_fala import aplicar_presenca, avaliar_presenca
+from sintese_pipewire import parar_reproducao, saudacao
+from stt_remoto import SttRemoto, transcrever_pedido_seguro
+from turno_pedido import conduzir_pedido, falar_etapa
+from verificador_acustico import resolver_verificador
+from voz_constantes import (
+    ARRANQUE_S,
+    DIAGNOSTICO_MAX,
+    ESPERA_S,
+    PEDIDO_MAX_S,
+    PICO_FALA,
+    POS_CONFIRMACAO_QUADROS,
+    PRE_CONFIRMACAO_QUADROS,
+    QUADRO,
+    SILENCIO_S,
+    TAXA,
+)
+
+# Compatibilidade com testes e ferramentas que importam escutar.*
+from voz_constantes import (  # noqa: F401
+    CANAIS,
+    FORMATO,
+)
+
+_abrir = abrir_captura
+_fechar = fechar_captura
+_quadro = ler_quadro
+_muda = amostras_mutas
+_aguardar = aguardar_ativacao
+_ler = medir_pico_detector
+_Stt = SttRemoto
+_transcrever_seguro = transcrever_pedido_seguro
+_ativacao_confirmada = lambda t, flexivel=False: atender_por_texto(t, flexivel=flexivel)[0]
+_resolver_modo_confirmacao = resolver_modo_confirmacao
+_resolver_limiar_verificador = resolver_limiar_verificador
+_voz_dir = voz_dir
+_estado = emitir_estado
+_tempos = emitir_tempos
+_configuracao = emitir_configuracao
+_ms = ms_desde
+_salvar_wav_confirmacao = salvar_wav_confirmacao
+_parar_reproducao = parar_reproducao
+_saudacao = saudacao
+_conduzir_pedido = conduzir_pedido
+_falar_etapa = falar_etapa
+
+from sintese_pipewire import falar as _falar  # noqa: E402 — testes fazem monkeypatch
 
 
 def main() -> None:
@@ -76,455 +91,426 @@ def main() -> None:
     parser.add_argument("--destino", required=True)
     parser.add_argument("--limiar", type=float, default=0.5)
     parser.add_argument("--duracao", type=float, default=0)
-    parser.add_argument("--pedido", type=float, default=PEDIDO_S)
+    parser.add_argument("--pedido", type=float, default=PEDIDO_MAX_S)
+    parser.add_argument("--espera", type=float, default=ESPERA_S)
+    parser.add_argument("--silencio", type=float, default=SILENCIO_S)
+    parser.add_argument("--pico-fala", type=float, default=PICO_FALA)
+    parser.add_argument("--arranque", type=float, default=ARRANQUE_S)
     parser.add_argument("--confirmar-ativacao", default="nao")
     parser.add_argument("--confirmacao-flexivel", default="nao")
+    parser.add_argument("--modo-verificador", default="producao", choices=("producao", "manual", "teste"))
+    parser.add_argument("--verificador", default="")
+    parser.add_argument("--limiar-verificador", type=float, default=0)
     parser.add_argument("--diagnostico", default="nao")
+    parser.add_argument("--gravar-diagnostico", default="nao")
+    parser.add_argument("--salvar-wavs", default="nao")
+    parser.add_argument("--depurar", default="nao")
+    parser.add_argument("--depurar-porta", type=int, default=5678)
+    parser.add_argument("--depurar-aguardar", default="sim")
     parser.add_argument("--provar-eco", action="store_true")
     args = parser.parse_args()
     if args.habilitar != "sim":
         raise SystemExit("A escuta exige --habilitar sim.")
-    if args.confirmar_ativacao not in {"sim", "nao"}:
-        raise SystemExit("Use --confirmar-ativacao sim ou nao.")
+    if args.confirmar_ativacao not in {"sim", "nao", "stt", "acustico"}:
+        raise SystemExit("Use --confirmar-ativacao nao|sim|stt|acustico.")
     if args.confirmacao_flexivel not in {"sim", "nao"}:
         raise SystemExit("Use --confirmacao-flexivel sim ou nao.")
     if args.diagnostico not in {"sim", "nao"}:
         raise SystemExit("Use --diagnostico sim ou nao.")
-    confirmar = args.confirmar_ativacao == "sim"
+    if args.gravar_diagnostico not in {"sim", "nao"}:
+        raise SystemExit("Use --gravar-diagnostico sim ou nao.")
+    if args.salvar_wavs not in {"sim", "nao"}:
+        raise SystemExit("Use --salvar-wavs sim ou nao.")
+    if args.depurar not in {"sim", "nao"}:
+        raise SystemExit("Use --depurar sim ou nao.")
+    if args.depurar_aguardar not in {"sim", "nao"}:
+        raise SystemExit("Use --depurar-aguardar sim ou nao.")
+    if args.depurar == "sim":
+        if args.depurar_porta < 1024 or args.depurar_porta > 65535:
+            raise SystemExit("Use --depurar-porta entre 1024 e 65535.")
+        iniciar_debug(porta=args.depurar_porta, aguardar_cliente=args.depurar_aguardar == "sim")
+    if args.limiar <= 0 or args.limiar > 1:
+        raise SystemExit("O limiar precisa ser maior que 0 e no máximo 1.")
+    if min(args.pedido, args.espera, args.silencio, args.pico_fala) <= 0 or args.arranque < 0:
+        raise SystemExit("Informe espera, silêncio, pedido e pico de fala maiores que zero.")
     flexivel = args.confirmacao_flexivel == "sim"
     diagnostico = args.diagnostico == "sim"
-    diagnostico_dir = _voz_dir() / "diagnostico" / "confirmacao"
+    gravar = args.gravar_diagnostico == "sim"
+    salvar_wavs = args.salvar_wavs == "sim"
+    depurar = args.depurar == "sim"
+    imprimir_pipeline = diagnostico or salvar_wavs
+    definir_console(not diagnostico)
+    modo_verificador = args.modo_verificador
+    diagnostico_dir = voz_dir() / "diagnostico" / "confirmacao"
     diagnostico_salvos = 0
+    pasta_voz = voz_dir()
+    recursos_path = Path(args.recursos)
+    override_verificador = Path(args.verificador).resolve() if args.verificador.strip() else None
+    verificador, manifesto, status_verificador = resolver_verificador(pasta_voz, recursos_path, override_verificador)
+    modo_confirmacao = resolver_modo_confirmacao(args.confirmar_ativacao, manifesto, verificador)
+    limiar_verificador = resolver_limiar_verificador(args.limiar_verificador, manifesto, modo_verificador)
+    if modo_confirmacao == "acustico" and modo_verificador == "teste":
+        if limiar_verificador >= 1.0 or limiar_verificador <= 0:
+            raise SystemExit(
+                "Modo teste exige --limiar-verificador explícito ou limiarCalibrado no manifesto (modelo segue não validado)."
+            )
 
     modelo = Path(args.modelo)
     if not modelo.is_file():
         raise SystemExit(f"Modelo ausente: {modelo}")
-    stt_dir = _voz_dir() / "stt" / "faster-whisper-small"
-    stt_python = _voz_dir() / "stt" / "venv" / "bin" / "python"
-    if not (stt_dir / "model.bin").is_file():
-        raise SystemExit(f"Modelo STT ausente: {stt_dir}")
-    if not stt_python.is_file():
-        raise SystemExit(f"Interpretador STT ausente: {stt_python}")
+    stt_dir = pasta_voz / "stt" / "faster-whisper-small"
+    stt_python = pasta_voz / "stt" / "venv" / "bin" / "python"
     sys.path.insert(0, str(Path(args.recursos) / "hey_pran_openwakeword_v060"))
     from openwakeword.model import Model
 
     detector = Model(wakeword_models=[str(modelo)], inference_framework="onnx", vad_threshold=0)
     chave = next(iter(detector.models))
-    stt = _Stt(stt_python, stt_dir)
+    stt: SttRemoto | None = None
+    stt_erro: str | None = None
     inicio = time.time()
     captura: subprocess.Popen[bytes] | None = None
     pico = 0.0
     acertos = 0
+    limites = LimitesPedido(espera_s=args.espera, silencio_s=args.silencio, maximo_s=args.pedido)
+    emitir_configuracao(
+        modelo=modelo,
+        chave=chave,
+        limiar=args.limiar,
+        origem=args.origem,
+        destino=args.destino,
+        modo_confirmacao=modo_confirmacao,
+        diagnostico=diagnostico,
+        gravar=gravar,
+        salvar_wavs=salvar_wavs,
+        depurar=depurar,
+        limites=limites,
+        pico_fala=args.pico_fala,
+        arranque=args.arranque,
+        verificador=verificador,
+        manifesto=manifesto,
+        status_verificador=status_verificador,
+        limiar_verificador=limiar_verificador,
+        modo_verificador=modo_verificador,
+        voz_dir_path=pasta_voz,
+    )
+    if diagnostico:
+        print(f"diagnostico modelo={modelo} chave={chave} carregado=sim vad=0", flush=True)
+
+    def obter_stt() -> SttRemoto | None:
+        nonlocal stt, stt_erro
+        if stt is not None:
+            return stt
+        if stt_erro is not None:
+            return None
+        if not (stt_dir / "model.bin").is_file() or not stt_python.is_file():
+            stt_erro = f"Modelo STT ausente em {stt_dir}."
+            print(stt_erro, flush=True)
+            return None
+        try:
+            stt = SttRemoto(stt_python, stt_dir)
+        except Exception as exc:
+            stt_erro = str(exc).strip() or "Falha ao carregar STT."
+            print(stt_erro, flush=True)
+            return None
+        return stt
 
     def encerrar(_signum: int, _frame: object) -> None:
-        _fechar(captura)
-        stt.close()
-        _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
+        parar_reproducao()
+        fechar_captura(captura)
+        if stt is not None:
+            stt.close()
+        emitir_estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
         raise SystemExit(0)
 
     signal.signal(signal.SIGINT, encerrar)
     signal.signal(signal.SIGTERM, encerrar)
     try:
         if args.provar_eco:
-            _estado("aguardando", microfone="retido", modelo=str(modelo), limiar=args.limiar)
-            captura = _abrir(args.origem)
-            _saudacao(args.destino)
-            pico = _ler(detector, chave, captura, args.limiar, 4, False)
-            _fechar(captura)
+            emitir_estado("aguardando", microfone="retido", modelo=str(modelo), limiar=args.limiar)
+            captura = abrir_captura(args.origem)
+            saudacao(args.destino)
+            pico = medir_pico_detector(detector, chave, captura, args.limiar, 4)
+            fechar_captura(captura)
             captura = None
-            _estado("desligado", microfone="liberado", pico=pico, eco=True)
+            emitir_estado("desligado", microfone="liberado", pico=pico, eco=True)
             return
-        _estado(
+        emitir_estado(
             "aguardando",
             microfone="retido",
             modelo=str(modelo),
             limiar=args.limiar,
-            confirmarAtivacao=confirmar,
+            confirmarAtivacao=modo_confirmacao != "nao",
+            modoConfirmacao=modo_confirmacao,
         )
         while args.duracao <= 0 or time.time() - inicio < args.duracao:
-            captura = _abrir(args.origem)
-            detectou, score, parcial, trecho = _aguardar(
+            captura = abrir_captura(args.origem)
+            zerar_detector(detector)
+            t_espera = time.perf_counter()
+            usar_buffer = modo_confirmacao == "acustico"
+            buffer = BufferCircular(PRE_CONFIRMACAO_QUADROS) if usar_buffer else None
+            detectou, score, parcial, trecho, _pos = aguardar_ativacao(
                 detector,
                 chave,
                 captura,
                 args.limiar,
                 inicio,
                 args.duracao,
-                guardar=confirmar,
+                guardar=modo_confirmacao == "stt",
+                diagnostico=diagnostico,
+                arranque_s=args.arranque,
+                buffer=buffer,
             )
+            cauda_pedido = np.zeros(0, dtype=np.int16)
+            espera_ms = ms_desde(t_espera)
             pico = max(pico, parcial)
-            _fechar(captura)
-            captura = None
             if not detectou:
+                fechar_captura(captura)
+                captura = None
+                if buffer is not None:
+                    buffer.descartar()
                 break
-            if confirmar:
-                _estado(
-                    "confirmando",
+            if usar_buffer and buffer is not None:
+                buffer.iniciar_candidato()
+                for _ in range(POS_CONFIRMACAO_QUADROS):
+                    quadro = ler_quadro(captura)
+                    if quadro is None:
+                        break
+                    buffer.anexar_pos(quadro)
+                trecho = buffer.concluir()
+                pipeline_ponto(
+                    "detector_candidato_trecho",
+                    amostras=trecho,
+                    imprimir=imprimir_pipeline,
+                    scoreDetector=round(score, 4),
+                    limiarDetector=args.limiar,
+                    modoConfirmacao=modo_confirmacao,
+                )
+            fechar_captura(captura)
+            captura = None
+            if diagnostico:
+                print(
+                    f"diagnostico ativacao etapa=detector score={score:.4f} limiar={args.limiar:.4f}",
+                    flush=True,
+                )
+            tempos = {"esperaAtivacaoMs": espera_ms}
+            score_verificador: float | None = None
+            confirmado = modo_confirmacao == "nao"
+            motivo_verificacao = ""
+            if modo_confirmacao == "stt":
+                emitir_estado(
+                    "verificando",
                     microfone="liberado",
                     pico=pico,
                     score=score,
                     acertos=acertos,
-                    modelo=str(modelo),
-                    limiar=args.limiar,
+                    etapa="stt",
                 )
                 wav_diag: Path | None = None
-                # Só grava o que de fato seguiria para o Whisper (não mudo).
-                if diagnostico and diagnostico_salvos < DIAGNOSTICO_MAX and not _muda(trecho):
+                if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
                     diagnostico_salvos += 1
-                    wav_diag = _salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
-                reconhecido = _transcrever_seguro(stt, trecho)
-                del trecho
+                    wav_diag = salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                if salvar_wavs and trecho.size:
+                    caminho_conf, meta_conf = salvar_wav_com_metricas(
+                        pasta_voz,
+                        "confirmacao-stt",
+                        "chamada",
+                        trecho,
+                        extras={"etapaStt": "confirmacao", "quadrosConfirmacao": len(trecho) // QUADRO},
+                    )
+                    print(
+                        f"diagnostico stt etapa=confirmacao wav={caminho_conf} "
+                        f"metricas={meta_conf.get('metricas')}",
+                        flush=True,
+                    )
+                trabalhador = obter_stt()
+                t_confirma = time.perf_counter()
+                reconhecido = "" if trabalhador is None else transcrever_pedido_seguro(trabalhador, trecho)
+                tempos["confirmacaoMs"] = ms_desde(t_confirma)
+                aceito_nome, _norm = atender_por_texto(reconhecido, flexivel=flexivel)
+                print(
+                    f"diagnostico stt etapa=confirmacao texto={reconhecido!r} "
+                    f"normalizado={_norm!r} aceito={aceito_nome} flexivel={flexivel}",
+                    flush=True,
+                )
                 if wav_diag is not None:
-                    print(f"{reconhecido}\n{wav_diag}", flush=True)
-                else:
-                    print(reconhecido, flush=True)
-                if not _ativacao_confirmada(reconhecido, flexivel=flexivel):
-                    _estado(
+                    print(f"diagnostico wav legado={wav_diag}", flush=True)
+                confirmado = trabalhador is not None and aceito_nome
+                motivo_verificacao = "stt_aceito" if confirmado else "stt_rejeitado"
+                if not confirmado:
+                    emitir_tempos(tempos)
+                    emitir_estado(
                         "aguardando",
                         microfone="liberado",
                         pico=pico,
                         acertos=acertos,
                         texto=reconhecido,
                         confirmarAtivacao=True,
+                        motivoRejeicao=motivo_verificacao,
+                    )
+                    del trecho
+                    continue
+                del trecho
+            elif modo_confirmacao == "acustico":
+                if verificador is None:
+                    print(
+                        "Verificador acústico ausente ou inválido; candidato descartado. "
+                        f"status={status_verificador}",
+                        flush=True,
+                    )
+                    if buffer is not None:
+                        buffer.descartar()
+                    emitir_tempos(tempos)
+                    emitir_estado(
+                        "aguardando",
+                        microfone="liberado",
+                        pico=pico,
+                        acertos=acertos,
+                        motivoRejeicao="verificador_ausente",
                     )
                     continue
-            else:
+                emitir_estado(
+                    "verificando",
+                    microfone="liberado",
+                    pico=pico,
+                    score=score,
+                    acertos=acertos,
+                    etapa="acustico",
+                )
+                if modo_verificador == "manual":
+                    permitir = False
+                    motivo_bloqueio = "modo_manual"
+                elif modo_verificador == "teste":
+                    permitir = True
+                    motivo_bloqueio = ""
+                else:
+                    permitir = bool(manifesto and manifesto.validado)
+                    motivo_bloqueio = "modelo_nao_validado"
+                if salvar_wavs:
+                    caminho_ver, meta_ver = salvar_wav_com_metricas(
+                        pasta_voz,
+                        "verificador",
+                        "candidato",
+                        trecho,
+                        extras={
+                            "scoreDetector": score,
+                            "limiarVerificador": limiar_verificador,
+                            "modoVerificador": modo_verificador,
+                        },
+                    )
+                    print(f"diagnostico wav verificador={caminho_ver} meta={meta_ver.get('metricas')}", flush=True)
+                resumo = pipeline_ponto(
+                    "verificador_entrada",
+                    amostras=trecho,
+                    imprimir=imprimir_pipeline,
+                    limiar=limiar_verificador,
+                    modoVerificador=modo_verificador,
+                )
+                # Pico e STT, se houver, leem este mesmo `trecho`. O score é o máximo
+                # das janelas de 1,28 s (com 1 s de silêncio na frente), não o pico.
+                presenca = avaliar_presenca(trecho)
+                t_confirma = time.perf_counter()
+                resultado = verificador.verificar(
+                    trecho,
+                    limiar_verificador,
+                    permitir=permitir,
+                    motivo_bloqueio=motivo_bloqueio,
+                )
+                tempos["confirmacaoMs"] = ms_desde(t_confirma)
+                score_verificador = resultado.score
+                aceito_verificador = atender_por_acustico(resultado)
+                confirmado_agora, motivo_verificacao = aplicar_presenca(
+                    presenca,
+                    aceito_verificador,
+                    resultado.motivo,
+                )
+                vad_txt = "ausente" if presenca.vad_max is None else f"{presenca.vad_max:.2f}"
+                pipeline_ponto(
+                    "verificador_decisao",
+                    imprimir=imprimir_pipeline,
+                    score=round(resultado.score, 4),
+                    limiar=resultado.limiar,
+                    motivo=motivo_verificacao,
+                    aceito=confirmado_agora,
+                    vad=None if presenca.vad_max is None else round(presenca.vad_max, 4),
+                    energiaMs=presenca.energia_ms,
+                )
+                if not diagnostico:
+                    audio = resumo.get("audio") or {}
+                    texto_campo = ""
+                    if presenca.fala:
+                        trabalhador = obter_stt()
+                        if trabalhador is not None:
+                            texto = transcrever_pedido_seguro(trabalhador, trecho)
+                            texto_campo = f" texto={texto!r}"
+                    print(
+                        f"candidato detector={score:.4f} verificador={resultado.score:.4f} "
+                        f"{motivo_verificacao} pico={audio.get('pico', 0)} vad={vad_txt}{texto_campo}",
+                        flush=True,
+                    )
+                if diagnostico:
+                    print(
+                        "diagnostico verificacao "
+                        f"score={resultado.score:.4f} limiar={resultado.limiar:.4f} "
+                        f"motivo={motivo_verificacao} latenciaMs={resultado.latencia_ms} "
+                        f"modoVerificador={modo_verificador} validado={manifesto.validado if manifesto else False} "
+                        f"vad={vad_txt}",
+                        flush=True,
+                    )
+                if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
+                    diagnostico_salvos += 1
+                    salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                cauda_pedido = extrair_cauda_pedido(
+                    trecho,
+                    resultado.indice_janela,
+                    fim_janela_s=resultado.fim_janela_s,
+                )
                 del trecho
+                confirmado = confirmado_agora
+                if not confirmado:
+                    emitir_tempos(tempos)
+                    emitir_estado(
+                        "aguardando",
+                        microfone="liberado",
+                        pico=pico,
+                        acertos=acertos,
+                        score=score,
+                        scoreVerificador=score_verificador,
+                        motivoRejeicao=motivo_verificacao,
+                    )
+                    continue
             acertos += 1
-            _estado(
-                "saudacao",
+            emitir_estado(
+                "confirmada",
                 microfone="liberado",
                 pico=pico,
-                score=score,
                 acertos=acertos,
+                score=score,
+                scoreVerificador=score_verificador,
+                detectorConfirmado=True,
+            )
+            conduzir_pedido(
+                destino=args.destino,
+                abrir=lambda: abrir_captura(args.origem),
+                limites=limites,
+                pico_fala=args.pico_fala,
+                obter_stt=obter_stt,
+                pico=pico,
+                acertos=acertos,
+                score=score,
+                tempos=tempos,
                 modelo=str(modelo),
                 limiar=args.limiar,
+                pre_cauda=cauda_pedido,
+                voz_dir=pasta_voz,
+                salvar_wavs=salvar_wavs,
+                imprimir_pipeline=imprimir_pipeline,
             )
-            _saudacao(args.destino)
-            _estado("ouvindo", microfone="retido", pico=pico, acertos=acertos)
-            captura = _abrir(args.origem)
-            amostras = _capturar_pedido(captura, args.pedido)
-            _fechar(captura)
-            captura = None
-            texto = _transcrever(stt, amostras)
-            del amostras
-            print(texto, flush=True)
-            if texto.strip():
-                _estado("consultando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
-                _atender_pedido(texto, args.destino, pico=pico, acertos=acertos)
-            _estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, texto=texto)
-        _estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
+        emitir_estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
-        _fechar(captura)
-        stt.close()
-
-
-class _Stt:
-    def __init__(self, python: Path, modelo: Path) -> None:
-        env = os.environ.copy()
-        env["HF_HUB_OFFLINE"] = "1"
-        env["MOAH_STT_MODEL"] = str(modelo)
-        self._proc = subprocess.Popen(
-            [str(python), "-u", "-c", _STT_WORKER],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env=env,
-        )
-        pronto = self._proc.stdout.readline() if self._proc.stdout else b""
-        if pronto.decode("utf-8", "replace").strip() != "READY":
-            erro = self._proc.stderr.read().decode("utf-8", "replace") if self._proc.stderr else ""
-            self.close()
-            raise SystemExit(f"Falha ao carregar STT: {erro.strip() or 'sem READY'}")
-
-    def transcribe(self, audio: np.ndarray) -> str:
-        if self._proc.stdin is None or self._proc.stdout is None:
-            raise SystemExit("STT encerrado.")
-        payload = len(audio).to_bytes(8, "little") + audio.astype(np.float32, copy=False).tobytes()
-        self._proc.stdin.write(payload)
-        self._proc.stdin.flush()
-        linha = self._proc.stdout.readline()
-        if not linha:
-            erro = self._proc.stderr.read().decode("utf-8", "replace") if self._proc.stderr else ""
-            raise SystemExit(f"STT encerrou durante a transcrição: {erro.strip()}")
-        return linha.decode("utf-8", "replace").rstrip("\n")
-
-    def close(self) -> None:
-        if self._proc.poll() is not None:
-            return
-        if self._proc.stdin is not None:
-            try:
-                self._proc.stdin.close()
-            except BrokenPipeError:
-                pass
-        self._proc.terminate()
-        try:
-            self._proc.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            self._proc.kill()
-            self._proc.wait(timeout=1)
-
-
-def _aguardar(
-    detector,
-    chave: str,
-    captura: subprocess.Popen[bytes],
-    limiar: float,
-    inicio: float,
-    duracao: float,
-    guardar: bool = False,
-) -> tuple[bool, float, float, np.ndarray]:
-    """Retorna (detectou, score do disparo, pico local, trecho PCM curto).
-
-    Com guardar=True, só aceita disparo depois que a captura atual preencheu a
-    janela de confirmação (~1,6 s). Disparos anteriores são ignorados; exige-se
-    um novo score acima do limiar com o buffer já completo.
-    """
-    pico = 0.0
-    recentes: deque[np.ndarray] = deque(maxlen=CONFIRMACAO_QUADROS if guardar else 0)
-    vazio = np.zeros(0, dtype=np.int16)
-    while duracao <= 0 or time.time() - inicio < duracao:
-        quadro = _quadro(captura)
-        if quadro is None:
-            return False, 0.0, pico, vazio
-        if guardar:
-            recentes.append(quadro.copy())
-        score = float(detector.predict(quadro).get(chave, 0.0))
-        pico = max(pico, score)
-        if score < limiar:
-            continue
-        if not guardar:
-            return True, score, pico, vazio
-        if len(recentes) < CONFIRMACAO_QUADROS:
-            continue
-        return True, score, pico, np.concatenate(list(recentes))
-    return False, 0.0, pico, vazio
-
-
-def _ler(detector, chave: str, captura: subprocess.Popen[bytes], limiar: float, segundos: float, _parar: bool) -> float:
-    fim = time.time() + segundos
-    pico = 0.0
-    while time.time() < fim:
-        quadro = _quadro(captura)
-        if quadro is None:
-            break
-        pico = max(pico, float(detector.predict(quadro).get(chave, 0.0)))
-    return pico
-
-
-def _capturar_pedido(captura: subprocess.Popen[bytes], segundos: float) -> np.ndarray:
-    fim = time.time() + max(0.1, segundos)
-    blocos: list[np.ndarray] = []
-    while time.time() < fim:
-        quadro = _quadro(captura)
-        if quadro is None:
-            break
-        blocos.append(quadro.copy())
-    if not blocos:
-        return np.zeros(0, dtype=np.int16)
-    return np.concatenate(blocos)
-
-
-def _salvar_wav_confirmacao(pasta: Path, indice: int, amostras: np.ndarray) -> Path:
-    """Grava o PCM int16 que, dividido por 32768, é o float enviado ao Whisper."""
-    pasta.mkdir(parents=True, exist_ok=True)
-    destino = pasta / f"confirmacao-{indice:02d}.wav"
-    pcm = np.ascontiguousarray(amostras, dtype=np.int16)
-    with wave.open(str(destino), "wb") as wav:
-        wav.setnchannels(1)
-        wav.setsampwidth(2)
-        wav.setframerate(TAXA)
-        wav.writeframes(pcm.tobytes())
-    return destino.resolve()
-
-
-def _transcrever(stt: _Stt, amostras: np.ndarray) -> str:
-    if _muda(amostras):
-        return ""
-    audio = amostras.astype(np.float32) / 32768.0
-    try:
-        return stt.transcribe(audio)
-    finally:
-        del audio
-
-
-def _transcrever_seguro(stt: _Stt, amostras: np.ndarray) -> str:
-    try:
-        return _transcrever(stt, amostras)
-    except Exception:
-        return ""
-
-
-def _normalizar_ativacao(texto: str) -> str:
-    sem_acento = unicodedata.normalize("NFKD", texto)
-    sem_acento = "".join(c for c in sem_acento if not unicodedata.combining(c))
-    limpo = re.sub(r"[^A-Za-z0-9]+", " ", sem_acento.upper())
-    return " ".join(limpo.split())
-
-
-def _ativacao_confirmada(texto: str, flexivel: bool = False) -> bool:
-    normalizado = _normalizar_ativacao(texto)
-    palavras = normalizado.split()
-    if 1 <= len(palavras) <= 2 and all(palavra in ATIVACOES for palavra in palavras):
-        return True
-    if not flexivel:
-        return False
-    if len(palavras) == 1 and palavras[0] in ATIVACOES_FLEXIVEIS:
-        return True
-    return normalizado in FRASES_FLEXIVEIS
-
-
-def _atender_pedido(
-    texto: str,
-    destino: str,
-    *,
-    pico: float = 0.0,
-    acertos: int = 0,
-) -> None:
-    """Encaminha o pedido ao catálogo/política via `moah voz pedido`."""
-    repo = Path(__file__).resolve().parents[2]
-    cli = repo / "dist" / "src" / "cli" / "main.js"
-    if not cli.is_file():
-        print("Consulta indisponível: CLI não compilada.", flush=True)
-        return
-    resultado = subprocess.run(
-        [
-            "node",
-            "--disable-warning=ExperimentalWarning",
-            str(cli),
-            "voz",
-            "pedido",
-            "--dominio",
-            "pessoal",
-            "--texto",
-            texto,
-        ],
-        capture_output=True,
-        text=True,
-        env=os.environ.copy(),
-    )
-    bruto = (resultado.stdout or "").strip()
-    if resultado.returncode != 0 or not bruto:
-        erro = (resultado.stderr or "").strip() or bruto or "Falha ao consultar o catálogo."
-        print(erro, flush=True)
-        return
-    try:
-        payload = json.loads(bruto)
-    except json.JSONDecodeError:
-        print(bruto, flush=True)
-        return
-    terminal = str(payload.get("terminal") or "").strip()
-    if terminal:
-        print(terminal, flush=True)
-    falar = payload.get("speak")
-    if not isinstance(falar, str) or not falar.strip():
-        return
-    _estado("falando", microfone="liberado", pico=pico, acertos=acertos)
-    erro_fala = _falar_seguro(destino, falar.strip())
-    if erro_fala is not None:
-        print(f"Falha na síntese: {erro_fala}", flush=True)
-
-
-def _muda(amostras: np.ndarray) -> bool:
-    if not amostras.size or not np.any(amostras):
-        return True
-    sem = amostras.astype(np.float32) - float(np.mean(amostras))
-    return float(np.max(np.abs(sem))) < PICO_MUDO
-
-
-def _quadro(captura: subprocess.Popen[bytes]) -> np.ndarray | None:
-    if captura.stdout is None:
-        return None
-    bruto = captura.stdout.read(QUADRO * 2)
-    if len(bruto) < QUADRO * 2:
-        return None
-    return np.frombuffer(bruto, dtype=np.int16)
-
-
-def _abrir(origem: str) -> subprocess.Popen[bytes]:
-    return subprocess.Popen(
-        ["pw-record", "--target", origem, "--rate", str(TAXA), "--channels", "1", "--format", "s16", "--raw", "-"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-
-
-def _fechar(captura: subprocess.Popen[bytes] | None) -> None:
-    if captura is None or captura.poll() is not None:
-        return
-    captura.terminate()
-    try:
-        captura.wait(timeout=1)
-    except subprocess.TimeoutExpired:
-        captura.kill()
-        captura.wait(timeout=1)
-
-
-def _falar(destino: str, texto: str) -> None:
-    """Síntese espeak + reprodução pw-play no destino da saudação."""
-    with tempfile.TemporaryDirectory() as pasta:
-        arquivo = Path(pasta) / "fala.wav"
-        subprocess.run(
-            ["espeak", "-v", "pt-br", "-s", "140", "-w", str(arquivo), texto],
-            check=True,
-        )
-        subprocess.run(["pw-play", "--target", destino, str(arquivo)], check=True)
-
-
-def _falar_seguro(destino: str, texto: str) -> str | None:
-    """Reproduz texto; retorna mensagem de erro ou None se ok."""
-    try:
-        _falar(destino, texto)
-        return None
-    except Exception as exc:
-        detalhe = str(exc).strip()
-        return detalhe or type(exc).__name__
-
-
-def _saudacao(destino: str) -> None:
-    _falar(destino, "Estou aqui.")
-
-
-def _voz_dir() -> Path:
-    override = os.environ.get("MOAH_VOICE_DIR", "").strip()
-    if override:
-        return Path(override).expanduser().resolve()
-    return Path.home() / ".local" / "share" / "moah" / "voz"
-
-
-def _estado(
-    fase: str,
-    microfone: str,
-    pico: float = 0,
-    acertos: int = 0,
-    eco: bool = False,
-    texto: str | None = None,
-    score: float | None = None,
-    modelo: str | None = None,
-    limiar: float | None = None,
-    confirmarAtivacao: bool | None = None,
-) -> None:
-    payload: dict[str, object] = {
-        "fase": fase,
-        "microfone": microfone,
-        "pico": round(pico, 4),
-        "acertos": acertos,
-        "eco": eco,
-        "detectorConfirmado": False,
-    }
-    if score is not None:
-        payload["score"] = round(score, 4)
-    if modelo is not None:
-        payload["modelo"] = modelo
-    if limiar is not None:
-        payload["limiar"] = limiar
-    if confirmarAtivacao is not None:
-        payload["confirmarAtivacao"] = confirmarAtivacao
-    if texto is not None:
-        payload["texto"] = texto
-    json.dump(payload, sys.stdout, ensure_ascii=False)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+        parar_reproducao()
+        fechar_captura(captura)
+        if stt is not None:
+            stt.close()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ O adaptador de captura fornece áudio. O detector emite uma ativação. A sessã
 
 | Cenário | Comportamento esperado |
 | --- | --- |
-| Usuário chama MOAH | Detectar localmente, falar “Estou aqui” e abrir a janela do pedido |
+| Usuário chama MOAH | Detectar localmente, falar “Estou aqui” e abrir a janela do pedido. “Que horas são?” responde o relógio local, sem LLM |
 | Música, conversa ou saudação toca | Medir falsos disparos e impedir que a própria saída reative a sessão |
 | Pedido fica em silêncio | Encerrar por timeout e voltar à espera |
 | Microfone indisponível ou desligado | Exibir estado e liberar captura |
