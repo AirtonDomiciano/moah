@@ -13,8 +13,14 @@ from eventos_voz import emitir_estado, emitir_tempos, ms_desde
 from janela_pedido import JanelaPedido, LimitesPedido, decidir
 from pcm_pipewire import fechar_captura, ler_quadro, tem_fala
 from pedido_cli import consultar_pedido
+from presenca_fala import avaliar_presenca
 from sintese_pipewire import falar_seguro
 from stt_remoto import transcrever_pedido
+
+
+def _audio_tem_fala(amostras: np.ndarray) -> bool:
+    """Presença de fala no pedido. Reusa o critério do clipe de confirmação."""
+    return bool(amostras.size) and avaliar_presenca(amostras).fala
 
 
 def capturar_pedido(
@@ -27,19 +33,27 @@ def capturar_pedido(
     inicio = time.monotonic()
     janela = JanelaPedido(inicio=inicio)
     blocos: list[np.ndarray] = []
+    # A cauda é anterior à saudação e permanece no áudio. Pico (fim da chamada
+    # ou ruído) não inicia o pedido; só presença de fala arma o silêncio.
     if pre_cauda is not None and pre_cauda.size:
         blocos.append(pre_cauda.copy())
-        if tem_fala(pre_cauda, pico_fala):
+        if _audio_tem_fala(pre_cauda):
             janela.viu_fala = True
             janela.ultimo_fala = inicio
+    vivo = np.zeros(0, dtype=np.int16)
     motivo = "interrupcao"
     while True:
         quadro = ler_quadro(captura)
         agora = time.monotonic()
         if quadro is None:
             break
-        blocos.append(quadro.copy())
-        decisao = decidir(janela, agora, tem_fala(quadro, pico_fala), limites)
+        copia = quadro.copy()
+        blocos.append(copia)
+        vivo = np.concatenate((vivo, copia))
+        fala = tem_fala(copia, pico_fala)
+        if fala and not janela.viu_fala:
+            fala = _audio_tem_fala(vivo)
+        decisao = decidir(janela, agora, fala, limites)
         if decisao is not None:
             motivo = decisao
             break
@@ -134,7 +148,12 @@ def conduzir_pedido(
         tempos["escutaMs"] = ms_desde(t_pedido)
         fechar_captura(captura)
         captura = None
-        print(f"pedido motivo={motivo} amostras={amostras.size}", flush=True)
+        tem_pedido = _audio_tem_fala(amostras)
+        print(
+            f"pedido motivo={motivo} amostras={amostras.size} "
+            f"presenca={'fala' if tem_pedido else 'sem_fala'}",
+            flush=True,
+        )
         pipeline_ponto(
             "pedido_capturado",
             amostras=amostras,
@@ -160,6 +179,11 @@ def conduzir_pedido(
                 },
             )
             print(f"diagnostico wav pedido-stt={caminho_ped} meta={meta_ped.get('metricas')}", flush=True)
+        if not tem_pedido:
+            falar_etapa(destino, "Não ouvi o pedido.", "falando", tempos, "falaMs", pico, acertos)
+            emitir_tempos(tempos)
+            emitir_estado("aguardando", microfone="liberado", pico=pico, acertos=acertos)
+            return
         emitir_estado("transcrevendo", microfone="liberado", pico=pico, acertos=acertos, score=score)
         pipeline_ponto("stt_entrada", amostras=amostras, imprimir=imprimir_pipeline)
         texto, erro_stt = ouvir_texto(obter_stt, amostras, tempos)

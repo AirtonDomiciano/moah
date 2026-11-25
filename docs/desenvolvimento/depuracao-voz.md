@@ -115,14 +115,11 @@ Use as configurações **MOAH voz: reproduzir WAV** no `launch.json` com breakpo
 
 Linhas auxiliares: `scripts/voz/audio_metricas.py` (`resumo_audio`, `pipeline_ponto`); saída `pipeline {...}` só com `--diagnostico` ou `--salvar-wavs sim`. `--depurar` só abre o debugpy.
 
-## Investigar “Legendas pela comunidade Amara.org”
+## “Legendas pela comunidade Amara.org”
 
-Sem concluir a causa:
+Causa fechada em 23/11/2026 no turno do pedido, sem filtro de texto. A cauda anterior à saudação, se passava do pico de fala, marcava o pedido como já iniciado. O silêncio de 0,7 s então encerrava a captura antes da pergunta. Um clipe de cerca de 1,16 s (cauda mais o silêncio) ia ao Whisper, que preenche silêncio com essa frase, e o texto seguia para a consulta. Agora a cauda só arma o silêncio quando `avaliar_presenca` vê fala, e sem fala não há STT nem consulta. A linha fica `pedido motivo=espera … presenca=sem_fala`.
 
-1. Abra o JSON ao lado do `pedido-*.wav`: se `"mudo": true` ou RMS/pico baixos → captura vazia ou só ruído; Whisper costuma alucinar legendas em silêncio.
-2. Confira `motivoEncerramento`: `silencio` com 0,7 s sem fala após saudação é compatível com pedido não iniciado a tempo.
-3. Compare duração do WAV com `esperaS` (4 s) e `silencioS` (0,7 s).
-4. Reproduza o mesmo WAV com `reproduzir_wav.py --etapa stt` sob debugger em `_transcrever`.
+Se um WAV antigo ainda precisar de leitura: `"mudo": true` ou RMS baixo, `motivoEncerramento=silencio` e duração perto de 0,7 s mais a cauda confirmam esse caminho. `reproduzir_wav.py --etapa stt` só relê o arquivo; não é o fluxo corrigido.
 
 ## Comportamento padrão preservado
 

@@ -48,7 +48,7 @@ Varredura em `pedido-stt/*.wav`:
 - **“Que horas são?”** em `pedido-20261123-115516.wav` (pico ~10786, 3,28 s) — captura e STT coerentes.
 - **Vários WAV com fala ausente no texto** (pico 200–1000, duração 3–7 s, `mudo: false`) — limiar de mudo não barra; Whisper devolve `""` ou lixo.
 
-**Hipótese forte:** causa dominante no pedido = **janela capturou pouco ou sem o comando** (`motivoEncerramento=silencio`) + **comportamento do Whisper** em sinal fraco; não falha de taxa/canal.
+**Causa no turno, 23/11/2026:** a cauda com pico marcava o pedido como iniciado e o silêncio de 0,7 s fechava o clipe (~1,16 s no teste relatado) antes da pergunta. O Whisper preenchia esse áudio e o texto ia à consulta. A correção não filtra a frase: sem presença de fala não há STT. Detalhe em [2026-11-23-004](../../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md).
 
 **Hipótese:** `Broken pipe` no STT ao depurar = processo Whisper morto/pausado no debugger, não prova de hardware ruim.
 

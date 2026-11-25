@@ -55,6 +55,11 @@ def _self_test() -> None:
 
     fala_segura_espera = JanelaPedido(inicio=0)
     assert decidir(fala_segura_espera, 4.0, True, limites) is None
+
+    # Sem fala iniciada, o silêncio de encerramento não dispara.
+    sem_inicio = JanelaPedido(inicio=0)
+    assert decidir(sem_inicio, 0.7, False, limites) is None
+    assert sem_inicio.viu_fala is False
     print("ok")
 
 

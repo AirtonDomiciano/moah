@@ -1,6 +1,6 @@
 # Ideias e backlog
 
-Atualizado em 29/10/2026. Os módulos 01 a 10 estão planejados. O prompt 00 entregou a CLI de memória de trabalho. O prompt 11 entrega a conversa de leitura sobre essa memória, com simulador e sem modelo real validado.
+Atualizado em 23/11/2026. Os módulos 01 a 10 estão planejados. O prompt 00 entregou a CLI de memória de trabalho. O prompt 11 entrega a conversa de leitura sobre essa memória, com simulador e sem modelo real validado.
 
 | ID | Responsabilidade | Prioridade / destino |
 | --- | --- | --- |
@@ -129,8 +129,12 @@ Data: 03/11/2026. Origem: pedido explícito de Airton para levantamento e separa
 
 ## MOAH-036 — Voz ativada pelo nome MOAH
 
-Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: laço e painel testados com fixtures; captura e saudação medidas no JBL Quantum 360; em 08/11/2026 o `escutar` transcreve o pedido com faster-whisper local após “Estou aqui.” e volta a aguardar, sem consulta à memória. Aceite falado do detector e resposta falada pendentes. A ativação não autoriza ações e a conversa segue somente leitura. O modelo “hey pran” não foi reutilizado como detector deste nome. Fonte: [voz](docs/operacao/voz.md).
+Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: em 23/11/2026 o laço acústico em modo teste no JBL foi relatado como funcional depois da presença de fala e da captura do pedido. O verificador continua `validado: false`. A fala duplicada está em MOAH-040, sem correção. A ativação não autoriza ações e a conversa segue somente leitura. Fonte: [voz](docs/operacao/voz.md).
 
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 
-Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: experimental permanece em uso; candidato com janelas da escuta (`49ac8909…` + `.pt`) em 08/11/2026: 8/8 na 03 e falsos de fala 7@0,95 (baseline `f5d9784…` tinha 48); saudação 0/9; música/ambiente ainda altos; sessão 04 fechada. Os resultados da 03 não são o teste final.
+Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: experimental permanece em uso. O verificador atual não tem 8/8 na sessão 03 (`limiarCalibrado` 0,8 com 7/8; `limiarOperacional` null; `validado: false`). A sessão 04 segue fechada e não entra no ajuste do limiar. Os resultados da 03 não são o teste final.
+
+## MOAH-040 — Fala duplicada no laço do JBL
+
+Data: 23/11/2026. Origem: relato de Airton depois do teste em modo teste no JBL. Responsabilidade: voz. Estado: registrada para observar se persiste. Uma ocorrência. Sem investigação e sem correção neste capítulo. Não impede o registro de que o laço foi relatado como funcional, e também não valida o verificador.
