@@ -133,8 +133,42 @@ Data: 03/11/2026. Origem: pedido explícito de Airton. Estado: em 23/11/2026 o l
 
 ## MOAH-037 — Treinar um detector da pronúncia MOAH
 
-Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: experimental permanece em uso. O verificador atual não tem 8/8 na sessão 03 (`limiarCalibrado` 0,8 com 7/8; `limiarOperacional` null; `validado: false`). A sessão 04 segue fechada e não entra no ajuste do limiar. Os resultados da 03 não são o teste final.
+Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Responsabilidade: voz. Estado: experimental permanece em uso; candidato com janelas da escuta (`49ac8909…` + `.pt`) em 08/11/2026: 8/8 na 03 e falsos de fala 7@0,95 (baseline `f5d9784…` tinha 48); saudação 0/9; música/ambiente ainda altos; sessão 04 fechada. O verificador atual não tem 8/8 na sessão 03 (`limiarCalibrado` 0,8 com 7/8; `limiarOperacional` null; `validado: false`) e a sessão 04 não entra no ajuste desse limiar. Os resultados da 03 não são o teste final.
 
-## MOAH-040 — Fala duplicada no laço do JBL
 
-Data: 23/11/2026. Origem: relato de Airton depois do teste em modo teste no JBL. Responsabilidade: voz. Estado: registrada para observar se persiste. Uma ocorrência. Sem investigação e sem correção neste capítulo. Não impede o registro de que o laço foi relatado como funcional, e também não valida o verificador.
+## MOAH-038 — Chamada e pedido na mesma frase
+
+- **Data:** 23/11/2026.
+- **Origem:** pedido explícito de Airton nesta conversa.
+- **Estado:** planejado; comportamento completo e integração com agenda ainda dependem de implementação e validação.
+- **Responsabilidade:** módulo 08 (voz e sessão), módulo 03 (consulta de calendário) e módulo 04 (agenda). Contrato de voz: [voz e ciclo de modelos](docs/arquitetura/estrutura/voz.md).
+- **Exemplo desejado:** “Moah, quero que me fale quais são nossas reuniões hoje.” → consulta a agenda autorizada → “Airton, hoje nossas reuniões são…” com os compromissos reais retornados pela fonte.
+- **Comportamento:** reconhecer a chamada e preservar o pedido completo na mesma fala; transcrever e executar a consulta disponível sem exigir repetição após “Estou aqui”. Quando houver pedido junto, responder diretamente; quando houver apenas “Moah”, saudar e aguardar o pedido.
+- **Separação da chamada:** considerar variantes de transcrição como “Moa” e “Boa” no contexto da ativação, sem substituir palavras indiscriminadamente no pedido nem aceitar qualquer frase iniciada por “boa”. A política de ativação precisa continuar distinguindo chamadas de conversas comuns.
+- **Próximos passos:** estabilizar captura e confirmação atuais; validar preservação do começo e fim da fala e a separação entre nome e pedido; depois integrar consulta de agenda somente leitura pelo catálogo/política existentes, respeitando domínio, calendário e fuso configurados. Informar fonte indisponível ou ausência de reuniões sem inventar compromissos.
+- **Critérios de aceite futuros:** chamada isolada; chamada com pedido contínuo; pequena pausa entre nome e pedido; nenhuma perda ou duplicação de palavras; sem executar duas vezes; resposta de agenda baseada na fonte autorizada. Não considerar este registro uma autorização para conectar contas ou alterar compromissos.
+
+
+## MOAH-039 — Manter a voz de quem iniciou o pedido
+
+- **Data:** 23/11/2026.
+- **Origem:** pedido explícito de Airton: ao iniciar a fala, acompanhar sua voz e não incorporar uma segunda pessoa que fale depois.
+- **Estado:** planejado; avaliação técnica e validação no ambiente real pendentes.
+- **Responsabilidade:** módulo 08, captura, identificação de locutor e sessão de voz. Contrato: [voz e ciclo de modelos](docs/arquitetura/estrutura/voz.md).
+- **Comportamento desejado:** após uma chamada aceita, vincular temporariamente o turno ao locutor que a iniciou; evitar incorporar falas de outra pessoa ao pedido ou trocar de interlocutor automaticamente. Encerrar o vínculo ao finalizar, cancelar ou expirar a sessão.
+- **Distinção:** VAD detecta presença de fala, não quem fala. Avaliar comparação de características de voz (embeddings de locutor) e segmentação por locutor. Uma chamada curta como “Moah” pode não conter áudio suficiente para uma referência confiável; não assumir que a primeira voz seja Airton.
+- **Escopo opcional futuro:** perfil de voz cadastrado explicitamente por Airton para aceitar chamadas da sua voz. Este perfil é diferente de acompanhar o locutor inicial de qualquer sessão e deve ser configurável.
+- **Falas simultâneas:** separar a voz desejada de uma mistura é uma capacidade adicional, não garantida pela identificação de locutor. Se houver sobreposição ou incerteza, não executar pedido misturado; pedir repetição ou cancelar o turno conforme política definida.
+- **Próximos passos:** estabilizar ativação e captura; avaliar solução local compatível com Debian e latência medida; comparar locutor inicial, troca de pessoa e sobreposição antes de escolher modelo ou dependência. Manter amostras e perfis privados fora do Git e permitir excluir eventual cadastro.
+- **Critérios de aceite futuros:** Airton chama e continua; outra pessoa fala depois; pausa e retomada da mesma pessoa; duas vozes simultâneas; TV ou reprodução ao fundo; chamadas curtas e variação de distância/volume. Medir aceitação indevida, rejeição da voz desejada e latência. Identificação vocal não concede autorização para ações nem substitui a política existente.
+
+
+## MOAH-040 — Acompanhar relato de fala duplicada
+
+- **Data:** 23/11/2026.
+- **Origem:** relato explícito de Airton após teste no JBL: “deu boa, só que ele falou duas vezes”.
+- **Estado:** observação para acompanhamento; uma ocorrência. Investigar se persistir. Sem investigação e sem correção nesta rodada. Não impede o registro de que o laço foi relatado como funcional, e também não valida o verificador (`validado: false`).
+- **Responsabilidade:** módulo 08, sessão e reprodução de voz.
+- **Contexto:** teste do fluxo acústico em modo teste, limiar do verificador 0,95, após ajuste da captura do pedido e retirada de diagnóstico detalhado do console. Airton informou que o fluxo funcionou, mas houve duas falas.
+- **Evidência disponível:** relato do usuário. Ainda não foi identificado se repetiu a saudação, a resposta ou se foram falas diferentes; não há log ou WAV associado a esta ocorrência.
+- **Próximo passo se recorrer:** registrar o que foi dito nas duas falas e correlacionar os estados da mesma tentativa; verificar duplicação na síntese/reprodução, execução repetida ou nova ativação após a saída de áudio, sem assumir a causa.

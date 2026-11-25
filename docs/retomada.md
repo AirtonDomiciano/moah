@@ -1,6 +1,6 @@
 # Ponto de retomada do MOAH
 
-Atualizado em 23/11/2026, horário de São Paulo.
+Atualizado em 25/11/2026, horário de São Paulo.
 
 ## Leia primeiro
 
@@ -65,12 +65,25 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl \
   --diagnostico sim
 ```
 
+## Entrega preparada para `main`
+
+A branch `teste/lembretes-moah` incorpora `origin/main` até `d8894ae`. Os registros exclusivos da `main` permanecem: [MOAH-038](../ideias.md#moah-038--chamada-e-pedido-na-mesma-frase), [MOAH-039](../ideias.md#moah-039--manter-a-voz-de-quem-iniciou-o-pedido) e [MOAH-040](../ideias.md#moah-040--acompanhar-relato-de-fala-duplicada). MOAH-038 e MOAH-039 continuam planejados. MOAH-040 continua observação, sem correção.
+
+O que esta branch acrescenta, sem promover o verificador:
+
+- Lembretes locais por voz (`me lembro de` / `me lembre`) e aviso falado quando a ferramenta está indisponível ou o prazo não serve.
+- Pipeline acústico em dois estágios, presença de fala e turno do pedido. Evidências: [2026-11-23-003](../cursror-dev/execucoes/2026-11-23-003-presenca-fala.md), [2026-11-23-004](../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md), [2026-11-23-005](../cursror-dev/execucoes/2026-11-23-005-fechamento-jbl.md).
+
+`validado` permanece `false`. O modo produção continua recusando confirmação acústica sem `validado: true` e `limiarOperacional` (`modelo_nao_validado`). O modo teste não grava o manifesto.
+
+Verificação desta rodada, em 25/11/2026, Node 22.23.3 e Python 3.10.21 do ambiente de voz: `npm run typecheck`, `npm test` (84 testes, 0 falhas) e os scripts `test_turno_escuta.py`, `test_presenca_fala.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py`, `test_confirmacao_texto.py`. Isso não fecha 8/8 na sessão 03, a tabela de chamadas nem a sessão 04.
+
 ## Git
 
-- Branch: `teste/lembretes-moah`
-- HEAD: `c69de26` (`melhoria na fala`, 23/11/2026 16:18 -0300)
-- A árvore local ainda tem alterações não commitadas deste capítulo (turno do pedido e docs). Este fechamento não as commita.
-- Remoto: `origin` → `github.com/AirtonDomiciano/moah.git` (sincronia depende do último `git push` na máquina).
+- Branch: `teste/lembretes-moah`, com merge de `origin/main` (`d8894ae`).
+- `main` local segue em `3efb008`; o remoto `origin/main` está em `d8894ae`.
+- Remoto: `origin` → `github.com/AirtonDomiciano/moah.git`.
+- Áudio, ONNX, credenciais e memória real ficam fora do Git. Bytecode `__pycache__` não entra neste merge.
 
 ## Manutenção
 
