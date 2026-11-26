@@ -36,6 +36,7 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-11-25-007-voz-faber-config](2026-11-25-007-voz-faber-config.md) | continuação de 16 | Faber gravada em config.json; espeak se o Piper falhar |
 | [2026-11-25-008-lembrete-voz](2026-11-25-008-lembrete-voz.md) | continuação de 16 | Lembrete vencido anunciado só com voz uso aberto |
 | [2026-11-25-009-alterar-lembrete](2026-11-25-009-alterar-lembrete.md) | continuação de 16 | Alterar pendente atualiza o mesmo job |
+| [2026-11-25-010-lembrete-recorrente](2026-11-25-010-lembrete-recorrente.md) | continuação de 16 | Recorrência no mesmo job, um aviso por ciclo |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

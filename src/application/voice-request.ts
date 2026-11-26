@@ -1,5 +1,5 @@
 import { isDomain, type Domain } from "../domain/constants.js";
-import { ALTER_LOCAL_REMINDER_TOOL, LOCAL_REMINDER_TOOL, READ_TOOLS } from "../domain/policy.js";
+import { ALTER_LOCAL_REMINDER_TOOL, CANCEL_LOCAL_REMINDER_TOOL, LOCAL_REMINDER_TOOL, READ_TOOLS } from "../domain/policy.js";
 import { formatRecordLines } from "./format-record.js";
 import { governVoiceTool } from "./governance.js";
 import {
@@ -7,6 +7,7 @@ import {
   isReminderRequest,
   parseLocalReminder,
   parseReminderChange,
+  REMINDER_INCOMPLETE_SPEECH,
 } from "./reminders/index.js";
 import { findCheckpoint, listKnownProjects, type WorkLogContext } from "./work-log.js";
 
@@ -42,7 +43,7 @@ const ONDE_PARAMOS_NO = /ONDE PARAMOS NO (.+)$/;
 const DATE_INTENT = /\b(\d{4}-\d{2}-\d{2})\b/;
 const MEETING_INTENT = /reuni[aã]o\s+(reu_[0-9a-f-]{8,})/i;
 
-const CATALOG = new Set<string>([...READ_TOOLS, LOCAL_REMINDER_TOOL, ALTER_LOCAL_REMINDER_TOOL]);
+const CATALOG = new Set<string>([...READ_TOOLS, LOCAL_REMINDER_TOOL, ALTER_LOCAL_REMINDER_TOOL, CANCEL_LOCAL_REMINDER_TOOL]);
 
 export function handleVoiceRequest(
   context: WorkLogContext,
@@ -86,6 +87,9 @@ export function handleVoiceRequest(
   if (intent.tool === ALTER_LOCAL_REMINDER_TOOL) {
     return presentReminderChange(execution);
   }
+  if (intent.tool === CANCEL_LOCAL_REMINDER_TOOL) {
+    return presentReminderCancel(execution);
+  }
   if (!execution.ok) {
     return {
       status: "denied",
@@ -121,12 +125,11 @@ export function resolveVoiceIntent(context: WorkLogContext, domain: Domain, text
     return { kind: "local", terminal: `${clock} (${context.timeZone})`, speak: clock };
   }
   const change = parseReminderChange(text);
+  if (change?.kind === "cancel-incomplete") {
+    return { kind: "unavailable", detail: change.speak, speak: change.speak };
+  }
   if (change?.kind === "cancel") {
-    return {
-      kind: "unavailable",
-      detail: "Cancelar lembrete não está disponível.",
-      speak: VOICE_REMINDER_CANCEL_UNAVAILABLE_SPEECH,
-    };
+    return { kind: "tool", tool: CANCEL_LOCAL_REMINDER_TOOL, args: { texto: change.texto } };
   }
   if (change?.kind === "alter-incomplete") {
     return { kind: "unavailable", detail: change.speak, speak: change.speak };
@@ -135,7 +138,7 @@ export function resolveVoiceIntent(context: WorkLogContext, domain: Domain, text
     return {
       kind: "tool",
       tool: ALTER_LOCAL_REMINDER_TOOL,
-      args: { texto: change.texto, segundos: String(change.segundos) },
+      args: { texto: change.texto, segundos: String(change.segundos), recorrente: change.recorrente ? "sim" : "nao" },
     };
   }
   const reminder = parseLocalReminder(text);
@@ -143,14 +146,19 @@ export function resolveVoiceIntent(context: WorkLogContext, domain: Domain, text
     return {
       kind: "tool",
       tool: LOCAL_REMINDER_TOOL,
-      args: { texto: reminder.texto, minutos: String(reminder.minutos) },
+      args: {
+        texto: reminder.texto,
+        segundos: String(reminder.segundos),
+        recorrente: reminder.recorrente ? "sim" : "nao",
+        ...(reminder.minutos !== null ? { minutos: String(reminder.minutos) } : {}),
+      },
     };
   }
   if (isReminderRequest(text)) {
     return {
       kind: "unavailable",
-      detail: "Lembrete sem prazo válido em minutos. Informe daqui a quantos minutos.",
-      speak: VOICE_REMINDER_UNAVAILABLE_SPEECH,
+      detail: REMINDER_INCOMPLETE_SPEECH,
+      speak: REMINDER_INCOMPLETE_SPEECH,
     };
   }
   if (WRITE_INTENT.test(text)) {
@@ -280,6 +288,24 @@ function presentCheckpoint(
     speak: `${checkpoint.text} Próximo passo: ${next}`,
     tool: "consultar_checkpoint",
   };
+}
+
+function presentReminderCancel(execution: {
+  ok: boolean;
+  lines: string[];
+  question: string | null;
+  modelPayload: unknown;
+}): VoiceRequestResult {
+  if (!execution.ok) {
+    const speak = execution.question ?? execution.lines[0] ?? "Não encontrei o lembrete.";
+    return { status: "unavailable", terminal: speak, speak, tool: CANCEL_LOCAL_REMINDER_TOOL };
+  }
+  const payload =
+    typeof execution.modelPayload === "object" && execution.modelPayload !== null
+      ? (execution.modelPayload as Record<string, unknown>)
+      : {};
+  const confirmation = typeof payload.confirmation === "string" ? payload.confirmation : execution.lines[0] ?? "Lembrete cancelado.";
+  return { status: "ok", terminal: confirmation, speak: confirmation, tool: CANCEL_LOCAL_REMINDER_TOOL };
 }
 
 function presentReminderChange(execution: {

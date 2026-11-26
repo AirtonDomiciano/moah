@@ -56,7 +56,7 @@ def proximo_vencido(agora: datetime | None = None, banco: Path | None = None) ->
     if not caminho.is_file():
         return None
     instante = agora or datetime.now(timezone.utc)
-    vencidos: list[tuple[str, str, str]] = []
+    vencidos: list[tuple[str, str, str, str]] = []
     uri = f"file:{caminho}?mode=ro"
     with sqlite3.connect(uri, uri=True) as conexao:
         linhas = conexao.execute(
@@ -73,15 +73,16 @@ def proximo_vencido(agora: datetime | None = None, banco: Path | None = None) ->
             prazo = _instante(disparo)
             if prazo is None or prazo > instante:
                 continue
-            vencidos.append((disparo, str(identificador), texto))
+            recorrente = "sim" if payload.get("recorrente") is True else "nao"
+            vencidos.append((disparo, str(identificador), texto, recorrente))
     if not vencidos:
         return None
     vencidos.sort()
-    _disparo, identificador, texto = vencidos[0]
-    return {"id": identificador, "texto": texto}
+    _disparo, identificador, texto, recorrente = vencidos[0]
+    return {"id": identificador, "texto": texto, "recorrente": recorrente}
 
 
-def registrar_resultado(identificador: str, entregue: bool, erro: str | None = None) -> bool:
+def registrar_resultado(identificador: str, entregue: bool, erro: str | None = None, recorrente: bool = False) -> bool:
     repo = Path(__file__).resolve().parents[2]
     cli = repo / "dist" / "src" / "cli" / "main.js"
     if not cli.is_file():
@@ -96,7 +97,7 @@ def registrar_resultado(identificador: str, entregue: bool, erro: str | None = N
         "--id",
         identificador,
         "--resultado",
-        "entregue" if entregue else "falha",
+        "proxima" if recorrente else "entregue" if entregue else "falha",
     ]
     if not entregue:
         comando.extend(["--erro", erro or "Falha na reprodução."])
@@ -111,17 +112,18 @@ def registrar_resultado(identificador: str, entregue: bool, erro: str | None = N
 def anunciar_lembrete(destino: str, item: dict[str, str], falar=falar_seguro, registrar=registrar_resultado) -> bool:
     texto = frase_lembrete(item.get("texto") or "")
     emitir_estado("falando", microfone="liberado")
+    recorrente = item.get("recorrente") == "sim"
     erro = falar(destino, texto)
     if erro:
         print(f"erro={erro}", flush=True)
-        registrar(item["id"], False, erro)
+        registrar(item["id"], False, erro, recorrente)
         emitir_estado("aguardando", microfone="liberado")
         return False
     if console_enxuto():
         emitir_linha("resultado", texto)
     else:
         print(texto, flush=True)
-    if not registrar(item["id"], True, None):
+    if not registrar(item["id"], True, None, recorrente):
         emitir_estado("aguardando", microfone="liberado")
         return False
     emitir_estado("aguardando", microfone="liberado")
@@ -170,7 +172,7 @@ def _self_test() -> None:
             gravar("job_falha", "falha", "2026-11-25T17:00:00.000Z", "não saiu")
             gravar("job_vence", "pendente", "2026-11-25T17:58:00.000Z", "beber água")
         achado = proximo_vencido(agora, banco)
-        assert achado == {"id": "job_vence", "texto": "beber água"}
+        assert achado == {"id": "job_vence", "texto": "beber água", "recorrente": "nao"}
         falas: list[str] = []
         registros: list[tuple[str, bool, str | None]] = []
 
@@ -178,7 +180,7 @@ def _self_test() -> None:
             falas.append(fala)
             return None
 
-        def registrar(identificador: str, entregue: bool, erro: str | None = None) -> bool:
+        def registrar(identificador: str, entregue: bool, erro: str | None = None, _recorrente: bool = False) -> bool:
             registros.append((identificador, entregue, erro))
             return True
 

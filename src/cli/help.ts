@@ -25,7 +25,7 @@ Comandos:
   moah voz estado|simular --roteiro <json-simulacao>
   moah voz pedido --texto <pedido> [--dominio pessoal|imex|aluai]
   moah voz uso [--microfone jbl|camera]
-  moah voz lembrete --id <job> --resultado entregue|falha [--erro <texto>]
+  moah voz lembrete --id <job> --resultado entregue|falha|proxima [--erro <texto>]
   moah voz ouvir --voz espeak|faber|cadu|jeff|edresson|tugao [--microfone jbl|camera]
   moah voz hardware --habilitar sim [--microfone jbl|camera]
   moah voz escutar --habilitar sim [--microfone jbl|camera] [--modelo /caminho/modelo.onnx] [--limiar 0.5] [--diagnostico sim] [--salvar-wavs sim] [--depurar sim] [--depurar-porta 5678] [--pedido 8] [--espera 4] [--silencio 0.7] [--pico-fala 200] [--arranque 1.7] [--confirmar-ativacao acustico|stt|sim|nao] [--modo-verificador producao|manual|teste] [--verificador /caminho/verificador.onnx] [--limiar-verificador 0.95] [--gravar-diagnostico sim]

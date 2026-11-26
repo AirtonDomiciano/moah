@@ -174,6 +174,51 @@ export function settlePendingReminder(
   });
 }
 
+/** Próximo ciclo da recorrência. Não marca entrega e não recupera avisos atrasados. */
+export function continueRecurringReminder(
+  context: JobContext,
+  id: string,
+  spoke: boolean,
+  error: string | null,
+): { changed: boolean; state: JobState | null; fireAt: string | null } {
+  return withJobs(context.dataDir, (db) => {
+    const current = selectJob(db, id);
+    if (!current || current.kind !== "lembrete_local" || current.state !== "pendente" || current.payload.recorrente !== true) {
+      return { changed: false, state: current?.state ?? null, fireAt: null };
+    }
+    const intervalo = Number(current.payload.intervaloSegundos);
+    if (!Number.isInteger(intervalo) || intervalo < 1) {
+      return { changed: false, state: current.state, fireAt: null };
+    }
+    const now = context.now();
+    const fireAt = new Date(now.getTime() + intervalo * 1000).toISOString();
+    const payload = { ...current.payload, fireAt };
+    const checkpoint = { entregue: false, falado: spoke, recorrente: true };
+    const result = db
+      .prepare(
+        `UPDATE jobs
+         SET payload_json = ?, checkpoint_json = ?, error = ?, updated_at = ?, finished_at = NULL
+         WHERE id = ? AND kind = 'lembrete_local' AND state = 'pendente'`,
+      )
+      .run(JSON.stringify(payload), JSON.stringify(checkpoint), spoke ? null : error, now.toISOString(), id);
+    return { changed: Number(result.changes) === 1, state: "pendente", fireAt };
+  });
+}
+
+export function cancelPendingLocalReminder(context: JobContext, id: string): boolean {
+  return withJobs(context.dataDir, (db) => {
+    const now = context.now().toISOString();
+    const result = db
+      .prepare(
+        `UPDATE jobs
+         SET state = 'cancelada', checkpoint_json = ?, error = NULL, updated_at = ?, finished_at = ?
+         WHERE id = ? AND kind = 'lembrete_local' AND state = 'pendente'`,
+      )
+      .run(JSON.stringify({ entregue: false, cancelado: true }), now, now, id);
+    return Number(result.changes) === 1;
+  });
+}
+
 export function listJobsByKind(dataDir: string, kind: string): JobRow[] {
   return withJobs(dataDir, (db) => {
     const rows = db.prepare("SELECT * FROM jobs WHERE kind = ? ORDER BY created_at").all(kind) as unknown as Array<

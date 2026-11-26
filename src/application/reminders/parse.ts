@@ -10,7 +10,11 @@ const DELAY_MINUTES_WORD = /\bdaqui(?:\s+a)?\s+([a-záéíóúâêôãõç]+)\s*
 const ALTER_INTENT = /\balter(?:ar|a|e|o)?\b/i;
 const CANCEL_INTENT = /\bcancel(?:ar|a|e|o)?\b/i;
 const CHANGE_CONTENT = /\blembrete\s+de\s+(.+?)\s+para\b/i;
+const CHANGE_EACH = /\bpara\s+a cada\s+(\d+|[a-záéíóúâêôãõç]+)\s+(segundos?|minutos?)\b/i;
 const CHANGE_DELAY = /\bpara(?:\s+daqui(?:\s+a)?)?\s+(\d+|[a-záéíóúâêôãõç]+)\s+(segundos?|minutos?)\b/i;
+const EACH_INTERVAL = /\ba cada\s+(\d+|[a-záéíóúâêôãõç]+)\s+(segundos?|minutos?)\b/i;
+const DAQUI_SECONDS = /\bdaqui(?:\s+a)?\s+(\d+|[a-záéíóúâêôãõç]+)\s+(segundos?)\b/i;
+const CANCEL_CONTENT = /\blembrete\s+de\s+(.+?)(?:\s+a cada\b|\s+daqui\b|[.?!]|$)/i;
 
 const MINUTE_WORDS: Record<string, number> = {
   um: 1,
@@ -35,13 +39,19 @@ const MINUTE_WORDS: Record<string, number> = {
 
 export type ParsedLocalReminder = {
   texto: string;
-  minutos: number;
+  minutos: number | null;
+  segundos: number;
+  recorrente: boolean;
 };
 
 export type ReminderChange =
-  | { kind: "alter"; texto: string; segundos: number }
+  | { kind: "alter"; texto: string; segundos: number; recorrente: boolean }
   | { kind: "alter-incomplete"; speak: string }
-  | { kind: "cancel" };
+  | { kind: "cancel"; texto: string }
+  | { kind: "cancel-incomplete"; speak: string };
+
+export const REMINDER_INCOMPLETE_SPEECH =
+  "Diga daqui a quantos minutos ou segundos, ou a cada quanto tempo.";
 
 /**
  * “me lembre/lembra” e agenda explícita.
@@ -84,38 +94,50 @@ export function parseReminderChange(text: string): ReminderChange | null {
     return null;
   }
   if (CANCEL_INTENT.test(trimmed)) {
-    return { kind: "cancel" };
+    const texto = CANCEL_CONTENT.exec(trimmed)?.[1]?.trim().replace(/[.?!,]+$/g, "") ?? "";
+    if (!texto) {
+      return { kind: "cancel-incomplete", speak: "Diga qual lembrete cancelar." };
+    }
+    return { kind: "cancel", texto };
   }
   if (!ALTER_INTENT.test(trimmed)) {
     return null;
   }
   const content = CHANGE_CONTENT.exec(trimmed)?.[1]?.trim() ?? "";
-  const delay = extractChangeDelay(trimmed);
+  const each = extractAmount(trimmed, CHANGE_EACH);
+  const delay = each ?? extractChangeDelay(trimmed);
   if (!content || delay === null) {
     const speak = content
-      ? `Diga o novo prazo do lembrete de ${content}, por exemplo para 30 segundos.`
+      ? `Diga o novo prazo do lembrete de ${content}, por exemplo para 30 segundos ou para a cada 30 segundos.`
       : "Diga qual lembrete alterar e o novo prazo.";
     return { kind: "alter-incomplete", speak };
   }
-  return { kind: "alter", texto: content, segundos: delay };
+  return { kind: "alter", texto: content, segundos: delay.segundos, recorrente: delay.recorrente };
 }
 
-function extractChangeDelay(text: string): number | null {
-  const match = CHANGE_DELAY.exec(text);
+function extractChangeDelay(text: string): { segundos: number; recorrente: boolean } | null {
+  const amount = extractAmount(text, CHANGE_DELAY);
+  return amount ? { ...amount, recorrente: false } : null;
+}
+
+function extractAmount(
+  text: string,
+  pattern: RegExp,
+): { segundos: number; recorrente: boolean } | null {
+  const match = pattern.exec(text);
   if (!match?.[1] || !match[2]) {
     return null;
   }
-  const amount = Number(match[1]);
-  const value = Number.isInteger(amount) && amount > 0 ? amount : wordAmount(match[1]);
+  const numeric = Number(match[1]);
+  const value = Number.isInteger(numeric) && numeric > 0 ? numeric : wordAmount(match[1]);
   if (value === null) {
     return null;
   }
-  const unit = match[2].toLowerCase();
-  const segundos = unit.startsWith("minuto") ? value * 60 : value;
+  const segundos = match[2].toLowerCase().startsWith("minuto") ? value * 60 : value;
   if (segundos < 1 || segundos > 24 * 60 * 60) {
     return null;
   }
-  return segundos;
+  return { segundos, recorrente: true };
 }
 
 function wordAmount(token: string): number | null {
@@ -128,20 +150,34 @@ function wordAmount(token: string): number | null {
 
 export function parseLocalReminder(text: string): ParsedLocalReminder | null {
   const trimmed = text.trim();
-  if (!trimmed) {
+  if (!trimmed || CANCEL_INTENT.test(trimmed) || ALTER_INTENT.test(trimmed)) {
     return null;
+  }
+  const each = extractAmount(trimmed, EACH_INTERVAL);
+  if (each && (REMINDER_COMMAND.test(trimmed) || REMEMBER_STT.test(trimmed))) {
+    return parsedReminder(trimmed, each.segundos, true);
+  }
+  const seconds = extractAmount(trimmed, DAQUI_SECONDS);
+  if (seconds && (REMINDER_COMMAND.test(trimmed) || REMEMBER_STT.test(trimmed) || DELAY_REMINDER.test(trimmed))) {
+    return parsedReminder(trimmed, seconds.segundos, false);
   }
   const minutos = extractMinutesDelay(trimmed);
   if (minutos === null) {
     return null;
   }
-  if (REMEMBER_STT.test(trimmed)) {
-    return { texto: reminderBody(trimmed), minutos };
-  }
-  if (REMINDER_COMMAND.test(trimmed) || DELAY_REMINDER.test(trimmed)) {
-    return { texto: reminderBody(trimmed), minutos };
+  if (REMEMBER_STT.test(trimmed) || REMINDER_COMMAND.test(trimmed) || DELAY_REMINDER.test(trimmed)) {
+    return parsedReminder(trimmed, minutos * 60, false);
   }
   return null;
+}
+
+function parsedReminder(text: string, segundos: number, recorrente: boolean): ParsedLocalReminder {
+  return {
+    texto: reminderBody(text),
+    minutos: segundos % 60 === 0 ? segundos / 60 : null,
+    segundos,
+    recorrente,
+  };
 }
 
 function reminderBody(text: string): string {
@@ -150,7 +186,9 @@ function reminderBody(text: string): string {
   body = body.replace(/\bme\s+lembr[aeo]\s+de\b/i, " ");
   body = body.replace(/\blembre[- ]?me\s*(de)?\b/i, " ");
   body = body.replace(/\blembrar(?:\s+de)?\b/i, " ");
+  body = body.replace(/\blembrete\s+de\b/i, " ");
   body = body.replace(/\b(lembrete|alarme|agend[ae]r?)\b/i, " ");
+  body = body.replace(/\ba cada\s+(\d+|[a-záéíóúâêôãõç]+)\s*(minuto|minutos|segundo|segundos)\b/i, " ");
   body = body.replace(/\bdaqui(?:\s+a)?\s+(\d+|[a-záéíóúâêôãõç]+)\s*(minuto|minutos|hora|horas|segundo|segundos)\b/i, " ");
   body = body.replace(/[.,;:!?]+$/g, " ");
   body = body.replace(/\s+/g, " ").trim();

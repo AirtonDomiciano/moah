@@ -2,12 +2,13 @@ import type { Domain } from "../../domain/constants.js";
 import type { LlmToolDefinition } from "../../domain/llm.js";
 import type { ToolExecution } from "../query-tools.js";
 import type { JobContext } from "../jobs.js";
-import { rescheduleLocalReminder, scheduleLocalReminder } from "./schedule.js";
+import { cancelLocalReminder, rescheduleLocalReminder, scheduleLocalReminder } from "./schedule.js";
 import type { SessionReminderStore } from "./session.js";
 import { processSessionReminders } from "./session.js";
 
 export const CRIAR_LEMBRETE_LOCAL = "criar_lembrete_local";
 export const ALTERAR_LEMBRETE_LOCAL = "alterar_lembrete_local";
+export const CANCELAR_LEMBRETE_LOCAL = "cancelar_lembrete_local";
 
 export const LOCAL_REMINDER_TOOL_DEFINITION: LlmToolDefinition = {
   name: CRIAR_LEMBRETE_LOCAL,
@@ -42,14 +43,25 @@ export function executeCriarLembreteLocal(
       : typeof minutosRaw === "string"
         ? Number(minutosRaw.trim())
         : Number.NaN;
+  const recorrente = args.recorrente === true || args.recorrente === "sim";
+  const segundosInformados = numberArg(args.segundos);
   if (!texto) {
     return failure("Informe texto do lembrete.");
   }
-  if (!Number.isInteger(minutos) || minutos < 1) {
-    return failure("Informe minutos como inteiro positivo.");
+  if (segundosInformados === null && (!Number.isInteger(minutos) || minutos < 1)) {
+    return failure("Informe o prazo em minutos ou segundos.");
   }
   try {
-    const scheduled = scheduleLocalReminder(jobs, { domain, texto, minutos }, store);
+    const scheduled = scheduleLocalReminder(
+      jobs,
+      {
+        domain,
+        texto,
+        ...(segundosInformados !== null ? { segundos: segundosInformados } : { minutos }),
+        recorrente,
+      },
+      store,
+    );
     return {
       name: CRIAR_LEMBRETE_LOCAL,
       arguments: args,
@@ -97,11 +109,12 @@ export function executeAlterarLembreteLocal(
   if (!texto) {
     return failureAlter("Informe qual lembrete alterar.");
   }
+  const recorrente = args.recorrente === true || args.recorrente === "sim";
   if (!Number.isInteger(segundos) || segundos < 1) {
     return failureAlter("Informe o novo prazo em segundos.");
   }
   try {
-    const changed = rescheduleLocalReminder(jobs, { domain, texto, segundos }, store);
+    const changed = rescheduleLocalReminder(jobs, { domain, texto, segundos, recorrente }, store);
     if (changed.kind === "updated") {
       return {
         name: ALTERAR_LEMBRETE_LOCAL,
@@ -139,6 +152,57 @@ export function executeAlterarLembreteLocal(
   }
 }
 
+export function executeCancelarLembreteLocal(
+  jobs: JobContext,
+  domain: Domain,
+  rawArguments: unknown,
+): ToolExecution {
+  const args = asObject(rawArguments);
+  if (args === null) {
+    return failureCancel("Os argumentos da ferramenta precisam ser um objeto JSON.");
+  }
+  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
+  if (!texto) {
+    return failureCancel("Informe qual lembrete cancelar.");
+  }
+  try {
+    const cancelled = cancelLocalReminder(jobs, { domain, texto });
+    if (cancelled.kind === "cancelled") {
+      return {
+        name: CANCELAR_LEMBRETE_LOCAL,
+        arguments: args,
+        ok: true,
+        empty: false,
+        question: null,
+        references: [cancelled.jobId],
+        lines: [cancelled.confirmation],
+        modelPayload: {
+          tool: CANCELAR_LEMBRETE_LOCAL,
+          ok: true,
+          confirmation: cancelled.confirmation,
+          recorrente: cancelled.recorrente,
+        },
+      };
+    }
+    if (cancelled.kind === "ambiguous") {
+      return failureCancel(
+        `Há mais de um lembrete pendente de ${cancelled.texto}. Diga qual cancelar: ${cancelled.options.join("; ")}.`,
+      );
+    }
+    if (cancelled.kind === "delivered") {
+      return failureCancel(`O lembrete de ${cancelled.texto} já foi entregue.`);
+    }
+    return failureCancel(`Não encontrei um lembrete pendente de ${cancelled.texto}.`);
+  } catch (error) {
+    return failureCancel(error instanceof Error ? error.message : "Falha ao cancelar lembrete.");
+  }
+}
+
+function numberArg(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value.trim()) : Number.NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 function asObject(value: unknown): Record<string, unknown> | null {
   if (value === undefined || value === null) {
     return {};
@@ -154,6 +218,19 @@ function asObject(value: unknown): Record<string, unknown> | null {
     return value as Record<string, unknown>;
   }
   return null;
+}
+
+function failureCancel(question: string): ToolExecution {
+  return {
+    name: CANCELAR_LEMBRETE_LOCAL,
+    arguments: {},
+    ok: false,
+    empty: null,
+    question,
+    references: [],
+    lines: [question],
+    modelPayload: { tool: CANCELAR_LEMBRETE_LOCAL, ok: false, question },
+  };
 }
 
 function failureAlter(question: string): ToolExecution {

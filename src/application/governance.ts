@@ -1,6 +1,7 @@
 import { AppError } from "../domain/errors.js";
 import {
   ALTER_LOCAL_REMINDER_TOOL,
+  CANCEL_LOCAL_REMINDER_TOOL,
   LOCAL_REMINDER_TOOL,
   POLICY_VERSION,
   READ_TOOLS,
@@ -15,7 +16,7 @@ import {
   type PolicyDecision,
 } from "../domain/policy.js";
 import type { Domain } from "../domain/types.js";
-import { executeAlterarLembreteLocal, executeCriarLembreteLocal } from "./reminders/tool.js";
+import { executeAlterarLembreteLocal, executeCancelarLembreteLocal, executeCriarLembreteLocal } from "./reminders/tool.js";
 import { executeQueryTool, type ToolExecution } from "./query-tools.js";
 import type { WorkLogContext } from "./work-log.js";
 import { runInTransaction } from "../infrastructure/transaction.js";
@@ -205,7 +206,10 @@ export function governVoiceTool(
   name: string,
   rawArguments: unknown,
 ): ToolExecution {
-  const action = name === LOCAL_REMINDER_TOOL || name === ALTER_LOCAL_REMINDER_TOOL ? "agendar" : "consultar";
+  const action =
+    name === LOCAL_REMINDER_TOOL || name === ALTER_LOCAL_REMINDER_TOOL || name === CANCEL_LOCAL_REMINDER_TOOL
+      ? "agendar"
+      : "consultar";
   return governWithAuthority(context, session, name, rawArguments, voiceAuthority(session.domain), action);
 }
 
@@ -224,7 +228,10 @@ function governWithAuthority(
       tool: name,
       agent: authority.agent,
       domain: session.domain,
-      target: name === LOCAL_REMINDER_TOOL || name === ALTER_LOCAL_REMINDER_TOOL ? "sessao-local" : session.domain,
+      target:
+        name === LOCAL_REMINDER_TOOL || name === ALTER_LOCAL_REMINDER_TOOL || name === CANCEL_LOCAL_REMINDER_TOOL
+          ? "sessao-local"
+          : session.domain,
       parameters: proposalParameters(name, rawArguments),
     });
   } catch (error) {
@@ -254,6 +261,9 @@ function governWithAuthority(
       rawArguments,
     );
   }
+  if (name === CANCEL_LOCAL_REMINDER_TOOL) {
+    return executeCancelarLembreteLocal({ dataDir: context.dataDir, now: context.now }, session.domain, rawArguments);
+  }
   if ((READ_TOOLS as readonly string[]).includes(name)) {
     return executeQueryTool(context, session, name, rawArguments);
   }
@@ -261,7 +271,7 @@ function governWithAuthority(
 }
 
 function proposalParameters(name: string, rawArguments: unknown): Record<string, string> {
-  if (name !== LOCAL_REMINDER_TOOL && name !== ALTER_LOCAL_REMINDER_TOOL) {
+  if (name !== LOCAL_REMINDER_TOOL && name !== ALTER_LOCAL_REMINDER_TOOL && name !== CANCEL_LOCAL_REMINDER_TOOL) {
     return {};
   }
   if (rawArguments === null || typeof rawArguments !== "object" || Array.isArray(rawArguments)) {

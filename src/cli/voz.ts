@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { settlePendingReminder } from "../application/jobs.js";
+import { continueRecurringReminder, settlePendingReminder } from "../application/jobs.js";
 import { handleVoiceRequest } from "../application/voice-request.js";
 import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { isDomain } from "../domain/constants.js";
@@ -257,11 +257,21 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     rejectUnknown(parsed.options, ["id", "resultado", "erro"]);
     const id = one(parsed.options, "id");
     const resultado = one(parsed.options, "resultado");
-    if (!id || (resultado !== "entregue" && resultado !== "falha")) {
-      throw new AppError("Uso: moah voz lembrete --id <job> --resultado entregue|falha [--erro <texto>].", "validation");
+    if (!id || (resultado !== "entregue" && resultado !== "falha" && resultado !== "proxima")) {
+      throw new AppError("Uso: moah voz lembrete --id <job> --resultado entregue|falha|proxima [--erro <texto>].", "validation");
     }
     const dirs = resolveDirs();
     const erro = one(parsed.options, "erro");
+    if (resultado === "proxima") {
+      const advanced = continueRecurringReminder(
+        { dataDir: dirs.dataDir, now: () => new Date() },
+        id,
+        !erro,
+        erro,
+      );
+      printJson({ id, resultado, alterado: advanced.changed, estado: advanced.state, fireAt: advanced.fireAt });
+      return true;
+    }
     const settled = settlePendingReminder(
       { dataDir: dirs.dataDir, now: () => new Date() },
       id,

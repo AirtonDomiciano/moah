@@ -4,15 +4,13 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { LOCAL_REMINDER_TOOL } from "../src/domain/policy.js";
-import { processSessionReminders } from "../src/application/reminders/index.js";
+import { continueRecurringReminder, enqueueJob, listJobsByKind, settlePendingReminder } from "../src/application/jobs.js";
+import { processSessionReminders, REMINDER_INCOMPLETE_SPEECH } from "../src/application/reminders/index.js";
 import {
   formatLocalTimeSpeech,
   handleVoiceRequest,
   VOICE_COMMAND_UNAVAILABLE_SPEECH,
-  VOICE_REMINDER_CANCEL_UNAVAILABLE_SPEECH,
-  VOICE_REMINDER_UNAVAILABLE_SPEECH,
 } from "../src/application/voice-request.js";
-import { enqueueJob, listJobsByKind, settlePendingReminder } from "../src/application/jobs.js";
 import { loadConfig } from "../src/infrastructure/config.js";
 import { cliWorkspace, runCli } from "./helpers.js";
 
@@ -187,10 +185,10 @@ test("alterar lembrete pendente troca o prazo sem criar outro", () => {
     const missing = handleVoiceRequest(context, "pessoal", "Alterar o lembrete de café para 30 segundos.");
     assert.match(missing.speak ?? "", /Não encontrei um lembrete pendente de café/);
     const cancel = handleVoiceRequest(context, "pessoal", "Cancelar o lembrete de beber água.");
-    assert.equal(cancel.speak, VOICE_REMINDER_CANCEL_UNAVAILABLE_SPEECH);
+    assert.match(cancel.speak ?? "", /Lembrete cancelado: beber água/);
+    assert.equal(listJobsByKind(workspace.dataDir, "lembrete_local")[0]?.state, "cancelada");
     const bare = handleVoiceRequest(context, "pessoal", "Me lembre de tomar água");
-    assert.equal(bare.speak, VOICE_REMINDER_UNAVAILABLE_SPEECH);
-    assert.equal(listJobsByKind(workspace.dataDir, "lembrete_local").length, 1);
+    assert.equal(bare.speak, REMINDER_INCOMPLETE_SPEECH);
   } finally {
     processSessionReminders.clear();
     workspace.cleanup();
@@ -223,6 +221,57 @@ test("alterar pede esclarecimento ou avisa lembrete já entregue", () => {
     settlePendingReminder({ dataDir: workspace.dataDir, now: () => now }, walking.id, true, null);
     const late = handleVoiceRequest(context, "pessoal", "Alterar o lembrete de caminhar para 30 segundos.");
     assert.match(late.speak ?? "", /já foi entregue/);
+  } finally {
+    processSessionReminders.clear();
+    workspace.cleanup();
+  }
+});
+
+test("lembrete recorrente repete uma vez e o prazo antigo não dispara", () => {
+  const workspace = cliWorkspace();
+  processSessionReminders.clear();
+  const now = new Date("2026-11-25T18:00:00.000Z");
+  const context = {
+    dataDir: workspace.dataDir,
+    timeZone: "America/Sao_Paulo",
+    now: () => now,
+  };
+  try {
+    const created = handleVoiceRequest(context, "pessoal", "Lembrete de água a cada 30 segundos.");
+    assert.equal(created.status, "ok");
+    assert.match(created.speak ?? "", /Lembrete recorrente: água a cada 30 segundos/);
+    assert.match(created.speak ?? "", /enquanto esta sessão estiver aberta/);
+    const once = handleVoiceRequest(context, "pessoal", "Lembrete de café daqui a 30 segundos.");
+    assert.match(once.speak ?? "", /Lembrete criado: café em 30 segundos/);
+    assert.match(once.speak ?? "", /vale só nesta sessão/);
+    const jobs = listJobsByKind(workspace.dataDir, "lembrete_local");
+    const recurring = jobs.find((job) => job.payload.texto === "água");
+    const single = jobs.find((job) => job.payload.texto === "café");
+    assert.ok(recurring && single);
+    assert.equal(recurring.payload.recorrente, true);
+    assert.equal(recurring.payload.fireAt, new Date(now.getTime() + 30_000).toISOString());
+    assert.equal(single.payload.recorrente, false);
+    const later = new Date(now.getTime() + 5 * 60_000);
+    const advanced = continueRecurringReminder(
+      { dataDir: workspace.dataDir, now: () => later },
+      recurring.id,
+      true,
+      null,
+    );
+    assert.equal(advanced.changed, true);
+    assert.equal(advanced.state, "pendente");
+    assert.equal(advanced.fireAt, new Date(later.getTime() + 30_000).toISOString());
+    const changed = handleVoiceRequest(context, "pessoal", "Alterar o lembrete de água para a cada 1 minuto.");
+    assert.match(changed.speak ?? "", /Lembrete alterado: água a cada 1 minuto/);
+    const updated = listJobsByKind(workspace.dataDir, "lembrete_local").find((job) => job.id === recurring.id);
+    assert.equal(updated?.payload.intervaloSegundos, 60);
+    assert.equal(updated?.payload.fireAt, new Date(now.getTime() + 60_000).toISOString());
+    assert.notEqual(updated?.payload.fireAt, new Date(now.getTime() + 30_000).toISOString());
+    const removed = handleVoiceRequest(context, "pessoal", "Cancelar o lembrete de água.");
+    assert.match(removed.speak ?? "", /Lembrete recorrente cancelado: água/);
+    assert.equal(listJobsByKind(workspace.dataDir, "lembrete_local").find((job) => job.id === recurring.id)?.state, "cancelada");
+    const incomplete = handleVoiceRequest(context, "pessoal", "Lembrete de água.");
+    assert.equal(incomplete.speak, REMINDER_INCOMPLETE_SPEECH);
   } finally {
     processSessionReminders.clear();
     workspace.cleanup();
@@ -267,7 +316,7 @@ test("me lembre sem prazo válido não agenda e avisa", () => {
       "Me lembre de tomar água",
     );
     assert.equal(result.status, "unavailable");
-    assert.equal(result.speak, VOICE_REMINDER_UNAVAILABLE_SPEECH);
+    assert.equal(result.speak, REMINDER_INCOMPLETE_SPEECH);
     assert.equal(processSessionReminders.list().length, 0);
   } finally {
     processSessionReminders.clear();
