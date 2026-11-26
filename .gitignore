@@ -2,7 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Estado local do runtime. Nunca versionar memória real.
+# Estado local do runtime. Nunca versionar memória real nem tokens.
+contas/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { continueRecurringReminder, settlePendingReminder } from "../application/jobs.js";
+import { answerAgendaQuestion } from "../application/agenda-voice.js";
 import { handleVoiceRequest } from "../application/voice-request.js";
 import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { isDomain } from "../domain/constants.js";
@@ -8,6 +9,8 @@ import { AppError } from "../domain/errors.js";
 import { fixtureWakeDetector, unavailableWakeDetector, voicePanel, type VoiceSample } from "../domain/voice.js";
 import { deviceIds, probeHeadset } from "../infrastructure/audio-probe.js";
 import { loadConfig } from "../infrastructure/config.js";
+import { createLlmProvider, readApiKey } from "../infrastructure/llm/create-provider.js";
+import { resolveLlmSettings } from "../infrastructure/llm/settings.js";
 import { resolveDirs } from "../infrastructure/paths.js";
 import { validateSessions } from "../infrastructure/voice-validate.js";
 import { correctedModelPath, runVoiceScript, trainedModelPath, voiceDirectory } from "../infrastructure/wake-command.js";
@@ -53,12 +56,18 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     }
     const dirs = resolveDirs();
     const config = loadConfig(dirs.configDir);
-    const result = handleVoiceRequest(
-      { dataDir: dirs.dataDir, timeZone: config.timezone, now: () => new Date() },
-      dominioRaw,
-      texto,
+    const voiceContext = { dataDir: dirs.dataDir, timeZone: config.timezone, now: () => new Date() };
+    const agenda = await answerAgendaQuestion({
+      context: voiceContext,
+      domain: dominioRaw,
+      text: texto,
+      google: config.google,
+      provider: voiceProvider(config.llm),
+    });
+    printJson(
+      agenda ??
+        handleVoiceRequest(voiceContext, dominioRaw, texto),
     );
-    printJson(result);
     return true;
   }
   if (action === "simular") {
@@ -291,6 +300,18 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     "Uso: moah voz estado|pedido|simular|hardware|uso|ouvir|lembrete|escutar|coletar|validar.",
     "validation",
   );
+}
+
+function voiceProvider(llm: ReturnType<typeof loadConfig>["llm"]) {
+  try {
+    const settings = resolveLlmSettings(llm, process.env, null);
+    if (settings.provider === "simulator") {
+      return null;
+    }
+    return createLlmProvider(settings, readApiKey(process.env));
+  } catch {
+    return null;
+  }
 }
 
 function normalizarSessao(valor: string): string {

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { DEFAULT_TIMEZONE } from "../domain/constants.js";
+import { DEFAULT_TIMEZONE, isDomain, type Domain } from "../domain/constants.js";
 import { AppError } from "../domain/errors.js";
 import { assertValidTimeZone } from "../domain/time.js";
 import { parseLlmConfig, type LlmSettings } from "./llm/settings.js";
@@ -25,12 +25,19 @@ export interface VoiceConfig {
   sintese: VoiceSynthesis;
 }
 
+export interface GoogleConfig {
+  clientId: string | null;
+  clientSecret: string | null;
+  calendarios: Partial<Record<Domain, string>>;
+}
+
 export interface AppConfig {
   timezone: string;
   llm: Partial<LlmSettings>;
   storage: StorageConfig;
   agenda: AgendaConfig;
   voz: VoiceConfig;
+  google: GoogleConfig;
 }
 
 export function loadConfig(configDir: string): AppConfig {
@@ -42,6 +49,7 @@ export function loadConfig(configDir: string): AppConfig {
       storage: emptyStorage(),
       agenda: defaultAgenda(),
       voz: defaultVoice(),
+      google: defaultGoogle(),
     };
   }
   let parsed: unknown;
@@ -55,7 +63,7 @@ export function loadConfig(configDir: string): AppConfig {
   }
   const record = parsed as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (key !== "timezone" && key !== "llm" && key !== "storage" && key !== "agenda" && key !== "voz") {
+    if (key !== "timezone" && key !== "llm" && key !== "storage" && key !== "agenda" && key !== "voz" && key !== "google") {
       throw new AppError(`Chave de configuração desconhecida: ${key}.`, "validation");
     }
   }
@@ -71,6 +79,7 @@ export function loadConfig(configDir: string): AppConfig {
     storage: parseStorage(record.storage),
     agenda: parseAgenda(record.agenda),
     voz: parseVoice(record.voz),
+    google: parseGoogle(record.google),
   };
 }
 
@@ -84,6 +93,59 @@ function defaultAgenda(): AgendaConfig {
 
 function defaultVoice(): VoiceConfig {
   return { sintese: "faber" };
+}
+
+function defaultGoogle(): GoogleConfig {
+  return { clientId: null, clientSecret: null, calendarios: { pessoal: "primary" } };
+}
+
+function parseGoogle(value: unknown): GoogleConfig {
+  if (value === undefined) {
+    return defaultGoogle();
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new AppError("google deve ser um objeto.", "validation");
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (key !== "clientId" && key !== "clientSecret" && key !== "calendarios") {
+      throw new AppError(`Chave de google desconhecida: ${key}.`, "validation");
+    }
+  }
+  const clientId = optionalText(record.clientId, "google.clientId");
+  const clientSecret = optionalText(record.clientSecret, "google.clientSecret");
+  return { clientId, clientSecret, calendarios: parseCalendars(record.calendarios) };
+}
+
+function optionalText(value: unknown, name: string): string | null {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  if (typeof value !== "string" || !value.trim()) {
+    throw new AppError(`${name} deve ser um texto.`, "validation");
+  }
+  return value.trim();
+}
+
+function parseCalendars(value: unknown): Partial<Record<Domain, string>> {
+  if (value === undefined) {
+    return { pessoal: "primary" };
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new AppError("google.calendarios deve ser um objeto.", "validation");
+  }
+  const record = value as Record<string, unknown>;
+  const calendarios: Partial<Record<Domain, string>> = {};
+  for (const [key, calendarId] of Object.entries(record)) {
+    if (!isDomain(key)) {
+      throw new AppError(`Domínio de calendário desconhecido: ${key}.`, "validation");
+    }
+    if (typeof calendarId !== "string" || !calendarId.trim()) {
+      throw new AppError(`google.calendarios.${key} deve ser o id do calendário.`, "validation");
+    }
+    calendarios[key] = calendarId.trim();
+  }
+  return calendarios;
 }
 
 function parseVoice(value: unknown): VoiceConfig {

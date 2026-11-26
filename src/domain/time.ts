@@ -26,6 +26,15 @@ export function assertValidTimeZone(timeZone: string): void {
   }
 }
 
+export function addCivilDays(date: string, days: number): string {
+  const match = DATE_RE.exec(date);
+  if (!match) {
+    throw new AppError(`Data rejeitada: "${date}". ${DATE_GUIDANCE}`, "validation");
+  }
+  const utc = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days));
+  return formatDate(utc.getUTCFullYear(), utc.getUTCMonth() + 1, utc.getUTCDate());
+}
+
 export function civilToday(timeZone: string, now: Date = new Date()): string {
   assertValidTimeZone(timeZone);
   const parts = partsInZone(now, timeZone);

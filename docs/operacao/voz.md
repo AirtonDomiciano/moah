@@ -25,6 +25,7 @@ O console desse comando mostra uma linha de arranque e, por turno, `estado=`, `p
 
 Fale o nome, espere “Estou aqui.” e diga um pedido. Exemplos que a CLI já resolve, sem modelo de linguagem:
 
+- “Quais são minhas reuniões hoje?” — lê a agenda Google conectada ao domínio, no fuso configurado. Sem conta, sem calendário do domínio, agenda vazia e falha de conexão têm falas diferentes. `moah conta google conectar` abre o navegador; os tokens ficam fora do Git.
 - “Que horas são?” — relógio local.
 - “Me lembra de beber água daqui a dois minutos.” — cria o lembrete e avisa que vale só nesta sessão. Sem “daqui a N minutos”, não agenda. “Me lembro de …” sem esse prazo fica em silêncio.
 - “Lembrete de água daqui a 30 segundos.” — lembrete único. “Lembrete de água a cada 30 segundos.” — repete enquanto `voz uso` estiver aberto, um aviso por vez, sem recuperar atrasos. “Cancelar o lembrete de água.” encerra o pendente. Sem prazo, o pedido fica incompleto e não usa a frase de criação indisponível.

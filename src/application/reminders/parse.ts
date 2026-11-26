@@ -1,7 +1,7 @@
 /** Validação de pedidos de lembrete. Sem agendamento e sem dependência de voz. */
 
 const REMINDER_COMMAND =
-  /\b(me\s+lembr[ae]|lembre[- ]?me|lembrar(?:\s+de)?|lembrete|agend[ae]r?|alarme)\b/i;
+  /\b(me\s+lembr[ae]|lembre[- ]?me|lembrar(?:\s+de)?|lembrete|agendar|agende|alarme)\b/i;
 const REMEMBER_STT = /\bme\s+lembro\s+de\b/i;
 const DELAY_REMINDER =
   /\bdaqui(?:\s+a)?\s+\d+\s*(minuto|minutos|hora|horas|segundo|segundos)\b/i;
@@ -187,7 +187,7 @@ function reminderBody(text: string): string {
   body = body.replace(/\blembre[- ]?me\s*(de)?\b/i, " ");
   body = body.replace(/\blembrar(?:\s+de)?\b/i, " ");
   body = body.replace(/\blembrete\s+de\b/i, " ");
-  body = body.replace(/\b(lembrete|alarme|agend[ae]r?)\b/i, " ");
+  body = body.replace(/\b(lembrete|alarme|agendar|agende)\b/i, " ");
   body = body.replace(/\ba cada\s+(\d+|[a-záéíóúâêôãõç]+)\s*(minuto|minutos|segundo|segundos)\b/i, " ");
   body = body.replace(/\bdaqui(?:\s+a)?\s+(\d+|[a-záéíóúâêôãõç]+)\s*(minuto|minutos|hora|horas|segundo|segundos)\b/i, " ");
   body = body.replace(/[.,;:!?]+$/g, " ");

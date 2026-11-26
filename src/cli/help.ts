@@ -23,6 +23,7 @@ Comandos:
   moah reuniao importar --arquivo <transcricao.txt>
   moah reuniao ver --id <reu_> --dominio <domínio>
   moah voz estado|simular --roteiro <json-simulacao>
+  moah conta google conectar|estado|desconectar
   moah voz pedido --texto <pedido> [--dominio pessoal|imex|aluai]
   moah voz uso [--microfone jbl|camera]
   moah voz lembrete --id <job> --resultado entregue|falha|proxima [--erro <texto>]
@@ -71,6 +72,8 @@ Arquivos:
   Configuração: $MOAH_CONFIG_DIR, ou $XDG_CONFIG_HOME/moah, ou ~/.config/moah
   config.json: { "timezone": "America/Sao_Paulo", "storage": {}, "agenda": {}, "voz": { "sintese": "faber" } }
   voz.sintese escolhe a fala do laço. Omissão usa faber. Se o Piper falhar, o laço fala com espeak.
+  google opcional: clientId, clientSecret e calendarios por domínio. Omissão de calendarios usa primary em pessoal.
+  Tokens da conta ficam em $MOAH_DATA_DIR/contas/google.json, fora do Git. O escopo inicial é só leitura de eventos.
   storage opcional: volume.mount, volume.uuid, volume.label, documentsDir, derivedDir, backupDir
   agenda opcional: quietStart e quietEnd em HH:mm; omissão usa 22:00–07:00
   O volume só é aceito depois da verificação de montagem e UUID. Pasta existente não confirma o SSD.

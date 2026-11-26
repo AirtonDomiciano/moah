@@ -181,3 +181,16 @@ Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Respons
 - **Estado:** decidido por Airton em 25/11/2026. A voz do laço é a Faber, gravada em `config.json` como `voz.sintese`. O espeak permanece como alternativa se o Piper falhar e em `moah voz ouvir --voz espeak`.
 - **Responsabilidade:** síntese e reprodução. Não altera ativação, captura, STT, pedidos nem lembretes.
 - **O que ouvir:** `moah voz ouvir --voz espeak|faber|cadu`. Detalhe em [voz](docs/operacao/voz.md).
+
+
+## MOAH-042 — Contas do assistente de voz
+
+- **Data:** 25/11/2026.
+- **Origem:** pedido explícito de Airton para integrar Google Agenda/Gmail, WhatsApp e Discord, com conversa em canal de voz no futuro.
+- **Estado:** nesta rodada só a consulta de leitura da agenda Google. Gmail, Discord, WhatsApp e envio de mensagens continuam planejados.
+- **Responsabilidade:** conectores e voz. A voz Faber e o `voz uso` permanecem.
+- **Próximas etapas:**
+  - Gmail: leitura e resumo primeiro; envio em etapa separada.
+  - Discord: bot próprio por texto e, depois, canal de voz.
+  - WhatsApp: avaliar a integração apropriada ao uso pessoal antes de implementar.
+  - Envio de mensagens: mostrar destinatário e conteúdo e pedir confirmação antes do envio, nesta primeira versão.
