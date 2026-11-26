@@ -28,6 +28,22 @@ export class SessionReminderStore {
   clear(): void {
     this.items.length = 0;
   }
+
+  updateByJob(jobId: string, patch: Partial<Pick<SessionReminder, "texto" | "minutos" | "fireAt">>): void {
+    const current = this.items.find((item) => item.jobId === jobId);
+    if (!current) {
+      return;
+    }
+    if (patch.texto !== undefined) {
+      current.texto = patch.texto;
+    }
+    if (patch.minutos !== undefined) {
+      current.minutos = patch.minutos;
+    }
+    if (patch.fireAt !== undefined) {
+      current.fireAt = patch.fireAt;
+    }
+  }
 }
 
 /** Store da sessão atual do processo Node (voz/CLI). */

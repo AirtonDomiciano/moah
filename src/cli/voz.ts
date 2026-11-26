@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { settlePendingReminder } from "../application/jobs.js";
 import { handleVoiceRequest } from "../application/voice-request.js";
 import { VoiceSession, type VoicePorts } from "../application/voice-session.js";
 import { isDomain } from "../domain/constants.js";
@@ -17,7 +18,7 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
   if (parsed.positionals[0] !== "voz") {
     return false;
   }
-  const action = parsed.positionals[1] ?? "estado";
+  let action = parsed.positionals[1] ?? "estado";
   if (action === "estado") {
     rejectUnknown(parsed.options, []);
     const detector = unavailableWakeDetector();
@@ -80,6 +81,31 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     }
     printJson(await probeHeadset(true, choice));
     return true;
+  }
+  if (action === "ouvir") {
+    rejectUnknown(parsed.options, ["voz", "microfone"]);
+    const voz = one(parsed.options, "voz");
+    if (voz !== "espeak" && voz !== "faber" && voz !== "cadu" && voz !== "jeff" && voz !== "edresson" && voz !== "tugao") {
+      throw new AppError("Use --voz espeak, faber, cadu, jeff, edresson ou tugao.", "validation");
+    }
+    const choice = microphoneChoice(one(parsed.options, "microfone"));
+    const devices = await deviceIds(choice);
+    await runVoiceScript(process.env, "ouvir_voz.py", ["--voz", voz, "--destino", devices.sink]);
+    return true;
+  }
+  if (action === "uso") {
+    rejectUnknown(parsed.options, ["microfone"]);
+    const microfone = one(parsed.options, "microfone") ?? "jbl";
+    parsed.options = new Map([
+      ["habilitar", ["sim"]],
+      ["microfone", [microfone]],
+      ["limiar", ["0.5"]],
+      ["confirmar-ativacao", ["acustico"]],
+      ["modo-verificador", ["teste"]],
+      ["limiar-verificador", ["0.95"]],
+      ["diagnostico", ["nao"]],
+    ]);
+    action = "escutar";
   }
   if (action === "escutar") {
     rejectUnknown(parsed.options, [
@@ -227,13 +253,34 @@ export async function handleVoice(parsed: ParsedArgs): Promise<boolean> {
     printJson(relatorio);
     return true;
   }
+  if (action === "lembrete") {
+    rejectUnknown(parsed.options, ["id", "resultado", "erro"]);
+    const id = one(parsed.options, "id");
+    const resultado = one(parsed.options, "resultado");
+    if (!id || (resultado !== "entregue" && resultado !== "falha")) {
+      throw new AppError("Uso: moah voz lembrete --id <job> --resultado entregue|falha [--erro <texto>].", "validation");
+    }
+    const dirs = resolveDirs();
+    const erro = one(parsed.options, "erro");
+    const settled = settlePendingReminder(
+      { dataDir: dirs.dataDir, now: () => new Date() },
+      id,
+      resultado === "entregue",
+      resultado === "falha" ? erro || "Falha na reprodução." : null,
+    );
+    printJson({ id, resultado, alterado: settled.changed, estado: settled.state });
+    return true;
+  }
   if (action === "microfone") {
     throw new AppError(
       "O detector local de MOAH não está instalado nem validado. A escuta do microfone permanece desligada.",
       "unavailable",
     );
   }
-  throw new AppError("Uso: moah voz estado|pedido|simular|hardware|escutar|coletar|validar.", "validation");
+  throw new AppError(
+    "Uso: moah voz estado|pedido|simular|hardware|uso|ouvir|lembrete|escutar|coletar|validar.",
+    "validation",
+  );
 }
 
 function normalizarSessao(valor: string): string {

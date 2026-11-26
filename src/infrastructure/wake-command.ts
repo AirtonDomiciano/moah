@@ -31,7 +31,7 @@ export function experimentalModelPath(dir: string): string {
 
 export async function runVoiceScript(
   env: NodeJS.ProcessEnv,
-  script: "escutar.py" | "coletar.py",
+  script: "escutar.py" | "coletar.py" | "ouvir_voz.py",
   args: string[],
 ): Promise<void> {
   const dir = voiceDirectory(env);

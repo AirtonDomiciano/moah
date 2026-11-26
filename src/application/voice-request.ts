@@ -1,17 +1,19 @@
 import { isDomain, type Domain } from "../domain/constants.js";
-import { LOCAL_REMINDER_TOOL, READ_TOOLS } from "../domain/policy.js";
+import { ALTER_LOCAL_REMINDER_TOOL, LOCAL_REMINDER_TOOL, READ_TOOLS } from "../domain/policy.js";
 import { formatRecordLines } from "./format-record.js";
 import { governVoiceTool } from "./governance.js";
 import {
   extractMinutesDelay,
   isReminderRequest,
   parseLocalReminder,
+  parseReminderChange,
 } from "./reminders/index.js";
 import { findCheckpoint, listKnownProjects, type WorkLogContext } from "./work-log.js";
 
 export const VOICE_UNAVAILABLE_SPEECH = "Essa capacidade ainda está indisponível.";
 export const VOICE_COMMAND_UNAVAILABLE_SPEECH = "Esse comando ainda não está disponível.";
 export const VOICE_REMINDER_UNAVAILABLE_SPEECH = "Ainda não consigo criar lembretes.";
+export const VOICE_REMINDER_CANCEL_UNAVAILABLE_SPEECH = "Ainda não consigo cancelar lembretes.";
 
 export type VoiceRequestStatus = "ok" | "unavailable" | "ambiguous" | "none" | "denied";
 
@@ -40,7 +42,7 @@ const ONDE_PARAMOS_NO = /ONDE PARAMOS NO (.+)$/;
 const DATE_INTENT = /\b(\d{4}-\d{2}-\d{2})\b/;
 const MEETING_INTENT = /reuni[aã]o\s+(reu_[0-9a-f-]{8,})/i;
 
-const CATALOG = new Set<string>([...READ_TOOLS, LOCAL_REMINDER_TOOL]);
+const CATALOG = new Set<string>([...READ_TOOLS, LOCAL_REMINDER_TOOL, ALTER_LOCAL_REMINDER_TOOL]);
 
 export function handleVoiceRequest(
   context: WorkLogContext,
@@ -81,6 +83,9 @@ export function handleVoiceRequest(
     };
   }
   const execution = governVoiceTool(context, { domain, project: null }, intent.tool, intent.args);
+  if (intent.tool === ALTER_LOCAL_REMINDER_TOOL) {
+    return presentReminderChange(execution);
+  }
   if (!execution.ok) {
     return {
       status: "denied",
@@ -114,6 +119,24 @@ export function resolveVoiceIntent(context: WorkLogContext, domain: Domain, text
   const clock = clockSpeech(text, context.now(), context.timeZone);
   if (clock) {
     return { kind: "local", terminal: `${clock} (${context.timeZone})`, speak: clock };
+  }
+  const change = parseReminderChange(text);
+  if (change?.kind === "cancel") {
+    return {
+      kind: "unavailable",
+      detail: "Cancelar lembrete não está disponível.",
+      speak: VOICE_REMINDER_CANCEL_UNAVAILABLE_SPEECH,
+    };
+  }
+  if (change?.kind === "alter-incomplete") {
+    return { kind: "unavailable", detail: change.speak, speak: change.speak };
+  }
+  if (change?.kind === "alter") {
+    return {
+      kind: "tool",
+      tool: ALTER_LOCAL_REMINDER_TOOL,
+      args: { texto: change.texto, segundos: String(change.segundos) },
+    };
   }
   const reminder = parseLocalReminder(text);
   if (reminder) {
@@ -256,6 +279,31 @@ function presentCheckpoint(
     terminal: terminal || fallbackLines.join("\n"),
     speak: `${checkpoint.text} Próximo passo: ${next}`,
     tool: "consultar_checkpoint",
+  };
+}
+
+function presentReminderChange(execution: {
+  ok: boolean;
+  lines: string[];
+  question: string | null;
+  modelPayload: unknown;
+}): VoiceRequestResult {
+  if (!execution.ok) {
+    const speak = execution.question ?? execution.lines[0] ?? "Não encontrei o lembrete.";
+    return { status: "unavailable", terminal: speak, speak, tool: ALTER_LOCAL_REMINDER_TOOL };
+  }
+  const payload =
+    typeof execution.modelPayload === "object" && execution.modelPayload !== null
+      ? (execution.modelPayload as Record<string, unknown>)
+      : {};
+  const confirmation =
+    typeof payload.confirmation === "string" ? payload.confirmation : execution.lines[0] ?? "Lembrete alterado.";
+  const warning = typeof payload.warning === "string" ? payload.warning : "Aviso: vale só nesta sessão.";
+  return {
+    status: "ok",
+    terminal: execution.lines.join("\n"),
+    speak: `${confirmation} ${warning}`,
+    tool: ALTER_LOCAL_REMINDER_TOOL,
   };
 }
 

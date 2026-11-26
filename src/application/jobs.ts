@@ -148,6 +148,59 @@ export function jobCounts(dataDir: string): Record<JobState, number> {
   });
 }
 
+/** Fecha um lembrete local ainda pendente. Não marca entrega se a fala falhou. */
+export function settlePendingReminder(
+  context: JobContext,
+  id: string,
+  delivered: boolean,
+  error: string | null,
+): { changed: boolean; state: JobState | null } {
+  return withJobs(context.dataDir, (db) => {
+    const current = selectJob(db, id);
+    if (!current || current.kind !== "lembrete_local" || current.state !== "pendente") {
+      return { changed: false, state: current?.state ?? null };
+    }
+    const now = context.now().toISOString();
+    const state: JobState = delivered ? "concluida" : "falha";
+    const checkpoint = delivered ? { entregue: true, falado: true } : { entregue: false, falado: false };
+    const result = db
+      .prepare(
+        `UPDATE jobs
+         SET state = ?, checkpoint_json = ?, error = ?, updated_at = ?, finished_at = ?
+         WHERE id = ? AND kind = 'lembrete_local' AND state = 'pendente'`,
+      )
+      .run(state, JSON.stringify(checkpoint), delivered ? null : error, now, now, id);
+    return { changed: Number(result.changes) === 1, state };
+  });
+}
+
+export function listJobsByKind(dataDir: string, kind: string): JobRow[] {
+  return withJobs(dataDir, (db) => {
+    const rows = db.prepare("SELECT * FROM jobs WHERE kind = ? ORDER BY created_at").all(kind) as unknown as Array<
+      Record<string, unknown>
+    >;
+    return rows.map((row) => mapJob(row));
+  });
+}
+
+export function updatePendingLocalReminder(
+  context: JobContext,
+  id: string,
+  payload: Record<string, unknown>,
+): boolean {
+  return withJobs(context.dataDir, (db) => {
+    const now = context.now().toISOString();
+    const result = db
+      .prepare(
+        `UPDATE jobs
+         SET payload_json = ?, updated_at = ?
+         WHERE id = ? AND kind = 'lembrete_local' AND state = 'pendente'`,
+      )
+      .run(JSON.stringify(payload), now, id);
+    return Number(result.changes) === 1;
+  });
+}
+
 export function countJobs(dataDir: string): number {
   return withJobs(dataDir, (db) => {
     const row = db.prepare("SELECT COUNT(*) AS total FROM jobs").get() as { total: number };

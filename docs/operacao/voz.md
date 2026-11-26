@@ -8,13 +8,52 @@ Nesta entrega o arquivo ONNX existe fora do Git, mas a palavra falada por Airton
 moah voz estado
 moah voz simular --roteiro /caminho/roteiro.json
 moah voz hardware --habilitar sim --microfone jbl
+moah voz uso
 moah voz escutar --habilitar sim --microfone jbl
 moah voz validar
 ```
 
+## Uso diário — 25/11/2026
+
+`moah voz uso` abre o laço que Airton já usou no JBL, sem repetir as flags e sem o diagnóstico por segundo. O detector continua em 0,5. O verificador continua o arquivo atual, em modo teste, limiar 0,95. Isso não marca `validado` e não troca o modelo pelo candidato 05. O microfone padrão é o JBL; `--microfone camera` é a única variação. Treino e calibração ficam de fora deste comando.
+
+```bash
+npm run moah -- voz uso
+```
+
+O console desse comando mostra uma linha de arranque e, por turno, `estado=`, `pedido=`, `resultado=` e `erro=` quando houver falha. `Ctrl+C` fecha captura, síntese e transcrição. Se uma etapa do laço quebrar, o microfone é liberado, a linha `erro=` aparece e a escuta volta a aguardar. Uma chamada rejeitada não é erro: o estado volta a `aguardando` sem saudação.
+
+Fale o nome, espere “Estou aqui.” e diga um pedido. Exemplos que a CLI já resolve, sem modelo de linguagem:
+
+- “Que horas são?” — relógio local.
+- “Me lembra de beber água daqui a dois minutos.” — cria o lembrete e avisa que vale só nesta sessão. Sem “daqui a N minutos”, não agenda. “Me lembro de …” sem esse prazo fica em silêncio.
+- “Alterar o lembrete de beber água para 30 segundos.” — muda o prazo do pendente, sem criar outro. Vários correspondentes pedem esclarecimento. Já entregue ou ausente é dito como tal. Cancelar ainda não existe.
+- “Onde paramos?” — lê o checkpoint do domínio pessoal. “Onde paramos no Ledger?” restringe ao projeto. A fala traz o resumo e o próximo passo.
+
+“Me lembra de beber água daqui a dois minutos.” confirma o cadastro na hora. Enquanto `voz uso` continua aberto, o vencimento é anunciado na espera da próxima ativação, com o microfone fechado, na voz configurada. Não entra no meio de uma resposta nem durante a captura do pedido. A própria fala não é um comando. A entrega só fica registrada se a reprodução termina; falha de áudio grava `erro=` e não marca o lembrete como entregue. Fechar o `voz uso` antes do prazo adia o anúncio até a sessão estar aberta de novo. Pedido fora desses casos ouve que o comando ainda não está disponível. O modo produção continua recusado enquanto `validado` for falso. O diagnóstico detalhado continua no comando longo com `--diagnostico sim`. [MOAH-040](../../ideias.md#moah-040--acompanhar-relato-de-fala-duplicada) segue em observação: se a fala sair duplicada, anotar as duas frases e o `estado=` da mesma tentativa.
+
+## Comparar a voz falada — 25/11/2026
+
+O laço lê `voz.sintese` em `config.json`. Airton gravou `faber`. Saudação, resposta do pedido e o aviso falado do lembrete usam essa voz. Se o Piper falhar, a frase sai no espeak e o console mostra `erro=`. Ativação, captura e transcrição não mudam. O comando `moah voz ouvir --voz espeak` continua na voz antiga.
+
+`moah voz ouvir` só reproduz três frases nesse mesmo alto-falante. Não abre o microfone.
+
+```bash
+npm run moah -- voz ouvir --voz espeak
+npm run moah -- voz ouvir --voz faber
+npm run moah -- voz ouvir --voz cadu
+npm run moah -- voz ouvir --voz jeff
+npm run moah -- voz ouvir --voz edresson
+npm run moah -- voz ouvir --voz tugao
+```
+
+As frases são “Estou aqui, Airton.”, “São dezessete horas e doze minutos.” e “Airton, está na hora de beber água.”
+
+Em 25/11 Airton escolheu a Faber como voz do laço. O catálogo oficial do Piper tem cinco vozes em português, e só essas. Faber, Cadu e Jeff são médias `pt_BR`, 63 221 984 bytes, conjunto CC0. Edresson é `pt_BR` de qualidade baixa, 16 kHz, conjunto [TTS-Portuguese-Corpus](https://github.com/Edresson/TTS-Portuguese-Corpus) em CC BY 4.0. Tugão é português de Portugal, médio, CC0; no comando o nome é `tugao`. As fichas não registram o sexo do locutor. O motor é `piper-tts` 1.8.0, GPL-3.0-or-later, fora do Git.
+
 ## Primeiro fluxo falado — 22/11/2026
 
-A escuta continua no `moah-experimental.onnx`, 16 kHz, mono, PCM 16 bits (`s16`), quadros de 1280 amostras. O limiar padrão é 0,5 e o VAD permanece desligado. Cada execução imprime uma linha `configuracao` com modelo, SHA-256, limiar, dispositivo, taxa, canais, formato e limites do pedido. Não há treino automático.
+A escuta continua no `moah-experimental.onnx`, 16 kHz, mono, PCM 16 bits (`s16`), quadros de 1280 amostras. O limiar padrão é 0,5 e o VAD permanece desligado. Com `--diagnostico sim` a execução imprime o JSON `configuracao` (modelo, SHA-256, limiar, dispositivo, taxa, canais, formato e limites do pedido). Sem essa flag, a linha é `escuta limiar=… verificador=… limiar_verificador=…`. Não há treino automático.
 
 O microfone fecha antes de “Estou aqui.” e antes da resposta. O pedido só começa depois que a saudação termina. A captura encerra por silêncio de 0,7 s depois da fala, por 4 s sem fala, ou aos 8 s. A cauda anterior à saudação entra nesse áudio, mas pico alto sozinho não inicia o pedido: a contagem do silêncio só começa quando há presença de fala, o mesmo critério do clipe de confirmação. Sem fala até a espera, a escuta volta a aguardar e não transcreve nem consulta. O texto vai para `moah voz pedido`. “Que horas são?”, “que hora é” e “me diz as horas” respondem o relógio local, sem LLM. Pedido não reconhecido fala que o comando ainda não está disponível. “Me lembro de …” sem prazo continua sem agendar e sem essa frase. Silêncio fala “Não ouvi o pedido.” Falha de transcrição fala “Não consegui transcrever.” `Ctrl+C` fecha captura, síntese e STT.
 
@@ -123,7 +162,7 @@ O que a calibração lê, e só isso, para escolher o limiar:
 | Treino dos pesos | Sessões 01 e 02. A 05, se for gravada, só entra depois da revisão dos rótulos | Não escolhe limiar e não é a prova final |
 | Prova final | Sessão 04 e os prefixos `prova-*` abaixo | O calibrador, o `validar` e o treino do candidato não leem esses arquivos |
 
-`candidato.py` recusa treinar se a sessão 04 já tiver WAV. Por isso a 04 só é gravada depois que o limiar estiver congelado e não houver outro treino planejado. Um erro na 04 não autoriza baixar o limiar nem retreinar com esses mesmos arquivos.
+`candidato.py` recusa treinar se a sessão 04 já tiver WAV. Em 23/11/2026 a coleta dessa sessão foi interrompida e deixou `tomada-01.wav` com 0,196 s. Em 25/11 esse fragmento foi preservado em `coleta/preservados/sessao-04-fragmento-20261123/` (SHA `8add2048…`) e saiu da pasta reservada. A trava continua: qualquer WAV de volta em `sessao-04` impede o treino. O fragmento, os backups `sessao-05-backup*` e os `prova-*` não entram em peso nem em limiar. A 04 só é gravada de novo depois que o limiar estiver congelado e não houver outro treino planejado. Um erro na 04 não autoriza baixar o limiar nem retreinar com esses mesmos arquivos.
 
 Aceite para sair do modo teste: algum limiar da varredura (0,35 a 0,95, passo 0,05) acerta todas as tomadas aprovadas da sessão 03; entre esses, vale o de menos falsos nos negativos de ajuste; Airton revisa esses falsos; só então o comando com `--marcar-validado sim`. Sem 8/8, esse comando não liga `validado`.
 
@@ -161,7 +200,7 @@ npm run moah -- voz escutar --habilitar sim --microfone jbl --confirmar-ativacao
 
 `--salvar-wavs sim` grava em `diagnostico/wavs/` (fora do Git): `verificador/` (acústico), `confirmacao-stt/` (só modo `stt`), `pedido-stt/` (sempre após saudação). Reprocessar: [stt-captura-diagnostico.md](../desenvolvimento/stt-captura-diagnostico.md).
 
-Divisão de dados: treino **01–02**, calibração **03**, teste fechado **04**, expansão **05**. `coletar.py` **recusa** sobrescrever pasta de sessão cheia; para uma tomada só use `--tomada N`.
+Divisão de dados: treino **01, 02 e as tomadas aprovadas da 05** (a pasta exata `sessao-05`; backups ficam de fora), calibração **03**, teste fechado **04**. O retreino também exige `coleta/neg-boa-*.wav`, `neg-sala-*.wav` e `neg-musica-*.wav`. Sem esses três prefixos o `candidato.py` para antes de ajustar peso. Em 25/11/2026 o treino gravou `moah-candidato-05.onnx` (SHA `168b9fc2…`) e não substituiu `moah-verificador.onnx`, `moah-experimental.onnx` nem `moah-candidato-fundo.onnx`. No isolado ele faz 8/8 na sessão 03; no pipeline com o detector em uso fica 7/8, e as parecidas pioram. Não foi promovido. Relatório: [2026-11-25-003](../../cursror-dev/execucoes/2026-11-25-003-candidato-05.md). `coletar.py` **recusa** sobrescrever pasta de sessão cheia; para uma tomada só use `--tomada N`.
 
 Coleta nova (não mexe na sessão 01):
 
@@ -210,7 +249,7 @@ O laço em modo teste foi relatado como funcional no JBL em 23/11, com a ressalv
 | Fim de fala | limite de silêncio e duração máxima no laço | Testado com relógio injetado |
 | Transcrição | faster-whisper `small` local, CPU int8, idioma `pt` | Pesos e venv em `$MOAH_VOICE_DIR/stt/`. O worker sobe no primeiro pedido. Se faltar modelo ou venv, a escuta avisa e volta a aguardar |
 | Conversa | `moah voz pedido` → catálogo + política | Pedido resolve intenção e chama `governVoiceTool`. Leituras + `criar_lembrete_local` (módulo `application/reminders`, fila `jobs`). Sem prazo válido, “me lembro de …” não agenda |
-| Fala | texto “Estou aqui.” e a resposta | Saudação e resposta via espeak + pw-play. Checkpoint: Texto + Próximo passo. Lembrete: confirmação + aviso de sessão. Aceite no JBL pendente |
+| Fala | texto “Estou aqui.” e a resposta | O laço usa Piper Faber + pw-play. O espeak fica na comparação `moah voz ouvir --voz espeak`. Checkpoint: Texto + Próximo passo. Lembrete: confirmação + aviso de sessão |
 | Painel | `voicePanel` e `ui/src/voice-panel.ts` | Estado visível. React ainda não foi instalado nem aberto no navegador |
 
 O buffer da solicitação tem tamanho limitado e é descartado ao fim do turno. Não há gravação de áudio ambiente. Durante a saudação e a resposta, amostras do microfone e do próprio assistente não reiniciam a ativação. “MOAH, pare”, quando é o pedido transcrito, encerra sem consultar o modelo. Enquanto o MOAH está falando, essa frase não interrompe: o controle visível “Parar resposta” faz isso. A interrupção por voz durante a fala fica pendente até um teste de eco com microfone e caixas reais.

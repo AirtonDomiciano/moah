@@ -23,9 +23,19 @@ Esta pasta preserva relatórios sanitizados de execução. Preparar um prompt n�
 | [2026-11-08-002-voz-diagnostico-candidato](2026-11-08-002-voz-diagnostico-candidato.md) | continuação de 16 / MOAH-037 | Falsos do candidato: janela intermediária; Torch≈ONNX; sem promoção |
 | [2026-11-08-003-voz-candidato-janelas](2026-11-08-003-voz-candidato-janelas.md) | continuação de 16 / MOAH-037 | Janelas da escuta; falsos de fala 48→7 @0,95; experimental mantido |
 | [2026-11-22-001-voz-fluxo](2026-11-22-001-voz-fluxo.md) | continuação de 16 | Diagnóstico da ativação e pedido “que horas são?”; palavra falada pendente |
+| [2026-11-23-002-verificador-diagnostico](2026-11-23-002-verificador-diagnostico.md) | continuação de 16 | Verificador 6/8 e 7/8 na sessão 03; sem promoção |
 | [2026-11-23-003-presenca-fala](2026-11-23-003-presenca-fala.md) | continuação de 16 | Presença de fala antes da confirmação; verificador segue não validado |
 | [2026-11-23-004-turno-pedido](2026-11-23-004-turno-pedido.md) | continuação de 16 | Cauda não arma silêncio por pico; sem fala não há STT |
 | [2026-11-23-005-fechamento-jbl](2026-11-23-005-fechamento-jbl.md) | continuação de 16 | Relato JBL em modo teste; MOAH-040 em aberto; sem promover o verificador |
+| [2026-11-25-001-verificador-calibracao](2026-11-25-001-verificador-calibracao.md) | continuação de 16 | Recalibração 25/11: ainda 7/8; tomada 08 em 0,12; sem promoção |
+| [2026-11-25-002-sessao-05](2026-11-25-002-sessao-05.md) | continuação de 16 | Sessão 05 no envelope; treino 01/02/05 preparado; negativos ausentes; fragmento da 04 preservado |
+| [2026-11-25-003-candidato-05](2026-11-25-003-candidato-05.md) | continuação de 16 | Candidato 05 isolado 8/8; pipeline 7/8; parecidas pioram; sem promoção |
+| [2026-11-25-004-uso-diario](2026-11-25-004-uso-diario.md) | continuação de 16 | Comando `voz uso`; console curto; sem promover o verificador |
+| [2026-11-25-005-voz-falada](2026-11-25-005-voz-falada.md) | continuação de 16 | Comparação espeak, Faber e Cadu; laço permanece no espeak |
+| [2026-11-25-006-voz-faber](2026-11-25-006-voz-faber.md) | continuação de 16 | Airton escolheu a Faber como voz do laço |
+| [2026-11-25-007-voz-faber-config](2026-11-25-007-voz-faber-config.md) | continuação de 16 | Faber gravada em config.json; espeak se o Piper falhar |
+| [2026-11-25-008-lembrete-voz](2026-11-25-008-lembrete-voz.md) | continuação de 16 | Lembrete vencido anunciado só com voz uso aberto |
+| [2026-11-25-009-alterar-lembrete](2026-11-25-009-alterar-lembrete.md) | continuação de 16 | Alterar pendente atualiza o mesmo job |
 
 Para cada execução, criar YYYY-MM-DD-NNN-prompt-ID.md usando MODELO.md. Incluir prompt/versão e commit de origem, escopo, ambiente, resultado e comandos realmente executados. Repetições recebem relatório novo vinculado ao anterior.
 

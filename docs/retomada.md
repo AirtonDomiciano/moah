@@ -5,7 +5,7 @@ Atualizado em 25/11/2026, horário de São Paulo.
 ## Leia primeiro
 
 1. Este resumo e [voz em operação](operacao/voz.md).
-2. Evidências: [2026-11-23-005 fechamento JBL](../cursror-dev/execucoes/2026-11-23-005-fechamento-jbl.md), [2026-11-23-004 turno](../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md), [2026-11-23-002 verificador](../cursror-dev/execucoes/2026-11-23-002-verificador-diagnostico.md).
+2. Evidências: [2026-11-25-003 candidato 05](../cursror-dev/execucoes/2026-11-25-003-candidato-05.md), [2026-11-25-002 sessão 05](../cursror-dev/execucoes/2026-11-25-002-sessao-05.md), [2026-11-25-001 calibração](../cursror-dev/execucoes/2026-11-25-001-verificador-calibracao.md).
 3. Dados e ONNX ficam em `~/.local/share/moah/voz` (fora do Git): `correcao/verificador.json`, `correcao/diagnostico-verificador-sessao03.json`.
 
 ## Estado atual (código)
@@ -40,50 +40,29 @@ Atualizado em 25/11/2026, horário de São Paulo.
 
 - Manifesto: `validado: false`, **`limiarOperacional: null`** (não usar 0,95 em produção).
 - Primeira calibração registrou **`acertosSessao03: 0`** no sentido “nenhum limiar com 8/8” — **não** “score zero em todas as tomadas”.
-- Reavaliação offline (23/11): **tomada-07** ~0,81; **tomada-08** ~0,12; demais ~0,99. Melhor parcial `limiarCalibrado: 0,8` com 7/8.
-- Treino verificador: sessões **01–02**; calibração **03**; **04** fechada; coleta nova **05** (`coletar.py` não sobrescreve sessão existente).
+- Reavaliação offline (25/11, mesmo SHA `749fb6fa…`): tomadas 01–06 ~0,999; **tomada-07** 0,806 na janela que cobre a fala; **tomada-08** 0,120 numa janela que não cobre a fala (janelas que cobrem ficam ≤0,049). Features do fluxo de treino e de inferência coincidem. O slot fixo [1 s, 3 s] não é o caminho usado na calibração. Melhor parcial `limiarCalibrado: 0,8` com 7/8 e 22/65 falsos. Em 0,95: 6/8 e 13/65 (parecidas 4/28, música 6/8, ambiente 3/8; saudação e conversa 0). Detalhe: [2026-11-25-001](../cursror-dev/execucoes/2026-11-25-001-verificador-calibracao.md).
+- Candidato `moah-candidato-05.onnx` (SHA `168b9fc27a4bf565`), treinado em 25/11 com sessões **01, 02 e 05** e os negativos `neg-boa`, `neg-sala`, `neg-musica`. Não foi copiado para `moah-verificador.onnx` (`749fb6fa…`) nem para `moah-experimental.onnx` (`04fcd7bb…`). `validado` segue `false`.
 
 ## Próximo capítulo
 
-Sair do modo teste só pelo calibrador, no conjunto que ele já lê. A prova final é outro conjunto e não redefine o limiar. Detalhe e comandos: [voz em operação](operacao/voz.md).
-
-1. Medir no JBL, sem saudar e sem gravar em 03, `gerado` ou `reservados.txt`: chamada real, silêncio, ruído, frase comum, “boa” em conversa, voz do MOAH no alto-falante.
-   ```bash
-   npm run moah -- voz escutar --habilitar sim --microfone jbl \
-     --confirmar-ativacao acustico --modo-verificador manual --diagnostico sim
-   ```
-2. Se ainda faltar tomada para o treino, gravar na **sessão 05** e revisar o rótulo antes de retreinar. Não usar a 05 como prova final.
-3. Recalibrar **sem** `--marcar-validado sim`. Aceite do limiar operacional: 8/8 na sessão 03 e, entre esses limiares, o de menos falsos nos negativos de ajuste. Sem 8/8, `limiarOperacional` continua `null`.
-4. Só então, depois da revisão humana desses falsos: `treinar_verificador.py calibrar --marcar-validado sim`. Sem 8/8 o comando não liga `validado`. Não editar o JSON.
-5. Com o limiar congelado e sem outro treino planejado, gravar a **sessão 04** (8×4 s, “moá”) e os prefixos `prova-silencio`, `prova-ruido`, `prova-frase`, `prova-boa`, `prova-voz-moah`. `candidato.py` passa a recusar treino quando a 04 tiver WAV. Um erro nessa prova não volta para o calibrador.
-
-Comando do capítulo que Airton relatou como funcional:
+Calibração e treino ficam pausados. O candidato 05 não entra no verificador em uso e `validado` continua `false`. O uso diário no Debian é o laço do JBL, agora sem repetir as flags:
 
 ```bash
-npm run moah -- voz escutar --habilitar sim --microfone jbl \
-  --confirmar-ativacao acustico --modo-verificador teste --limiar-verificador 0.95 \
-  --diagnostico sim
+npm run moah -- voz uso
 ```
 
-## Entrega preparada para `main`
+Isso fixa detector 0,5, confirmação acústica, modo teste e limiar 0,95, com console `estado=`, `pedido=`, `resultado=` e `erro=`. O comando longo com `--diagnostico sim` continua disponível para medir o detector. Detalhe: [2026-11-25-004](../cursror-dev/execucoes/2026-11-25-004-uso-diario.md).
 
-A branch `teste/lembretes-moah` incorpora `origin/main` até `d8894ae`. Os registros exclusivos da `main` permanecem: [MOAH-038](../ideias.md#moah-038--chamada-e-pedido-na-mesma-frase), [MOAH-039](../ideias.md#moah-039--manter-a-voz-de-quem-iniciou-o-pedido) e [MOAH-040](../ideias.md#moah-040--acompanhar-relato-de-fala-duplicada). MOAH-038 e MOAH-039 continuam planejados. MOAH-040 continua observação, sem correção.
+A fala do laço é a Piper Faber, gravada em `~/.config/moah/config.json` (`voz.sintese`). Se o Piper falhar, o laço usa espeak e imprime `erro=`. O lembrete local vencido é anunciado só com `voz uso` aberto, fora do turno do pedido. Alterar um pendente atualiza o mesmo item da fila. Detalhe: [2026-11-25-008](../cursror-dev/execucoes/2026-11-25-008-lembrete-voz.md) e [2026-11-25-009](../cursror-dev/execucoes/2026-11-25-009-alterar-lembrete.md).
 
-O que esta branch acrescenta, sem promover o verificador:
-
-- Lembretes locais por voz (`me lembro de` / `me lembre`) e aviso falado quando a ferramenta está indisponível ou o prazo não serve.
-- Pipeline acústico em dois estágios, presença de fala e turno do pedido. Evidências: [2026-11-23-003](../cursror-dev/execucoes/2026-11-23-003-presenca-fala.md), [2026-11-23-004](../cursror-dev/execucoes/2026-11-23-004-turno-pedido.md), [2026-11-23-005](../cursror-dev/execucoes/2026-11-23-005-fechamento-jbl.md).
-
-`validado` permanece `false`. O modo produção continua recusando confirmação acústica sem `validado: true` e `limiarOperacional` (`modelo_nao_validado`). O modo teste não grava o manifesto.
-
-Verificação desta rodada, em 25/11/2026, Node 22.23.3 e Python 3.10.21 do ambiente de voz: `npm run typecheck`, `npm test` (84 testes, 0 falhas) e os scripts `test_turno_escuta.py`, `test_presenca_fala.py`, `test_confirmacao_acustica.py`, `test_pedido_preservado.py`, `test_confirmacao_texto.py`. Isso não fecha 8/8 na sessão 03, a tabela de chamadas nem a sessão 04.
+O candidato 05, no verificador isolado, marca 8/8 na sessão 03 em 0,80 e em 0,95 (tomada 08 sobe de 0,120 para 0,9999). No pipeline completo o detector experimental não dispara na tomada 08, então a confirmação fica 7/8. Nos negativos de ajuste, em 0,95, as parecidas sobem de 4/28 para 9/28 no modelo isolado e de 3/28 para 6/28 no pipeline. Saudação e conversa continuam em 0. Música isolada passa de 6/8 para 7/8; no pipeline cai de 2/8 para 0/8. Ambiente isolado passa de 3/8 para 2/8; no pipeline permanece 1/8. Detalhe: [2026-11-25-003](../cursror-dev/execucoes/2026-11-25-003-candidato-05.md). O aumento de parecidas impede o aceite do limiar. A sessão 04 e os `prova-*` continuam fora.
 
 ## Git
 
-- Branch: `teste/lembretes-moah`, com merge de `origin/main` (`d8894ae`).
-- `main` local segue em `3efb008`; o remoto `origin/main` está em `d8894ae`.
-- Remoto: `origin` → `github.com/AirtonDomiciano/moah.git`.
-- Áudio, ONNX, credenciais e memória real ficam fora do Git. Bytecode `__pycache__` não entra neste merge.
+- `main` local e `origin/main` em `5901269` (`Merge pull request #9`). Fast-forward a partir de `3efb008` em 25/11/2026. Não havia diff rastreado; `__pycache__` local permanece não versionado.
+- [MOAH-038](../ideias.md#moah-038--chamada-e-pedido-na-mesma-frase) e [MOAH-039](../ideias.md#moah-039--manter-a-voz-de-quem-iniciou-o-pedido) continuam planejados. [MOAH-040](../ideias.md#moah-040--acompanhar-relato-de-fala-duplicada) continua observação.
+- `validado` permanece `false`. O modo produção recusa confirmação acústica sem `validado: true` e `limiarOperacional`. O modo teste não grava o manifesto.
+- Áudio, ONNX, credenciais e memória real ficam fora do Git.
 
 ## Manutenção
 

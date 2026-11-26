@@ -31,6 +31,7 @@ from eventos_voz import (
     voz_dir,
 )
 from janela_pedido import LimitesPedido
+from lembrete_sessao import EsperaLembrete, anunciar_lembrete
 from oww_janela import extrair_cauda_pedido, zerar_detector
 from pcm_pipewire import abrir_captura, amostras_mutas, fechar_captura, ler_quadro
 from presenca_fala import aplicar_presenca, avaliar_presenca
@@ -80,6 +81,17 @@ _conduzir_pedido = conduzir_pedido
 _falar_etapa = falar_etapa
 
 from sintese_pipewire import falar as _falar  # noqa: E402 — testes fazem monkeypatch
+
+
+def _liberar_volta(captura, buffer, mensagem: str, pico: float, acertos: int) -> None:
+    """Fecha microfone e síntese e devolve o laço à espera."""
+    parar_reproducao()
+    fechar_captura(captura)
+    if buffer is not None:
+        buffer.descartar()
+    texto = " ".join(mensagem.split()) or "Falha na escuta."
+    print(f"erro={texto}", flush=True)
+    emitir_estado("aguardando", microfone="liberado", pico=pico, acertos=acertos)
 
 
 def main() -> None:
@@ -242,269 +254,274 @@ def main() -> None:
             confirmarAtivacao=modo_confirmacao != "nao",
             modoConfirmacao=modo_confirmacao,
         )
+        espera_lembrete = EsperaLembrete()
         while args.duracao <= 0 or time.time() - inicio < args.duracao:
-            captura = abrir_captura(args.origem)
-            zerar_detector(detector)
-            t_espera = time.perf_counter()
-            usar_buffer = modo_confirmacao == "acustico"
-            buffer = BufferCircular(PRE_CONFIRMACAO_QUADROS) if usar_buffer else None
-            detectou, score, parcial, trecho, _pos = aguardar_ativacao(
-                detector,
-                chave,
-                captura,
-                args.limiar,
-                inicio,
-                args.duracao,
-                guardar=modo_confirmacao == "stt",
-                diagnostico=diagnostico,
-                arranque_s=args.arranque,
-                buffer=buffer,
-            )
-            cauda_pedido = np.zeros(0, dtype=np.int16)
-            espera_ms = ms_desde(t_espera)
-            pico = max(pico, parcial)
-            if not detectou:
-                fechar_captura(captura)
-                captura = None
-                if buffer is not None:
-                    buffer.descartar()
-                break
-            if usar_buffer and buffer is not None:
-                buffer.iniciar_candidato()
-                for _ in range(POS_CONFIRMACAO_QUADROS):
-                    quadro = ler_quadro(captura)
-                    if quadro is None:
-                        break
-                    buffer.anexar_pos(quadro)
-                trecho = buffer.concluir()
-                pipeline_ponto(
-                    "detector_candidato_trecho",
-                    amostras=trecho,
-                    imprimir=imprimir_pipeline,
-                    scoreDetector=round(score, 4),
-                    limiarDetector=args.limiar,
-                    modoConfirmacao=modo_confirmacao,
+            buffer = None
+            try:
+                captura = abrir_captura(args.origem)
+                zerar_detector(detector)
+                t_espera = time.perf_counter()
+                usar_buffer = modo_confirmacao == "acustico"
+                buffer = BufferCircular(PRE_CONFIRMACAO_QUADROS) if usar_buffer else None
+                detectou, score, parcial, trecho, _pos = aguardar_ativacao(
+                    detector,
+                    chave,
+                    captura,
+                    args.limiar,
+                    inicio,
+                    args.duracao,
+                    guardar=modo_confirmacao == "stt",
+                    diagnostico=diagnostico,
+                    arranque_s=args.arranque,
+                    buffer=buffer,
+                    lembrete=espera_lembrete.consultar,
                 )
-            fechar_captura(captura)
-            captura = None
-            if diagnostico:
-                print(
-                    f"diagnostico ativacao etapa=detector score={score:.4f} limiar={args.limiar:.4f}",
-                    flush=True,
-                )
-            tempos = {"esperaAtivacaoMs": espera_ms}
-            score_verificador: float | None = None
-            confirmado = modo_confirmacao == "nao"
-            motivo_verificacao = ""
-            if modo_confirmacao == "stt":
-                emitir_estado(
-                    "verificando",
-                    microfone="liberado",
-                    pico=pico,
-                    score=score,
-                    acertos=acertos,
-                    etapa="stt",
-                )
-                wav_diag: Path | None = None
-                if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
-                    diagnostico_salvos += 1
-                    wav_diag = salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
-                if salvar_wavs and trecho.size:
-                    caminho_conf, meta_conf = salvar_wav_com_metricas(
-                        pasta_voz,
-                        "confirmacao-stt",
-                        "chamada",
-                        trecho,
-                        extras={"etapaStt": "confirmacao", "quadrosConfirmacao": len(trecho) // QUADRO},
-                    )
-                    print(
-                        f"diagnostico stt etapa=confirmacao wav={caminho_conf} "
-                        f"metricas={meta_conf.get('metricas')}",
-                        flush=True,
-                    )
-                trabalhador = obter_stt()
-                t_confirma = time.perf_counter()
-                reconhecido = "" if trabalhador is None else transcrever_pedido_seguro(trabalhador, trecho)
-                tempos["confirmacaoMs"] = ms_desde(t_confirma)
-                aceito_nome, _norm = atender_por_texto(reconhecido, flexivel=flexivel)
-                print(
-                    f"diagnostico stt etapa=confirmacao texto={reconhecido!r} "
-                    f"normalizado={_norm!r} aceito={aceito_nome} flexivel={flexivel}",
-                    flush=True,
-                )
-                if wav_diag is not None:
-                    print(f"diagnostico wav legado={wav_diag}", flush=True)
-                confirmado = trabalhador is not None and aceito_nome
-                motivo_verificacao = "stt_aceito" if confirmado else "stt_rejeitado"
-                if not confirmado:
-                    emitir_tempos(tempos)
-                    emitir_estado(
-                        "aguardando",
-                        microfone="liberado",
-                        pico=pico,
-                        acertos=acertos,
-                        texto=reconhecido,
-                        confirmarAtivacao=True,
-                        motivoRejeicao=motivo_verificacao,
-                    )
-                    del trecho
-                    continue
-                del trecho
-            elif modo_confirmacao == "acustico":
-                if verificador is None:
-                    print(
-                        "Verificador acústico ausente ou inválido; candidato descartado. "
-                        f"status={status_verificador}",
-                        flush=True,
-                    )
+                cauda_pedido = np.zeros(0, dtype=np.int16)
+                espera_ms = ms_desde(t_espera)
+                pico = max(pico, parcial)
+                if not detectou:
+                    fechar_captura(captura)
+                    captura = None
                     if buffer is not None:
                         buffer.descartar()
-                    emitir_tempos(tempos)
-                    emitir_estado(
-                        "aguardando",
-                        microfone="liberado",
-                        pico=pico,
-                        acertos=acertos,
-                        motivoRejeicao="verificador_ausente",
+                    if espera_lembrete.item is not None:
+                        anunciar_lembrete(args.destino, espera_lembrete.item)
+                        espera_lembrete.item = None
+                        continue
+                    break
+                if usar_buffer and buffer is not None:
+                    buffer.iniciar_candidato()
+                    for _ in range(POS_CONFIRMACAO_QUADROS):
+                        quadro = ler_quadro(captura)
+                        if quadro is None:
+                            break
+                        buffer.anexar_pos(quadro)
+                    trecho = buffer.concluir()
+                    pipeline_ponto(
+                        "detector_candidato_trecho",
+                        amostras=trecho,
+                        imprimir=imprimir_pipeline,
+                        scoreDetector=round(score, 4),
+                        limiarDetector=args.limiar,
+                        modoConfirmacao=modo_confirmacao,
                     )
-                    continue
-                emitir_estado(
-                    "verificando",
-                    microfone="liberado",
-                    pico=pico,
-                    score=score,
-                    acertos=acertos,
-                    etapa="acustico",
-                )
-                if modo_verificador == "manual":
-                    permitir = False
-                    motivo_bloqueio = "modo_manual"
-                elif modo_verificador == "teste":
-                    permitir = True
-                    motivo_bloqueio = ""
-                else:
-                    permitir = bool(manifesto and manifesto.validado)
-                    motivo_bloqueio = "modelo_nao_validado"
-                if salvar_wavs:
-                    caminho_ver, meta_ver = salvar_wav_com_metricas(
-                        pasta_voz,
-                        "verificador",
-                        "candidato",
-                        trecho,
-                        extras={
-                            "scoreDetector": score,
-                            "limiarVerificador": limiar_verificador,
-                            "modoVerificador": modo_verificador,
-                        },
-                    )
-                    print(f"diagnostico wav verificador={caminho_ver} meta={meta_ver.get('metricas')}", flush=True)
-                resumo = pipeline_ponto(
-                    "verificador_entrada",
-                    amostras=trecho,
-                    imprimir=imprimir_pipeline,
-                    limiar=limiar_verificador,
-                    modoVerificador=modo_verificador,
-                )
-                # Pico e STT, se houver, leem este mesmo `trecho`. O score é o máximo
-                # das janelas de 1,28 s (com 1 s de silêncio na frente), não o pico.
-                presenca = avaliar_presenca(trecho)
-                t_confirma = time.perf_counter()
-                resultado = verificador.verificar(
-                    trecho,
-                    limiar_verificador,
-                    permitir=permitir,
-                    motivo_bloqueio=motivo_bloqueio,
-                )
-                tempos["confirmacaoMs"] = ms_desde(t_confirma)
-                score_verificador = resultado.score
-                aceito_verificador = atender_por_acustico(resultado)
-                confirmado_agora, motivo_verificacao = aplicar_presenca(
-                    presenca,
-                    aceito_verificador,
-                    resultado.motivo,
-                )
-                vad_txt = "ausente" if presenca.vad_max is None else f"{presenca.vad_max:.2f}"
-                pipeline_ponto(
-                    "verificador_decisao",
-                    imprimir=imprimir_pipeline,
-                    score=round(resultado.score, 4),
-                    limiar=resultado.limiar,
-                    motivo=motivo_verificacao,
-                    aceito=confirmado_agora,
-                    vad=None if presenca.vad_max is None else round(presenca.vad_max, 4),
-                    energiaMs=presenca.energia_ms,
-                )
-                if not diagnostico:
-                    audio = resumo.get("audio") or {}
-                    texto_campo = ""
-                    if presenca.fala:
-                        trabalhador = obter_stt()
-                        if trabalhador is not None:
-                            texto = transcrever_pedido_seguro(trabalhador, trecho)
-                            texto_campo = f" texto={texto!r}"
-                    print(
-                        f"candidato detector={score:.4f} verificador={resultado.score:.4f} "
-                        f"{motivo_verificacao} pico={audio.get('pico', 0)} vad={vad_txt}{texto_campo}",
-                        flush=True,
-                    )
+                fechar_captura(captura)
+                captura = None
                 if diagnostico:
                     print(
-                        "diagnostico verificacao "
-                        f"score={resultado.score:.4f} limiar={resultado.limiar:.4f} "
-                        f"motivo={motivo_verificacao} latenciaMs={resultado.latencia_ms} "
-                        f"modoVerificador={modo_verificador} validado={manifesto.validado if manifesto else False} "
-                        f"vad={vad_txt}",
+                        f"diagnostico ativacao etapa=detector score={score:.4f} limiar={args.limiar:.4f}",
                         flush=True,
                     )
-                if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
-                    diagnostico_salvos += 1
-                    salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
-                cauda_pedido = extrair_cauda_pedido(
-                    trecho,
-                    resultado.indice_janela,
-                    fim_janela_s=resultado.fim_janela_s,
-                )
-                del trecho
-                confirmado = confirmado_agora
-                if not confirmado:
-                    emitir_tempos(tempos)
+                tempos = {"esperaAtivacaoMs": espera_ms}
+                score_verificador: float | None = None
+                confirmado = modo_confirmacao == "nao"
+                motivo_verificacao = ""
+                if modo_confirmacao == "stt":
                     emitir_estado(
-                        "aguardando",
+                        "verificando",
                         microfone="liberado",
                         pico=pico,
-                        acertos=acertos,
                         score=score,
-                        scoreVerificador=score_verificador,
-                        motivoRejeicao=motivo_verificacao,
+                        acertos=acertos,
+                        etapa="stt",
                     )
-                    continue
-            acertos += 1
-            emitir_estado(
-                "confirmada",
-                microfone="liberado",
-                pico=pico,
-                acertos=acertos,
-                score=score,
-                scoreVerificador=score_verificador,
-                detectorConfirmado=True,
-            )
-            conduzir_pedido(
-                destino=args.destino,
-                abrir=lambda: abrir_captura(args.origem),
-                limites=limites,
-                pico_fala=args.pico_fala,
-                obter_stt=obter_stt,
-                pico=pico,
-                acertos=acertos,
-                score=score,
-                tempos=tempos,
-                modelo=str(modelo),
-                limiar=args.limiar,
-                pre_cauda=cauda_pedido,
-                voz_dir=pasta_voz,
-                salvar_wavs=salvar_wavs,
-                imprimir_pipeline=imprimir_pipeline,
-            )
+                    wav_diag: Path | None = None
+                    if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
+                        diagnostico_salvos += 1
+                        wav_diag = salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                    if salvar_wavs and trecho.size:
+                        caminho_conf, meta_conf = salvar_wav_com_metricas(
+                            pasta_voz,
+                            "confirmacao-stt",
+                            "chamada",
+                            trecho,
+                            extras={"etapaStt": "confirmacao", "quadrosConfirmacao": len(trecho) // QUADRO},
+                        )
+                        print(
+                            f"diagnostico stt etapa=confirmacao wav={caminho_conf} "
+                            f"metricas={meta_conf.get('metricas')}",
+                            flush=True,
+                        )
+                    trabalhador = obter_stt()
+                    t_confirma = time.perf_counter()
+                    reconhecido = "" if trabalhador is None else transcrever_pedido_seguro(trabalhador, trecho)
+                    tempos["confirmacaoMs"] = ms_desde(t_confirma)
+                    aceito_nome, _norm = atender_por_texto(reconhecido, flexivel=flexivel)
+                    print(
+                        f"diagnostico stt etapa=confirmacao texto={reconhecido!r} "
+                        f"normalizado={_norm!r} aceito={aceito_nome} flexivel={flexivel}",
+                        flush=True,
+                    )
+                    if wav_diag is not None:
+                        print(f"diagnostico wav legado={wav_diag}", flush=True)
+                    confirmado = trabalhador is not None and aceito_nome
+                    motivo_verificacao = "stt_aceito" if confirmado else "stt_rejeitado"
+                    if not confirmado:
+                        emitir_tempos(tempos)
+                        emitir_estado(
+                            "aguardando",
+                            microfone="liberado",
+                            pico=pico,
+                            acertos=acertos,
+                            texto=reconhecido,
+                            confirmarAtivacao=True,
+                            motivoRejeicao=motivo_verificacao,
+                        )
+                        del trecho
+                        continue
+                    del trecho
+                elif modo_confirmacao == "acustico":
+                    if verificador is None:
+                        print(
+                            "Verificador acústico ausente ou inválido; candidato descartado. "
+                            f"status={status_verificador}",
+                            flush=True,
+                        )
+                        if buffer is not None:
+                            buffer.descartar()
+                        emitir_tempos(tempos)
+                        emitir_estado(
+                            "aguardando",
+                            microfone="liberado",
+                            pico=pico,
+                            acertos=acertos,
+                            motivoRejeicao="verificador_ausente",
+                        )
+                        continue
+                    emitir_estado(
+                        "verificando",
+                        microfone="liberado",
+                        pico=pico,
+                        score=score,
+                        acertos=acertos,
+                        etapa="acustico",
+                    )
+                    if modo_verificador == "manual":
+                        permitir = False
+                        motivo_bloqueio = "modo_manual"
+                    elif modo_verificador == "teste":
+                        permitir = True
+                        motivo_bloqueio = ""
+                    else:
+                        permitir = bool(manifesto and manifesto.validado)
+                        motivo_bloqueio = "modelo_nao_validado"
+                    if salvar_wavs:
+                        caminho_ver, meta_ver = salvar_wav_com_metricas(
+                            pasta_voz,
+                            "verificador",
+                            "candidato",
+                            trecho,
+                            extras={
+                                "scoreDetector": score,
+                                "limiarVerificador": limiar_verificador,
+                                "modoVerificador": modo_verificador,
+                            },
+                        )
+                        print(f"diagnostico wav verificador={caminho_ver} meta={meta_ver.get('metricas')}", flush=True)
+                    pipeline_ponto(
+                        "verificador_entrada",
+                        amostras=trecho,
+                        imprimir=imprimir_pipeline,
+                        limiar=limiar_verificador,
+                        modoVerificador=modo_verificador,
+                    )
+                    # Pico e STT, se houver, leem este mesmo `trecho`. O score é o máximo
+                    # das janelas de 1,28 s (com 1 s de silêncio na frente), não o pico.
+                    presenca = avaliar_presenca(trecho)
+                    t_confirma = time.perf_counter()
+                    resultado = verificador.verificar(
+                        trecho,
+                        limiar_verificador,
+                        permitir=permitir,
+                        motivo_bloqueio=motivo_bloqueio,
+                    )
+                    tempos["confirmacaoMs"] = ms_desde(t_confirma)
+                    score_verificador = resultado.score
+                    aceito_verificador = atender_por_acustico(resultado)
+                    confirmado_agora, motivo_verificacao = aplicar_presenca(
+                        presenca,
+                        aceito_verificador,
+                        resultado.motivo,
+                    )
+                    vad_txt = "ausente" if presenca.vad_max is None else f"{presenca.vad_max:.2f}"
+                    pipeline_ponto(
+                        "verificador_decisao",
+                        imprimir=imprimir_pipeline,
+                        score=round(resultado.score, 4),
+                        limiar=resultado.limiar,
+                        motivo=motivo_verificacao,
+                        aceito=confirmado_agora,
+                        vad=None if presenca.vad_max is None else round(presenca.vad_max, 4),
+                        energiaMs=presenca.energia_ms,
+                    )
+                    if diagnostico:
+                        print(
+                            "diagnostico verificacao "
+                            f"score={resultado.score:.4f} limiar={resultado.limiar:.4f} "
+                            f"motivo={motivo_verificacao} latenciaMs={resultado.latencia_ms} "
+                            f"modoVerificador={modo_verificador} validado={manifesto.validado if manifesto else False} "
+                            f"vad={vad_txt}",
+                            flush=True,
+                        )
+                    if gravar and diagnostico_salvos < DIAGNOSTICO_MAX and not amostras_mutas(trecho):
+                        diagnostico_salvos += 1
+                        salvar_wav_confirmacao(diagnostico_dir, diagnostico_salvos, trecho)
+                    cauda_pedido = extrair_cauda_pedido(
+                        trecho,
+                        resultado.indice_janela,
+                        fim_janela_s=resultado.fim_janela_s,
+                    )
+                    del trecho
+                    confirmado = confirmado_agora
+                    if not confirmado:
+                        emitir_tempos(tempos)
+                        emitir_estado(
+                            "aguardando",
+                            microfone="liberado",
+                            pico=pico,
+                            acertos=acertos,
+                            score=score,
+                            scoreVerificador=score_verificador,
+                            motivoRejeicao=motivo_verificacao,
+                        )
+                        continue
+                acertos += 1
+                emitir_estado(
+                    "confirmada",
+                    microfone="liberado",
+                    pico=pico,
+                    acertos=acertos,
+                    score=score,
+                    scoreVerificador=score_verificador,
+                    detectorConfirmado=True,
+                )
+                conduzir_pedido(
+                    destino=args.destino,
+                    abrir=lambda: abrir_captura(args.origem),
+                    limites=limites,
+                    pico_fala=args.pico_fala,
+                    obter_stt=obter_stt,
+                    pico=pico,
+                    acertos=acertos,
+                    score=score,
+                    tempos=tempos,
+                    modelo=str(modelo),
+                    limiar=args.limiar,
+                    pre_cauda=cauda_pedido,
+                    voz_dir=pasta_voz,
+                    salvar_wavs=salvar_wavs,
+                    imprimir_pipeline=imprimir_pipeline,
+                )
+            except Exception as exc:
+                _liberar_volta(
+                    captura,
+                    buffer,
+                    str(exc).strip() or "Falha na escuta.",
+                    pico,
+                    acertos,
+                )
+                captura = None
+                time.sleep(0.4)
         emitir_estado("desligado", microfone="liberado", pico=pico, acertos=acertos)
     finally:
         parar_reproducao()

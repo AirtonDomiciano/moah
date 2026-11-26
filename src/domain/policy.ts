@@ -14,8 +14,9 @@ export const DEMO_EFFECT_TOOL = "eco_sintetico";
 
 /** Efeito local da sessão: lembrete avulso via fila, sem conector externo. */
 export const LOCAL_REMINDER_TOOL = "criar_lembrete_local";
+export const ALTER_LOCAL_REMINDER_TOOL = "alterar_lembrete_local";
 
-export const SESSION_EFFECT_TOOLS = [LOCAL_REMINDER_TOOL] as const;
+export const SESSION_EFFECT_TOOLS = [LOCAL_REMINDER_TOOL, ALTER_LOCAL_REMINDER_TOOL] as const;
 
 export const BLOCKED_TOOLS = [
   "shell",
@@ -80,7 +81,7 @@ export function voiceAuthority(sessionDomain: Domain): AuthorityContext {
   return {
     sessionDomain,
     agent: "voz",
-    grantedTools: [...READ_TOOLS, LOCAL_REMINDER_TOOL],
+    grantedTools: [...READ_TOOLS, LOCAL_REMINDER_TOOL, ALTER_LOCAL_REMINDER_TOOL],
     parentGrantedTools: null,
   };
 }

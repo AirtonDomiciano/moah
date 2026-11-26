@@ -25,6 +25,7 @@ def aguardar_ativacao(
     diagnostico: bool = False,
     arranque_s: float = 0.0,
     buffer: BufferCircular | None = None,
+    lembrete=None,
 ) -> tuple[bool, float, float, np.ndarray, bool]:
     pico = 0.0
     recentes: deque[np.ndarray] = deque(maxlen=CONFIRMACAO_QUADROS if guardar else 0)
@@ -73,6 +74,8 @@ def aguardar_ativacao(
             quadros = 0
             ultimo_relato = agora
         if score < limiar or agora - aberto < arranque_s:
+            if lembrete is not None and score < limiar and lembrete():
+                return False, 0.0, pico, vazio, False
             continue
         if buffer is not None:
             return True, score, pico, vazio, False

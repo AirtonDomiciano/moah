@@ -35,6 +35,20 @@ def definir_console(enxuto: bool) -> None:
     _enxuto = enxuto
 
 
+def console_enxuto() -> bool:
+    return _enxuto
+
+
+def emitir_linha(rotulo: str, texto: str) -> None:
+    """Uma linha no console de uso. O diagnóstico completo fica no outro modo."""
+    if not _enxuto:
+        return
+    limpo = " ".join(str(texto).split())
+    if not limpo:
+        return
+    print(f"{rotulo}={limpo}", flush=True)
+
+
 def diag(mensagem: str) -> None:
     print(f"diagnostico {mensagem}", flush=True)
 
@@ -196,7 +210,7 @@ def emitir_estado(
         payload["texto"] = texto
     if _enxuto:
         if fase != "verificando":
-            print(fase, flush=True)
+            print(f"estado={fase}", flush=True)
         return
     json.dump(payload, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")

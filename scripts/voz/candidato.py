@@ -2,10 +2,12 @@
 """Treina e valida um candidato ONNX de MOAH com o pipeline das sessões.
 
 Janelas de treino usam o mesmo pré-processamento e passo da escuta (pad de
-1 s + quadros de 1280). Positivos das sessões 01/02: só janelas que cobrem
-a palavra. Negativos de fala: janelas intermediárias e de transição.
+1 s + quadros de 1280). Positivos das sessões 01/02/05: só janelas que cobrem
+a palavra. A sessão 03 não entra no treino. Negativos de fala: janelas
+intermediárias e de transição, mais neg-boa, neg-sala e neg-musica.
 Piper de treino fica em treino/piper/, separado de avaliacao/gerado.
-Validação e limiar: só sessão 03. Sessão 04 fechada. Experimental intacto.
+Validação e limiar: só sessão 03. Sessão 04, prova-* e backups ficam fora.
+O candidato novo vai para moah-candidato-05.onnx. Experimental e verificador intactos.
 """
 
 from __future__ import annotations
@@ -29,13 +31,17 @@ QUADRO = 1280
 PAD_ESCUTA = 16000  # 1 s — mesmo pad da avaliação/escuta pontuada
 COBERTURA_JANELA = 16 * QUADRO / 16000  # ~1,28 s cobertos pelos 16 embeddings
 SOBREPOSICAO_MINIMA = 0.25
-SESSOES_TREINO = ("01", "02")
+SESSOES_TREINO = ("01", "02", "05")
 SESSAO_VALIDACAO = "03"
 SESSAO_TESTE = "04"
 CANDIDATO_NOME = "moah-candidato.onnx"
 CANDIDATO_PT = "moah-candidato.pt"
 CANDIDATO_FUNDO_NOME = "moah-candidato-fundo.onnx"
 CANDIDATO_FUNDO_PT = "moah-candidato-fundo.pt"
+CANDIDATO_05_NOME = "moah-candidato-05.onnx"
+CANDIDATO_05_PT = "moah-candidato-05.pt"
+VERIFICADOR_EM_USO = "moah-verificador.onnx"
+PREFIXOS_NEGATIVOS_COLETADOS = ("neg-boa", "neg-sala", "neg-musica")
 BASELINE_JANELAS_NOME = "moah-candidato-49ac8909.onnx"
 BASELINE_JANELAS_SHA = "49ac8909bfc0e6147441584968f17851db6fe53682251014ac6c0ddffdcaa1ba"
 BASELINE_NOME = "moah-candidato-f5d9784.onnx"
@@ -82,9 +88,10 @@ def _treinar(saida: Path, recursos: Path) -> None:
     _preservar_baseline(saida)
     _preservar_candidato_janelas(saida)
     acustica = _ler_ou_gerar_acustica(saida)
-    positivos_arquivos = _aprovadas(saida, acustica, SESSOES_TREINO)
+    positivos_arquivos = _positivos_treino(saida, acustica)
+    negativos_coletados = _negativos_coletados(saida)
     if len(positivos_arquivos) < 8:
-        raise SystemExit(f"Positivos insuficientes nas sessões 01/02: {len(positivos_arquivos)}.")
+        raise SystemExit(f"Positivos insuficientes nas sessões 01/02/05: {len(positivos_arquivos)}.")
     extrator = AudioFeatures(inference_framework="onnx", device="cpu")
 
     reais: list[np.ndarray] = []
@@ -156,6 +163,11 @@ def _treinar(saida: Path, recursos: Path) -> None:
             for item in _janelas_negativo_fala(extrator, _ler(arquivo)):
                 fala_neg.append(item)
                 contagem_fala[categoria] += 1
+    for prefixo, arquivos_neg in negativos_coletados.items():
+        for arquivo in arquivos_neg:
+            for item in _janelas_negativo_fala(extrator, _ler(arquivo)):
+                fala_neg.append(item)
+                contagem_fala[prefixo] = contagem_fala.get(prefixo, 0) + 1
     for arquivo in sorted((saida / "completo" / "moah" / "negative_train").glob("*.wav"))[:60]:
         for item in _janelas_negativo_fala(extrator, _ler(arquivo)):
             fala_neg.append(item)
@@ -202,11 +214,10 @@ def _treinar(saida: Path, recursos: Path) -> None:
         )
 
     completo = saida / "completo"
-    destino_onnx = completo / CANDIDATO_FUNDO_NOME
-    destino_pt = completo / CANDIDATO_FUNDO_PT
-    # Espelha também em moah-candidato.* para o comando avaliar padrão, sem apagar o 49ac8909.
-    destino_atual_onnx = completo / CANDIDATO_NOME
-    destino_atual_pt = completo / CANDIDATO_PT
+    # Candidato da sessão 05 fica em arquivo próprio. Não substitui o fundo,
+    # o candidato anterior, o verificador em uso nem o experimental.
+    destino_onnx = completo / CANDIDATO_05_NOME
+    destino_pt = completo / CANDIDATO_05_PT
     torch.save({"state_dict": rede.state_dict(), "arquitetura": "flatten-32-ln-relu-32-ln-relu-1"}, destino_pt)
     torch.onnx.export(
         rede,
@@ -216,8 +227,6 @@ def _treinar(saida: Path, recursos: Path) -> None:
         output_names=["score"],
         opset_version=13,
     )
-    destino_atual_onnx.write_bytes(destino_onnx.read_bytes())
-    destino_atual_pt.write_bytes(destino_pt.read_bytes())
     sha = hashlib.sha256(destino_onnx.read_bytes()).hexdigest()
     if sha in {BASELINE_SHA, BASELINE_JANELAS_SHA}:
         raise SystemExit("O novo ONNX coincidiu com um baseline anterior; o treino não produziu candidato novo.")
@@ -225,6 +234,9 @@ def _treinar(saida: Path, recursos: Path) -> None:
         "papel": "candidato-fundo",
         "correcaoFundo": "amostragem de música/ambiente ao longo do arquivo; reservados fora; oversample no lote",
         "modeloEmUsoNaoAlterado": (completo / EM_USO_NOME).as_posix(),
+        "verificadorEmUsoNaoAlterado": (completo / VERIFICADOR_EM_USO).as_posix(),
+        "candidatoAnteriorNaoAlterado": (completo / CANDIDATO_FUNDO_NOME).as_posix(),
+        "promovido": False,
         "modeloCandidato": destino_onnx.as_posix(),
         "checkpointPytorch": destino_pt.as_posix(),
         "referenciaJanelas": (completo / BASELINE_JANELAS_NOME).as_posix(),
@@ -255,7 +267,8 @@ def _treinar(saida: Path, recursos: Path) -> None:
         "p05PositivosDeTreino": round(float(np.quantile(amostra, 0.05)), 4),
         "vad": 0,
         "avaliacaoUsadaNoTreino": False,
-        "conferenciaDeOuvido": "Airton: tomadas aprovadas das sessões 01 e 02 conferidas de ouvido; 01-08 e 01-09 excluídas pela validação acústica.",
+        "conferenciaDeOuvido": "Sessões 01 e 02: aprovadas de ouvido, com 01-08 e 01-09 fora pela validação acústica. Sessão 05: envelope de 25/11 e reprodução na coleta; backup excluído. Sessão 03 fora do treino.",
+        "negativosColetados": {nome: [item.name for item in arquivos] for nome, arquivos in negativos_coletados.items()},
     }
     pasta = saida / "correcao"
     pasta.mkdir(exist_ok=True)
@@ -953,6 +966,79 @@ def _recusar_sessao_04(saida: Path) -> None:
     pasta = saida / "coleta" / "sessoes" / f"sessao-{SESSAO_TESTE}"
     if pasta.exists() and any(pasta.glob("*.wav")):
         raise SystemExit("A sessão 04 tem áudio e permanece reservada. O candidato não a abre.")
+
+
+def _vetar_avaliacao_final(arquivos: list[Path]) -> None:
+    """Impede que prova final, backup ou fragmento preservado entrem no treino."""
+    for arquivo in arquivos:
+        texto = arquivo.as_posix()
+        nome = arquivo.name
+        pai = arquivo.parent.name
+        if (
+            f"/sessao-{SESSAO_TESTE}/" in texto
+            or "/sessao-05-backup" in texto
+            or "/preservados/" in texto
+            or nome.startswith("prova-")
+            or pai.startswith("prova-")
+        ):
+            raise SystemExit(f"Arquivo fora do treino: {arquivo}")
+        if SESSAO_VALIDACAO in pai and pai == f"sessao-{SESSAO_VALIDACAO}":
+            raise SystemExit(f"A sessão 03 não entra no treino: {arquivo}")
+
+
+def _positivos_treino(saida: Path, acustica: dict[str, object]) -> list[Path]:
+    """01/02 já aprovadas no manifesto, mais a pasta exata sessao-05."""
+    anteriores = _aprovadas(saida, acustica, ("01", "02"))
+    _vetar_avaliacao_final(anteriores)
+    pasta = saida / "coleta" / "sessoes" / "sessao-05"
+    if not pasta.is_dir():
+        raise SystemExit("A pasta sessao-05 não existe. Backups não substituem essa pasta.")
+    tomadas = []
+    aprovadas: list[Path] = []
+    for arquivo in sorted(pasta.glob("tomada-*.wav")):
+        if arquivo.parent.resolve() != pasta.resolve():
+            continue
+        item = _qualidade_acustica(arquivo, 4.0)
+        tomadas.append(item)
+        if item["aprovadaAcusticamente"]:
+            aprovadas.append(arquivo)
+    _vetar_avaliacao_final(aprovadas)
+    registro = {
+        "sessao": "05",
+        "pasta": pasta.as_posix(),
+        "backupsExcluidos": True,
+        "tomadas": tomadas,
+        "aprovadas": len(aprovadas),
+        "reprovadas": len(tomadas) - len(aprovadas),
+        "palavraCompleta": "nao-avaliada",
+        "observacao": "Envelope acústico. A reprodução na coleta não grava um veredito da palavra.",
+    }
+    destino = saida / "correcao" / "sessao-05-acustica.json"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(json.dumps(registro, indent=2), encoding="utf8")
+    if len(aprovadas) < 8:
+        raise SystemExit(f"Sessão 05 com poucas tomadas aprovadas: {len(aprovadas)}.")
+    return anteriores + aprovadas
+
+
+def _negativos_coletados(saida: Path) -> dict[str, list[Path]]:
+    pasta = saida / "coleta"
+    grupos: dict[str, list[Path]] = {}
+    faltando = []
+    for prefixo in PREFIXOS_NEGATIVOS_COLETADOS:
+        arquivos = sorted(item for item in pasta.glob(f"{prefixo}-*.wav") if item.parent == pasta)
+        grupos[prefixo] = arquivos
+        if not arquivos:
+            faltando.append(prefixo)
+    if faltando:
+        raise SystemExit(
+            "Faltam negativos de treino: "
+            + ", ".join(faltando)
+            + ". Colete neg-boa, neg-sala e neg-musica antes do retreino. Não use o prefixo prova-."
+        )
+    for arquivos in grupos.values():
+        _vetar_avaliacao_final(arquivos)
+    return grupos
 
 
 if __name__ == "__main__":

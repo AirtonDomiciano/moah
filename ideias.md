@@ -167,8 +167,17 @@ Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Respons
 
 - **Data:** 23/11/2026.
 - **Origem:** relato explícito de Airton após teste no JBL: “deu boa, só que ele falou duas vezes”.
-- **Estado:** observação para acompanhamento; uma ocorrência. Investigar se persistir. Sem investigação e sem correção nesta rodada. Não impede o registro de que o laço foi relatado como funcional, e também não valida o verificador (`validado: false`).
+- **Estado:** observação para acompanhamento; uma ocorrência em 23/11. O capítulo de uso diário em 25/11 não abriu o headset e não investigou a duplicação. Investigar se a fala duplicada voltar. Não valida o verificador (`validado: false`).
 - **Responsabilidade:** módulo 08, sessão e reprodução de voz.
 - **Contexto:** teste do fluxo acústico em modo teste, limiar do verificador 0,95, após ajuste da captura do pedido e retirada de diagnóstico detalhado do console. Airton informou que o fluxo funcionou, mas houve duas falas.
 - **Evidência disponível:** relato do usuário. Ainda não foi identificado se repetiu a saudação, a resposta ou se foram falas diferentes; não há log ou WAV associado a esta ocorrência.
 - **Próximo passo se recorrer:** registrar o que foi dito nas duas falas e correlacionar os estados da mesma tentativa; verificar duplicação na síntese/reprodução, execução repetida ou nova ativação após a saída de áudio, sem assumir a causa.
+
+
+## MOAH-041 — Escolher a voz falada padrão
+
+- **Data:** 25/11/2026.
+- **Origem:** pedido explícito de Airton para melhorar a voz falada, depois que o primeiro uso no JBL funcionou.
+- **Estado:** decidido por Airton em 25/11/2026. A voz do laço é a Faber, gravada em `config.json` como `voz.sintese`. O espeak permanece como alternativa se o Piper falhar e em `moah voz ouvir --voz espeak`.
+- **Responsabilidade:** síntese e reprodução. Não altera ativação, captura, STT, pedidos nem lembretes.
+- **O que ouvir:** `moah voz ouvir --voz espeak|faber|cadu`. Detalhe em [voz](docs/operacao/voz.md).

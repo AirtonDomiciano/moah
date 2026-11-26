@@ -226,6 +226,40 @@ def _pedido_linha(saida: str) -> str:
     raise AssertionError(saida)
 
 
+def _cenario_console_enxuto() -> None:
+    from eventos_voz import definir_console
+
+    definir_console(True)
+    try:
+        saida, falas, stt = _rodar("Que horas são?", None, True)
+    finally:
+        definir_console(False)
+    assert "estado=aguardando" in saida
+    assert "pedido=Que horas são?" in saida
+    assert any(linha.startswith("resultado=") and "hora" in linha for linha in saida.splitlines())
+    assert "pedido motivo=" not in saida and "diagnostico stt" not in saida
+    assert not any(linha.startswith("{") for linha in saida.splitlines())
+    assert falas[0] == "Estou aqui." and "hora" in falas[-1]
+    assert stt.chamadas == 1
+
+
+def _cenario_falha_devolve_espera() -> None:
+    from eventos_voz import definir_console
+
+    definir_console(True)
+    captura = _Captura([_mudo()], pausa_s=0)
+    buffer = io.StringIO()
+    try:
+        with redirect_stdout(buffer):
+            escutar._liberar_volta(captura, None, "pw-record caiu", 0.2, 1)
+    finally:
+        definir_console(False)
+    saida = buffer.getvalue()
+    assert "erro=pw-record caiu" in saida
+    assert "estado=aguardando" in saida
+    assert captura.returncode == 0
+
+
 def _self_test() -> None:
     assert escutar._falar_etapa.__kwdefaults__ == {"transcricao": None}
 
@@ -275,6 +309,8 @@ def _self_test() -> None:
     assert stt.chamadas == 1
 
     _cenarios_da_cauda()
+    _cenario_console_enxuto()
+    _cenario_falha_devolve_espera()
     print("ok")
 
 

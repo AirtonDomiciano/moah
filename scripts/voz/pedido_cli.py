@@ -7,6 +7,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from eventos_voz import console_enxuto, emitir_linha
+
 
 def consultar_pedido(texto: str) -> tuple[str | None, str | None]:
     repo = Path(__file__).resolve().parents[2]
@@ -38,9 +40,15 @@ def consultar_pedido(texto: str) -> tuple[str | None, str | None]:
     except json.JSONDecodeError:
         return None, bruto
     terminal = str(payload.get("terminal") or "").strip()
-    if terminal:
-        print(terminal, flush=True)
     falar = payload.get("speak")
-    if not isinstance(falar, str) or not falar.strip():
+    fala = falar.strip() if isinstance(falar, str) else ""
+    if console_enxuto():
+        if fala:
+            emitir_linha("resultado", fala)
+        elif terminal:
+            emitir_linha("resultado", terminal)
+    elif terminal:
+        print(terminal, flush=True)
+    if not fala:
         return None, None
-    return falar.strip(), None
+    return fala, None

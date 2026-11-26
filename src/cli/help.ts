@@ -24,6 +24,9 @@ Comandos:
   moah reuniao ver --id <reu_> --dominio <domínio>
   moah voz estado|simular --roteiro <json-simulacao>
   moah voz pedido --texto <pedido> [--dominio pessoal|imex|aluai]
+  moah voz uso [--microfone jbl|camera]
+  moah voz lembrete --id <job> --resultado entregue|falha [--erro <texto>]
+  moah voz ouvir --voz espeak|faber|cadu|jeff|edresson|tugao [--microfone jbl|camera]
   moah voz hardware --habilitar sim [--microfone jbl|camera]
   moah voz escutar --habilitar sim [--microfone jbl|camera] [--modelo /caminho/modelo.onnx] [--limiar 0.5] [--diagnostico sim] [--salvar-wavs sim] [--depurar sim] [--depurar-porta 5678] [--pedido 8] [--espera 4] [--silencio 0.7] [--pico-fala 200] [--arranque 1.7] [--confirmar-ativacao acustico|stt|sim|nao] [--modo-verificador producao|manual|teste] [--verificador /caminho/verificador.onnx] [--limiar-verificador 0.95] [--gravar-diagnostico sim]
   Python (fora da CLI): scripts/voz/treinar_verificador.py treinar|calibrar
@@ -66,7 +69,8 @@ Códigos de saída:
 Arquivos:
   Dados: $MOAH_DATA_DIR, ou $XDG_DATA_HOME/moah, ou ~/.local/share/moah
   Configuração: $MOAH_CONFIG_DIR, ou $XDG_CONFIG_HOME/moah, ou ~/.config/moah
-  config.json: { "timezone": "America/Sao_Paulo", "storage": {}, "agenda": {} }
+  config.json: { "timezone": "America/Sao_Paulo", "storage": {}, "agenda": {}, "voz": { "sintese": "faber" } }
+  voz.sintese escolhe a fala do laço. Omissão usa faber. Se o Piper falhar, o laço fala com espeak.
   storage opcional: volume.mount, volume.uuid, volume.label, documentsDir, derivedDir, backupDir
   agenda opcional: quietStart e quietEnd em HH:mm; omissão usa 22:00–07:00
   O volume só é aceito depois da verificação de montagem e UUID. Pasta existente não confirma o SSD.

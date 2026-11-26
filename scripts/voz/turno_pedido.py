@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from audio_metricas import pipeline_ponto, salvar_wav_com_metricas
-from eventos_voz import emitir_estado, emitir_tempos, ms_desde
+from eventos_voz import console_enxuto, emitir_estado, emitir_linha, emitir_tempos, ms_desde
 from janela_pedido import JanelaPedido, LimitesPedido, decidir
 from pcm_pipewire import fechar_captura, ler_quadro, tem_fala
 from pedido_cli import consultar_pedido
@@ -76,6 +76,13 @@ def ouvir_texto(obter_stt, amostras: np.ndarray, tempos: dict[str, int]) -> tupl
         tempos["transcricaoMs"] = ms_desde(t0)
 
 
+def _aviso(mensagem: str) -> None:
+    if console_enxuto():
+        emitir_linha("erro", mensagem)
+    else:
+        print(mensagem, flush=True)
+
+
 def falar_etapa(
     destino: str,
     fala: str,
@@ -98,7 +105,7 @@ def falar_etapa(
     erro = falar_seguro(destino, fala)
     tempos[chave] = ms_desde(t0)
     if erro is not None:
-        print(f"Falha na síntese: {erro}", flush=True)
+        _aviso(f"Falha na síntese: {erro}")
 
 
 def conduzir_pedido(
@@ -136,7 +143,7 @@ def conduzir_pedido(
         erro_saudacao = falar_seguro(destino, "Estou aqui.")
         tempos["saudacaoMs"] = ms_desde(t_saudacao)
         if erro_saudacao is not None:
-            print(f"Falha na saudação: {erro_saudacao}", flush=True)
+            _aviso(f"Falha na saudação: {erro_saudacao}")
             emitir_tempos(tempos)
             emitir_estado("aguardando", microfone="liberado", pico=pico, acertos=acertos, score=score)
             return
@@ -149,11 +156,12 @@ def conduzir_pedido(
         fechar_captura(captura)
         captura = None
         tem_pedido = _audio_tem_fala(amostras)
-        print(
-            f"pedido motivo={motivo} amostras={amostras.size} "
-            f"presenca={'fala' if tem_pedido else 'sem_fala'}",
-            flush=True,
-        )
+        if not console_enxuto():
+            print(
+                f"pedido motivo={motivo} amostras={amostras.size} "
+                f"presenca={'fala' if tem_pedido else 'sem_fala'}",
+                flush=True,
+            )
         pipeline_ponto(
             "pedido_capturado",
             amostras=amostras,
@@ -180,6 +188,8 @@ def conduzir_pedido(
             )
             print(f"diagnostico wav pedido-stt={caminho_ped} meta={meta_ped.get('metricas')}", flush=True)
         if not tem_pedido:
+            if console_enxuto():
+                emitir_linha("resultado", "Não ouvi o pedido.")
             falar_etapa(destino, "Não ouvi o pedido.", "falando", tempos, "falaMs", pico, acertos)
             emitir_tempos(tempos)
             emitir_estado("aguardando", microfone="liberado", pico=pico, acertos=acertos)
@@ -188,18 +198,25 @@ def conduzir_pedido(
         pipeline_ponto("stt_entrada", amostras=amostras, imprimir=imprimir_pipeline)
         texto, erro_stt = ouvir_texto(obter_stt, amostras, tempos)
         pipeline_ponto("stt_saida", imprimir=imprimir_pipeline, texto=texto, erro=erro_stt)
-        print(
-            f"diagnostico stt etapa=pedido texto={texto!r} erro={erro_stt!r} "
-            f"encaminhaConsulta={'sim' if texto.strip() and erro_stt is None else 'nao'}",
-            flush=True,
-        )
+        if not console_enxuto():
+            print(
+                f"diagnostico stt etapa=pedido texto={texto!r} erro={erro_stt!r} "
+                f"encaminhaConsulta={'sim' if texto.strip() and erro_stt is None else 'nao'}",
+                flush=True,
+            )
         del amostras
-        if texto:
+        if texto and console_enxuto():
+            emitir_linha("pedido", texto)
+        elif texto:
             print(texto, flush=True)
         if erro_stt is not None:
-            print(erro_stt, flush=True)
+            _aviso(erro_stt)
+            if console_enxuto():
+                emitir_linha("resultado", "Não consegui transcrever.")
             falar_etapa(destino, "Não consegui transcrever.", "falando", tempos, "falaMs", pico, acertos)
         elif not texto.strip():
+            if console_enxuto():
+                emitir_linha("resultado", "Não ouvi o pedido.")
             falar_etapa(destino, "Não ouvi o pedido.", "falando", tempos, "falaMs", pico, acertos)
         else:
             pipeline_ponto("execucao_entrada", imprimir=imprimir_pipeline, texto=texto)
@@ -208,9 +225,11 @@ def conduzir_pedido(
             falar, erro_consulta = consultar_pedido(texto)
             tempos["execucaoMs"] = ms_desde(t_exec)
             if erro_consulta is not None:
-                print(erro_consulta, flush=True)
+                _aviso(erro_consulta)
                 if not falar:
                     falar = "Não consegui consultar o pedido."
+                    if console_enxuto():
+                        emitir_linha("resultado", falar)
             if falar:
                 falar_etapa(
                     destino,

@@ -17,11 +17,20 @@ export interface AgendaConfig {
   quietEnd: string;
 }
 
+export const VOICE_SYNTHESIS = ["espeak", "faber", "cadu", "jeff", "edresson", "tugao"] as const;
+
+export type VoiceSynthesis = (typeof VOICE_SYNTHESIS)[number];
+
+export interface VoiceConfig {
+  sintese: VoiceSynthesis;
+}
+
 export interface AppConfig {
   timezone: string;
   llm: Partial<LlmSettings>;
   storage: StorageConfig;
   agenda: AgendaConfig;
+  voz: VoiceConfig;
 }
 
 export function loadConfig(configDir: string): AppConfig {
@@ -32,6 +41,7 @@ export function loadConfig(configDir: string): AppConfig {
       llm: {},
       storage: emptyStorage(),
       agenda: defaultAgenda(),
+      voz: defaultVoice(),
     };
   }
   let parsed: unknown;
@@ -45,7 +55,7 @@ export function loadConfig(configDir: string): AppConfig {
   }
   const record = parsed as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (key !== "timezone" && key !== "llm" && key !== "storage" && key !== "agenda") {
+    if (key !== "timezone" && key !== "llm" && key !== "storage" && key !== "agenda" && key !== "voz") {
       throw new AppError(`Chave de configuração desconhecida: ${key}.`, "validation");
     }
   }
@@ -60,6 +70,7 @@ export function loadConfig(configDir: string): AppConfig {
     llm,
     storage: parseStorage(record.storage),
     agenda: parseAgenda(record.agenda),
+    voz: parseVoice(record.voz),
   };
 }
 
@@ -69,6 +80,30 @@ function emptyStorage(): StorageConfig {
 
 function defaultAgenda(): AgendaConfig {
   return { quietStart: "22:00", quietEnd: "07:00" };
+}
+
+function defaultVoice(): VoiceConfig {
+  return { sintese: "faber" };
+}
+
+function parseVoice(value: unknown): VoiceConfig {
+  if (value === undefined) {
+    return defaultVoice();
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new AppError("voz deve ser um objeto.", "validation");
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (key !== "sintese") {
+      throw new AppError(`Chave de voz desconhecida: ${key}.`, "validation");
+    }
+  }
+  const sintese = record.sintese ?? "faber";
+  if (typeof sintese !== "string" || !VOICE_SYNTHESIS.includes(sintese as VoiceSynthesis)) {
+    throw new AppError("voz.sintese deve ser espeak, faber, cadu, jeff, edresson ou tugao.", "validation");
+  }
+  return { sintese: sintese as VoiceSynthesis };
 }
 
 function parseStorage(value: unknown): StorageConfig {

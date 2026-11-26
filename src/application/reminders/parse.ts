@@ -7,6 +7,10 @@ const DELAY_REMINDER =
   /\bdaqui(?:\s+a)?\s+\d+\s*(minuto|minutos|hora|horas|segundo|segundos)\b/i;
 const DELAY_MINUTES_DIGIT = /\bdaqui(?:\s+a)?\s+(\d+)\s*minutos?\b/i;
 const DELAY_MINUTES_WORD = /\bdaqui(?:\s+a)?\s+([a-záéíóúâêôãõç]+)\s*minutos?\b/i;
+const ALTER_INTENT = /\balter(?:ar|a|e|o)?\b/i;
+const CANCEL_INTENT = /\bcancel(?:ar|a|e|o)?\b/i;
+const CHANGE_CONTENT = /\blembrete\s+de\s+(.+?)\s+para\b/i;
+const CHANGE_DELAY = /\bpara(?:\s+daqui(?:\s+a)?)?\s+(\d+|[a-záéíóúâêôãõç]+)\s+(segundos?|minutos?)\b/i;
 
 const MINUTE_WORDS: Record<string, number> = {
   um: 1,
@@ -33,6 +37,11 @@ export type ParsedLocalReminder = {
   texto: string;
   minutos: number;
 };
+
+export type ReminderChange =
+  | { kind: "alter"; texto: string; segundos: number }
+  | { kind: "alter-incomplete"; speak: string }
+  | { kind: "cancel" };
 
 /**
  * “me lembre/lembra” e agenda explícita.
@@ -69,6 +78,54 @@ export function extractMinutesDelay(text: string): number | null {
  * “Me lembro de …” sem prazo devolve null (não agenda).
  * Comando imperativo sem prazo também devolve null.
  */
+export function parseReminderChange(text: string): ReminderChange | null {
+  const trimmed = text.trim();
+  if (!trimmed || !REMINDER_COMMAND.test(trimmed)) {
+    return null;
+  }
+  if (CANCEL_INTENT.test(trimmed)) {
+    return { kind: "cancel" };
+  }
+  if (!ALTER_INTENT.test(trimmed)) {
+    return null;
+  }
+  const content = CHANGE_CONTENT.exec(trimmed)?.[1]?.trim() ?? "";
+  const delay = extractChangeDelay(trimmed);
+  if (!content || delay === null) {
+    const speak = content
+      ? `Diga o novo prazo do lembrete de ${content}, por exemplo para 30 segundos.`
+      : "Diga qual lembrete alterar e o novo prazo.";
+    return { kind: "alter-incomplete", speak };
+  }
+  return { kind: "alter", texto: content, segundos: delay };
+}
+
+function extractChangeDelay(text: string): number | null {
+  const match = CHANGE_DELAY.exec(text);
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
+  const amount = Number(match[1]);
+  const value = Number.isInteger(amount) && amount > 0 ? amount : wordAmount(match[1]);
+  if (value === null) {
+    return null;
+  }
+  const unit = match[2].toLowerCase();
+  const segundos = unit.startsWith("minuto") ? value * 60 : value;
+  if (segundos < 1 || segundos > 24 * 60 * 60) {
+    return null;
+  }
+  return segundos;
+}
+
+function wordAmount(token: string): number | null {
+  const key = token
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+  return MINUTE_WORDS[key] ?? MINUTE_WORDS[token.toLowerCase()] ?? null;
+}
+
 export function parseLocalReminder(text: string): ParsedLocalReminder | null {
   const trimmed = text.trim();
   if (!trimmed) {

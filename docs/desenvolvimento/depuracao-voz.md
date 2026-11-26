@@ -94,7 +94,7 @@ Use as configurações **MOAH voz: reproduzir WAV** no `launch.json` com breakpo
 | `ativacao_detector.py` | Espera openWakeWord |
 | `pcm_pipewire.py` | `pw-record` quadro a quadro |
 | `stt_remoto.py` | Worker Whisper |
-| `sintese_pipewire.py` | `espeak` + `pw-play` |
+| `sintese_pipewire.py` | Piper Faber no laço; espeak só na comparação; `pw-play` |
 | `verificador_acustico.py` | 2º estágio ONNX |
 | `presenca_fala.py` | VAD e energia do clipe, antes de confirmar |
 
