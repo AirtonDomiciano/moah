@@ -30,6 +30,8 @@ A agenda sintética (`moah agenda`, ADR 0011) é outra fonte. Ela tem teste em `
 
 Os relatos [004](../cursror-dev/execucoes/2026-11-25-004-uso-diario.md) a [011](../cursror-dev/execucoes/2026-11-25-011-agenda-google.md) dizem “commit pendente”. Esse texto é o estado da hora em que foram escritos. O código que descrevem está publicado em `540e70a`, `74a8182` e `d518735`.
 
+Os capítulos, as dependências e o aceite observável estão em [MOAH-043](../ideias.md#moah-043--assistente-de-rotina-imex). As lacunas abaixo foram a base desse registro.
+
 ### Lacunas para fechar o módulo
 
 1. Abrir o laço no domínio `imex`, com calendário desse domínio na configuração, e registrar uma consulta falada de agenda, pendência e checkpoint sem imprimir o conteúdo privado.

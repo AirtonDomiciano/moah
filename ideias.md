@@ -1,6 +1,6 @@
 # Ideias e backlog
 
-Atualizado em 23/11/2026. Os módulos 01 a 10 estão planejados. O prompt 00 entregou a CLI de memória de trabalho. O prompt 11 entrega a conversa de leitura sobre essa memória, com simulador e sem modelo real validado.
+Atualizado em 27/11/2026. Os módulos 01 a 10 permanecem o roadmap original. O primeiro módulo utilizável está em [MOAH-043](#moah-043--assistente-de-rotina-imex), com cinco capítulos. O prompt 00 entregou a CLI de memória de trabalho. O prompt 11 entrega a conversa de leitura sobre essa memória, com simulador e sem modelo real validado.
 
 | ID | Responsabilidade | Prioridade / destino |
 | --- | --- | --- |
@@ -75,7 +75,7 @@ Origem: pedido explícito de Airton para começar pelo MOAH por sua transição 
 | ID | Responsabilidade | Módulo / próximo passo |
 | --- | --- | --- |
 | MOAH-026 | Registro transversal de atividades, reuniões, decisões e ações por agente | Recorte manual na CLI do prompt 00, testado; memória compartilhada e correção continuam no módulo 05 |
-| MOAH-027 | Primeiro ciclo útil de Tech Lead: início do dia e fechamento com checkpoint | 01, 03–07; memória e agenda antes de ampliar agentes |
+| MOAH-027 | Primeiro ciclo útil de Tech Lead: início do dia e fechamento com checkpoint | Recorte de 27/11 em [MOAH-043](#moah-043--assistente-de-rotina-imex); o restante de 01, 03–07 continua depois |
 
 Refinamentos: MOAH-015 passa a valer para todos os domínios; MOAH-016 usa checkpoints e fontes atuais; MOAH-019 é o primeiro especialista profissional proposto após a base.
 
@@ -120,7 +120,7 @@ Data: 01/11/2026. Origem: pedido explícito de Airton por regras claras, inclusi
 
 ## MOAH-034 — Rotina local de Tech Lead
 
-Data: 02/11/2026. Origem: pedido explícito de Airton. Estado: recorte local testado no prompt 15; modelo real e calendário real bloqueados. Entregue volume com verificação de montagem e UUID, backup SQLite, fila persistente, agenda sintética e importação de transcrição em texto. A análise de reunião com modelo real e o conector de agenda permanecem pendentes. Não houve commit nesta execução. Fonte: [prompt 15](cursror-dev/15-rotina-tech-lead.md).
+Data: 02/11/2026. Origem: pedido explícito de Airton. Estado naquele dia: recorte local testado no prompt 15; modelo real e calendário real bloqueados. Entregue volume com verificação de montagem e UUID, backup SQLite, fila persistente, agenda sintética e importação de transcrição em texto. A leitura da agenda Google da Imex passou a ser o capítulo 1 de [MOAH-043](#moah-043--assistente-de-rotina-imex). A agenda sintética deste item continua outra fonte. Fonte: [prompt 15](cursror-dev/15-rotina-tech-lead.md).
 
 
 ## MOAH-035 — Referências do Pestinha para contexto e presença no desktop
@@ -187,10 +187,55 @@ Data: 03/11/2026. Origem: proposta técnica depois da prova de hardware. Respons
 
 - **Data:** 25/11/2026.
 - **Origem:** pedido explícito de Airton para integrar Google Agenda/Gmail, WhatsApp e Discord, com conversa em canal de voz no futuro.
-- **Estado:** nesta rodada só a consulta de leitura da agenda Google. Gmail, Discord, WhatsApp e envio de mensagens continuam planejados.
+- **Estado:** a leitura da agenda Google segue no capítulo 1 de [MOAH-043](#moah-043--assistente-de-rotina-imex). Gmail, Discord, WhatsApp e envio de mensagens continuam neste item, fora desse módulo.
 - **Responsabilidade:** conectores e voz. A voz Faber e o `voz uso` permanecem.
 - **Próximas etapas:**
   - Gmail: leitura e resumo primeiro; envio em etapa separada.
   - Discord: bot próprio por texto e, depois, canal de voz.
   - WhatsApp: avaliar a integração apropriada ao uso pessoal antes de implementar.
   - Envio de mensagens: mostrar destinatário e conteúdo e pedir confirmação antes do envio, nesta primeira versão.
+
+## MOAH-043 — Assistente de rotina Imex
+
+- **Data:** 27/11/2026.
+- **Origem:** pedido explícito de Airton para registrar o primeiro módulo a partir do levantamento do mesmo dia.
+- **Estado:** planejado como módulo. Os capítulos abaixo herdam o que já está no código e separam teste automático de relato no JBL. Fonte: [retomada](docs/retomada.md).
+- **Responsabilidade:** rotina falada da Imex. Não conclui os módulos 01 a 10.
+- **Issues já abertas:** a visão ampla continua na [issue #2](https://github.com/AirtonDomiciano/moah/issues/2). O código de lembrete publicado está no PR da [issue #9](https://github.com/AirtonDomiciano/moah/issues/9), fechada. A [issue #3](https://github.com/AirtonDomiciano/moah/issues/3) permanece o agente de reuniões e fica fora destes capítulos.
+- **Fora deste módulo:** Gmail, WhatsApp, Discord e envio, que seguem em [MOAH-042](#moah-042--contas-do-assistente-de-voz) e na parte de Gmail de MOAH-003; especialistas (MOAH-006, MOAH-015 e MOAH-019); reconhecimento de locutor ([MOAH-039](#moah-039--manter-a-voz-de-quem-iniciou-o-pedido)); avatar ([MOAH-035](#moah-035--referências-do-pestinha-para-contexto-e-presença-no-desktop)); retreino dos modelos de ativação ([MOAH-037](#moah-037--treinar-um-detector-da-pronúncia-moah)). [MOAH-038](#moah-038--chamada-e-pedido-na-mesma-frase) continua planejado e não é capítulo daqui. A voz atual e a Faber ([MOAH-041](#moah-041--escolher-a-voz-falada-padrão)) permanecem.
+- **Base já existente, sem novo item:** registro, pendência e checkpoint da Imex na CLI (MOAH-026); fila e agenda sintética ([MOAH-034](#moah-034--rotina-local-de-tech-lead)), que não substituem o Google; laço de voz em modo teste ([MOAH-036](#moah-036--voz-ativada-pelo-nome-moah)); fala duplicada em observação ([MOAH-040](#moah-040--acompanhar-relato-de-fala-duplicada)). O início do dia completo continua em MOAH-016. MOAH-004 continua os avisos de calls, mudanças e conflitos, depois destes capítulos.
+
+### Capítulo 1 — Conta e agenda Imex
+
+- **Objetivo:** a voz lê a agenda Google do domínio `imex` em um dia civil, só com os eventos devolvidos pela API.
+- **Dependências:** conector publicado em `d518735` e [MOAH-042](#moah-042--contas-do-assistente-de-voz). `google.calendarios.imex` ainda não é o padrão; o padrão segue `primary` em `pessoal`. O laço diário no domínio `imex` é o capítulo 4. Este capítulo pode ser provado com `moah voz pedido --dominio imex`.
+- **Estado:** parcial. A leitura por voz está implementada e coberta por `tests/agenda.test.ts` com HTTP simulado. A conta real e o calendário da Imex aguardam validação. O relatório [2026-11-25-011](cursror-dev/execucoes/2026-11-25-011-agenda-google.md) registra que a API real não foi chamada.
+- **Aceite observável:** com a conta conectada e o calendário da Imex configurado, “quais são minhas reuniões hoje?” no domínio `imex` fala só horários e títulos daquele dia, ou a frase de agenda vazia. Sem conta, sem calendário do domínio e com falha de consulta, as falas continuam distintas. O relatório anota o resultado (`ok`, vazio, desconectado ou falha) e a quantidade, sem título de evento, token ou identificador de conta. A agenda sintética de [MOAH-034](#moah-034--rotina-local-de-tech-lead) permanece outra fonte.
+
+### Capítulo 2 — Lembretes confiáveis
+
+- **Objetivo:** criar, alterar, cancelar e repetir um lembrete local, e anunciá-lo só com `voz uso` aberto, na voz Faber já configurada.
+- **Dependências:** ferramentas locais já publicadas em `540e70a` e `74a8182`, laço de [MOAH-036](#moah-036--voz-ativada-pelo-nome-moah) e síntese de [MOAH-041](#moah-041--escolher-a-voz-falada-padrão). Não depende da agenda Google. [MOAH-040](#moah-040--acompanhar-relato-de-fala-duplicada) segue observação: uma fala duplicada nova é registrada e não conta como aceite deste capítulo.
+- **Estado:** implementado, aguardando validação real. `tests/voice-request.test.ts` e `scripts/voz/lembrete_sessao.py` cobrem o relógio fixo. Os relatos [008](cursror-dev/execucoes/2026-11-25-008-lembrete-voz.md), [009](cursror-dev/execucoes/2026-11-25-009-alterar-lembrete.md) e [010](cursror-dev/execucoes/2026-11-25-010-lembrete-recorrente.md) não abriram o microfone.
+- **Aceite observável:** com `voz uso` aberto, um lembrete vencido é anunciado e fica `entregue` só se a reprodução termina. Falha de áudio grava `erro=` e não marca entrega. Alterar muda o mesmo job. Cancelar encerra o pendente. “A cada” avisa uma vez por ciclo e não recupera atrasos. Fechar o laço antes do prazo adia o anúncio. O registro guarda o resultado, sem o texto do lembrete quando ele for privado.
+
+### Capítulo 3 — Pendências e checkpoints pela voz
+
+- **Objetivo:** a voz consulta pendências e o último checkpoint no domínio `imex`, com ou sem projeto.
+- **Dependências:** CLI já validada em MOAH-026 e `tests/cli.acceptance.test.ts`. A intenção de checkpoint falado existe para `pessoal` em `tests/voice-request.test.ts`. A frase de pendências existe em `src/application/voice-request.ts` e ainda não tem teste de voz. O laço diário no domínio `imex` é o capítulo 4.
+- **Estado:** parcial. Checkpoint falado aguarda uso real. Pendência falada e domínio `imex` nesse pedido ainda não têm teste automático nem relato no JBL.
+- **Aceite observável:** `moah voz pedido --dominio imex` responde “quais são as pendências?” e “onde paramos?” com os registros daquele domínio. Com projeto, restringe ao projeto. Sem registro, a fala diz que não há pendência ou checkpoint. O teste automático usa dados sintéticos. A voz não conclui nem cria ação.
+
+### Capítulo 4 — Operação diária
+
+- **Objetivo:** `moah voz uso` atende a rotina da Imex com o laço, a Faber e o modo teste atuais.
+- **Dependências:** capítulos 1 a 3 para os pedidos. [MOAH-036](#moah-036--voz-ativada-pelo-nome-moah) e [MOAH-041](#moah-041--escolher-a-voz-falada-padrão) permanecem. O verificador segue `validado: false`; este capítulo não promove modelo nem executa [MOAH-037](#moah-037--treinar-um-detector-da-pronúncia-moah).
+- **Estado:** parcial. O comando existe, fixa o domínio `pessoal` em `scripts/voz/pedido_cli.py` e usa detector 0,5, confirmação acústica, modo teste e limiar 0,95. O JBL de 23/11 relatou o laço, sem tabela de chamadas e sem os pedidos deste módulo.
+- **Aceite observável:** um comando abre o laço no domínio `imex`. Depois do nome, um pedido de agenda, um de lembrete, um de pendência e um de checkpoint devolvem a fala do capítulo correspondente. O modo produção continua recusado. A Faber permanece a voz do laço; se o Piper falhar, o espeak entra e o console mostra `erro=`. Consulta repetida no mesmo turno fica registrada em [MOAH-040](#moah-040--acompanhar-relato-de-fala-duplicada).
+
+### Capítulo 5 — Validação integrada
+
+- **Objetivo:** uma sessão observável reúne agenda da Imex, lembrete, pendências e checkpoint, e separa o que o teste automático provou do que o JBL mostrou.
+- **Dependências:** capítulos 1 a 4. Não inclui o início do dia completo de MOAH-016: urgência, inglês e especialistas continuam de fora.
+- **Estado:** planejado. Não há pedido único que junte as fontes, e a voz recusa a mistura de pendência, resumo e checkpoint.
+- **Aceite observável:** um relatório em `cursror-dev/execucoes/` cita o comando, o domínio `imex` e o resultado de cada pedido (`ok`, vazio, indisponível ou falha), mais a suíte automática executada na rodada. O mesmo relatório declara o que foi ouvido no JBL. Não grava título de evento, texto de lembrete privado, token nem memória real. O módulo só fica aceito com os cinco capítulos nesse relatório.
