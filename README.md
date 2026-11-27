@@ -2,7 +2,9 @@
 
 MOAH será o agente principal de Airton: organizar compromissos, preservar contexto e coordenar agentes especializados, apoiando sua entrada como Tech Leader.
 
-**Estado em 02/11/2026:** a CLI de memória, a conversa de leitura, a política e o recorte local do [prompt 15](cursror-dev/15-rotina-tech-lead.md) estão testados. Os módulos 01 a 10 continuam planejados: o serviço permanente, o modelo local e o calendário real ainda não foram validados. A existência de um prompt ou de um SKILL.md não significa que o recurso funciona.
+**Estado em 27/11/2026:** o recorte em foco é o assistente de rotina, com voz, agenda Google só leitura, lembretes locais, pendências e checkpoints. A base de código no remoto é `d518735`. A classificação, a separação entre teste automático e relato no JBL, e as lacunas estão no [ponto de retomada](docs/retomada.md).
+
+Os módulos 01 a 10 do roadmap original não ficam concluídos por esse recorte. O parágrafo de estado de 02/11/2026 descrevia a CLI de memória, a conversa de leitura, a política e o recorte local do [prompt 15](cursror-dev/15-rotina-tech-lead.md) como testados, e o serviço permanente, o modelo local e o calendário real como ainda sem validação. Serviço permanente e modelo local continuam assim. Leitura de agenda e voz existem desde 25–26/11/2026 e estão classificadas na retomada. A existência de um prompt ou de um SKILL.md não significa que o recurso funciona.
 
 ## Visão aprovada na conversa
 
@@ -23,7 +25,7 @@ Uma experiência de conversa semelhante à Alexa/Gemini, com responsabilidade po
 - [Processos e exemplos completos de conversa](docs/produto/exemplos.md).
 - [Roadmap e critérios de evolução](docs/produto/roadmap.md).
 
-Inclui início do dia, retomada de trabalho, inglês e adiamentos, review/Azure, projetos no Cursor, diagnóstico do PC e música. Hardware informado: Debian 13 e RTX 5070 de 12 GB; CPU/RAM e escolhas de runtime ainda pendentes. Nenhuma dessas integrações está implementada neste repositório.
+Inclui início do dia, retomada de trabalho, inglês e adiamentos, review/Azure, projetos no Cursor, diagnóstico do PC e música. Hardware informado: Debian 13 e RTX 5070 de 12 GB; CPU/RAM e escolhas de runtime ainda pendentes. Essa visão completa permanece à frente do primeiro módulo. Gmail, calls, CTOs, inglês, review no Azure, diagnóstico, música e sala virtual continuam fora do recorte publicado.
 
 ## Comece aqui
 
@@ -40,7 +42,7 @@ A pasta `cursror-dev` mantém a grafia solicitada por Airton. Cada módulo cont�
 
 A CLI local registra atividades, reuniões relatadas, decisões, pendências e checkpoints, e consulta esses dados depois que o processo termina. Entrega do [prompt 00](cursror-dev/00-bootstrap-typescript.md); relatório em [execuções](cursror-dev/execucoes/2026-10-28-001-prompt-00.md). Escolhas de runtime e SQLite: [ADR 0001](docs/arquitetura/decisoes/0001-node-typescript-e-entrega-inicial.md) e [ADR 0003](docs/arquitetura/decisoes/0003-persistencia-sqlite-cli.md).
 
-O recorte do prompt 15 acrescenta fila local, agenda sintética e importação de transcrição. O lembrete não depende do modelo. O serviço permanente não foi instalado, nenhum calendário externo foi conectado e a avaliação com modelo real continua pendente. A conversa de leitura usa um provedor configurável e, por padrão, um simulador. O launcher e os especialistas podem continuar em outras linguagens.
+O recorte do prompt 15, entregue em 02/11/2026, acrescenta fila local, agenda sintética e importação de transcrição. O lembrete dessa agenda sintética não depende do modelo. Naquele dia o serviço permanente não foi instalado, nenhum calendário externo foi autenticado e a avaliação com modelo real ficou pendente. A leitura da agenda Google entrou em 25–26/11/2026 e aguarda uso real documentado. A conversa de leitura usa um provedor configurável e, por padrão, um simulador. O launcher e os especialistas podem continuar em outras linguagens.
 
 Organização: [prompts](cursror-dev/README.md), [histórico de execuções](cursror-dev/execucoes/README.md) e [decisões arquiteturais](docs/arquitetura/decisoes/README.md).
 
@@ -99,11 +101,11 @@ Uma ação com responsável e prazo usa `descricao ;; responsavel=Nome ;; prazo=
 
 ### Limitações desta CLI
 
-- A linguagem natural cobre pendências, resumo de uma data explícita e último checkpoint. A conversa não edita, não apaga e não conclui registros.
-- Reunião registrada é relato do usuário. Não há leitura de agenda nem inferência de presença.
+- A conversa por texto cobre pendências, resumo de uma data explícita e último checkpoint. Ela não edita, não apaga e não conclui registros. A voz acrescenta relógio, lembrete local e leitura da agenda Google; o detalhe está na [retomada](docs/retomada.md).
+- Reunião registrada na CLI é relato do usuário. A leitura da agenda lista eventos; ela não infere presença nem decisões.
 - O resumo do dia agrupa os registros daquele dia civil e mostra o estado atual das ações.
 - Origem aceita: `user_report`. Agente aceito: `manual`.
-- Sem serviço, fila, servidor HTTP, microfone ou conta externa. O cliente de modelo é opcional; o padrão é o simulador. Em 29/10/2026 e de novo em 02/11/2026 nenhum modelo local estava instalado, então a validação real continua pendente.
+- Em 28/10/2026 esta CLI não tinha serviço permanente, fila, servidor HTTP, microfone nem conta externa. Em 27/11/2026 existem fila local, laço de voz e conector de leitura do Google Calendar. O serviço permanente, o servidor HTTP e a validação com modelo local continuam ausentes. O cliente de modelo é opcional; o padrão da conversa é o simulador. Em 29/10/2026 e de novo em 02/11/2026 nenhum modelo local estava instalado.
 - O motor de políticas e o executor falso não isolam Windows nem Debian. Eles não impedem outro programa de ler o disco ou a rede.
 - Em Node 22, `node:sqlite` ainda é experimental na documentação da linha. O aviso é suprimido na CLI.
 - Duas invocações simultâneas esperam um lock de até 5 segundos. Se o banco continuar ocupado, a segunda falha sem substituir o arquivo.
